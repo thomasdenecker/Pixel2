@@ -36,3 +36,6 @@ RUN Rscript -e "install.packages('shinydashboard', repos='https://cran.rstudio.c
 
 RUN Rscript -e "install.packages('DT', repos='https://cran.rstudio.com/', dependencies = TRUE)" \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+    RUN Rscript -e "install.packages('shinyWidgets', repos='https://cran.rstudio.com/', dependencies = TRUE)" \
+        && rm -rf /tmp/downloaded_packages/ /tmp/*.rds

@@ -23,6 +23,12 @@ p.warning {
   text-align: right;
 }
 
+
+div.table_style{
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
 /*******************************************************************************
 Header
 *******************************************************************************/
@@ -50,4 +56,44 @@ Header
 
 .skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
   background-color: #595959;
+}
+
+
+/*******************************************************************************
+Authenfication
+*******************************************************************************/
+
+div.authenfication{
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  padding: 20px;
+  width: 400px;
+  margin: auto;
+  background-color: white;
+  text-align: center;
+}
+
+#USER {
+  background: url(Images/user.svg) no-repeat scroll 2px 2px;
+  padding-left: 35px;
+  background-size: 30px 30px;
+}
+
+#PW {
+  background: url(Images/padlock.svg) no-repeat scroll 2px 2px;
+  padding-left: 35px;
+  background-size: 30px 30px;
+}
+
+.center_input{
+  display: inline-block;
+  margin: 0 auto;
+}
+
+.inputNew{
+  width: 100%;
+}
+
+.tableTitle{
+  font-weight: bold;
+  text-align: center;
 }
