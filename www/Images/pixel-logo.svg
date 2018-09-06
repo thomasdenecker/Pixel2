@@ -1,0 +1,32 @@
+<svg width="813" height="217" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" fill-rule="evenodd">
+    <path fill="#CCC" fill-rule="nonzero" d="M4.47 4.27h40.19v41.6H4.46z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M44.66 4.27h40.2v41.6h-40.2z"/>
+    <path fill="#999" fill-rule="nonzero" d="M84.85 4.27h40.2v41.6h-40.2zm40.2 0h40.2v41.6h-40.2zm80.39 0h40.2v41.6h-40.2z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M285.83 4.27h40.19v41.6h-40.2z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M446.6 4.27h40.2v41.6h-40.2z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M527 4.27h40.19v41.6h-40.2z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M567.19 4.27h40.19v41.6h-40.2z"/>
+    <path fill="#D9D9D9" fill-rule="nonzero" d="M607.38 4.27h40.2v41.6h-40.2z"/>
+    <path fill="#999" fill-rule="nonzero" d="M687.77 4.27h40.2v41.6h-40.2z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M4.47 45.87h40.19v41.6H4.46z"/>
+    <path fill="#666" fill-rule="nonzero" d="M125.05 45.87h40.2v41.6h-40.2zm80.39 0h40.2v41.6h-40.2z"/>
+    <path fill="#999" fill-rule="nonzero" d="M326.02 45.87h40.2v41.6h-40.2zm80.38 0h40.2v41.6h-40.2zm120.6 0h40.19v41.6h-40.2zm160.77 0h40.2v41.6h-40.2zM4.47 87.47h40.19v41.6H4.46v-41.6z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M44.66 87.47h40.2v41.6h-40.2v-41.6z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M84.85 87.47h40.2v41.6h-40.2v-41.6z"/>
+    <path fill="#999" fill-rule="nonzero" d="M125.05 87.47h40.2v41.6h-40.2v-41.6z"/>
+    <path fill="#666" fill-rule="nonzero" d="M205.44 87.47h40.2v41.6h-40.2v-41.6zm160.77 0h40.2v41.6h-40.2v-41.6zm160.79 0h40.19v41.6h-40.2v-41.6z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M567.19 87.47h40.19v41.6h-40.2v-41.6z"/>
+    <path fill="#D9D9D9" fill-rule="nonzero" d="M607.38 87.47h40.2v41.6h-40.2v-41.6z"/>
+    <path fill="#666" fill-rule="nonzero" d="M687.77 87.47h40.2v41.6h-40.2v-41.6zm-683.3 41.6h40.19v41.6H4.46z"/>
+    <path fill="#999" fill-rule="nonzero" d="M205.44 129.07h40.2v41.6h-40.2zm120.58 0h40.2v41.6h-40.2zm80.38 0h40.2v41.6h-40.2zm120.6 0h40.19v41.6h-40.2zm160.77 0h40.2v41.6h-40.2zM4.47 170.66h40.19v41.6H4.46z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M205.44 170.66h40.2v41.6h-40.2zm80.39 0h40.19v41.6h-40.2z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M446.6 170.66h40.2v41.6h-40.2zm80.4 0h40.19v41.6h-40.2z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M567.19 170.66h40.19v41.6h-40.2z"/>
+    <path fill="#D9D9D9" fill-rule="nonzero" d="M607.38 170.66h40.2v41.6h-40.2z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M687.77 170.66h40.2v41.6h-40.2z"/>
+    <path fill="#B7B7B7" fill-rule="nonzero" d="M727.96 170.66h40.2v41.6h-40.2z"/>
+    <path fill="#CCC" fill-rule="nonzero" d="M768.16 170.66h40.19v41.6h-40.2z"/>
+    <path d="M4.47 2.27v212m40.19-170.4v41.6m0 41.6v87.2m80.39-170.4v45.6m40.19-87.2v128.8m40.2-128.8v212m40.19-212v212m40.2-212v45.6m0 120.79v45.6M326.02 2.27v87.2m0 37.6v87.2m40.19-170.4v128.8m40.19-128.8v128.8m40.2-170.4v87.2m0 37.6v87.2m40.2-212v45.6m0 120.79v45.6M527 2.27v212m40.19-170.4v45.6m0 37.6v45.6m80.38-170.4v45.6m0 37.6v45.6m0 37.59v45.6m40.2-211.99v212m40.19-212v170.4m80.39-4.01v45.6M2.47 4.27h164.77m36.2 0h44.2m36.19 0h44.19m116.58 0h44.2m36.2 0h124.57m36.2 0h44.2M42.66 45.87h84.39m156.78 0h84.38m36.19 0h84.4m76.39 0h84.38M42.66 87.47h84.39m196.97 0H448.6m116.59 0h84.38m-606.91 41.6h124.58m156.78 0H448.6m116.59 0h84.38m-365.74 41.59h84.38m36.19 0h84.4m76.39 0h84.38m76.39 0h84.39M2.47 212.26h44.19m156.78 0h44.2m36.19 0h44.19m116.58 0h44.2m36.2 1h124.57m36.2-1h124.58" stroke="#000" stroke-width="4"/>
+  </g>
+</svg>
