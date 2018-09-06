@@ -10,7 +10,7 @@ docker build -t pixel_db .
 
 ### Change docker name (to push on DockerHub)
 ```
-docker tag bpeaks_db tdenecker/pixel_db
+docker tag pixel_db tdenecker/pixel_db
 ```
 
 ### Run docker
@@ -21,6 +21,11 @@ docker run --name PIXEL_DB -d tdenecker/pixel_db
 ### Start Docker
 ```
 docker start PIXEL_DB
+```
+
+### Save docker IP
+```
+docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" bPeaksDB > Database/ipDB.txt
 ```
 
 ## Connect to database with  (command line)

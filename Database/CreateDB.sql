@@ -1,6 +1,6 @@
 CREATE EXTENSION pgcrypto;
 
-CREATE TABLE users (
+CREATE TABLE pixeler (
   id SERIAL PRIMARY KEY,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE users (
 );
 
 
-INSERT INTO users (first_name, last_name, user_name, email, UserType, password, Country) VALUES (
+INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password, Country) VALUES (
   'ad',
   'min',
   'admin',

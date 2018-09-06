@@ -1,0 +1,7 @@
+# History files
+.Rhistory
+.Rapp.history
+.Rprofile
+
+# log
+log/

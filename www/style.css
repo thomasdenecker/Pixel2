@@ -1,0 +1,53 @@
+/*******************************************************************************
+Style css - Pixel
+*******************************************************************************/
+
+/*******************************************************************************
+General
+*******************************************************************************/
+
+.center {
+  text-align: center;
+}
+
+p {
+  text-align: justify;
+}
+
+p.warning {
+  color: red;
+  font-weight: bold;
+}
+
+.textRight {
+  text-align: right;
+}
+
+/*******************************************************************************
+Header
+*******************************************************************************/
+
+/* main sidebar */
+
+.skin-red .main-sidebar {
+  background-color: #808080;
+}
+
+/* active selected tab in the sidebarmenu */
+
+.skin-red .main-sidebar .sidebar .sidebar-menu .active a {
+  background-color: #595959;
+}
+
+/* other links in the sidebarmenu */
+
+.skin-red .main-sidebar .sidebar .sidebar-menu a {
+  background-color: #808080;
+  color: white;
+}
+
+/* other links in the sidebarmenu when hovered */
+
+.skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
+  background-color: #595959;
+}
