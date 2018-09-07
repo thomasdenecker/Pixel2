@@ -22,3 +22,13 @@ INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password
   crypt('admin', gen_salt('bf')),
   'France'
 );
+
+INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password, Country) VALUES (
+  'Us',
+  'er',
+  'User',
+  'user@mail.com',
+  'User',
+  crypt('user', gen_salt('bf')),
+  'France'
+);
