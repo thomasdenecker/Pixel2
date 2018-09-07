@@ -188,8 +188,57 @@ server <- function(input, output, session) {
           tabName = "Dashboard", 
           h2("Dashboard"),
           fluidRow(
+            valueBoxOutput("nbPixel", width = 3),
+            valueBoxOutput("nbPixelSet", width = 3),
+            valueBoxOutput("nbPixeler", width = 3),
+            valueBoxOutput("DataEntries", width = 3)
+          ),
+          
+          fluidRow(
+            # box(title = "Pixels by OmicsUnitType", width = 6, htmlOutput("PixelsByOmicsUnitType") ),
+            # box(title = "Pixels by Species", width = 6, htmlOutput("PixelsByOmicsUnitType"))
+            # 
             
-          )),
+            div(class="col-sm-6",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Pixels by OmicsUnitType"), br(),
+                        htmlOutput("PixelsByOmicsUnitType")
+                    )
+                )
+            ),
+            
+            div(class="col-sm-6",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Pixels by Species"), br(),
+                        htmlOutput("PixelsBySpecies")
+                    )
+                )
+            )
+
+          ),
+          
+          fluidRow(
+            div(class="col-sm-6",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Pixeler localisation"), br(),
+                        htmlOutput("UsersMap")
+                    )
+                )
+            ),
+            
+            div(class="col-sm-6",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Pixeler informations"), br(),
+                        DT::dataTableOutput('pixelerInfo')
+                    )
+                )
+            )
+          )
+        ),
         
         # Tab content : Submissions
         tabItem(
@@ -266,6 +315,77 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  #-----------------------------------------------------------------------------
+  # Dashboard
+  #-----------------------------------------------------------------------------
+  
+  output$nbPixelSet <- renderValueBox({
+    valueBox(
+      8, "Pixelsets", icon = icon("folder"),
+      color = "red"
+    )
+  })
+  
+  output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)], options = list(scrollX = TRUE))
+  
+  output$nbPixel <- renderValueBox({
+    valueBox(
+      35200, "Pixels", icon = icon("puzzle-piece"),
+      color = "purple"
+    )
+  })
+  
+  output$nbPixeler <- renderValueBox({
+    valueBox(
+      paste0(nrow(USERS$infos)), "Pixelers", icon = icon("users"),
+      color = "green"
+    )
+  })
+  
+  
+  output$DataEntries <- renderValueBox({
+    valueBox(
+      21531, "Data entries", icon = icon("database"),
+      color = "blue"
+    )
+  })
+  
+  
+  # PixelsByOmicsUnitType PixelsBySpecies
+  
+  output$PixelsByOmicsUnitType <- renderGvis({
+    data<-data.frame(c('mRNA','Protein'),c(15,85))
+    gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
+  })
+  
+  output$PixelsBySpecies <- renderGvis({
+    data<-data.frame(c('C. glabrata','S. cerevisiae'),c(25,75))
+    gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
+  })
+  
+  output$UsersMap <- renderGvis({
+    REQUEST_MAP = paste0("SELECT country, count(*) FROM pixeler GROUP BY country ;")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    MapTable = dbGetQuery(con, REQUEST_MAP)
+    
+    gvisGeoChart(MapTable, locationvar="country", 
+                 colorvar="count",
+                 options=list(projection="kavrayskiy-vii",height= 350,
+                              colorAxis="{colors:['#ffe6e6','#b30000'], minValue:1}"))
+    
+  })
+  
+  
+  #-----------------------------------------------------------------------------
+  # Log
+  #-----------------------------------------------------------------------------
+  
   observe({
     if(USER$Logged == TRUE){
       updateTabItems (session, "tabs", selected = "Dashboard")
@@ -273,24 +393,28 @@ server <- function(input, output, session) {
   })
   
   
+  #-----------------------------------------------------------------------------
+  # Profile
+  #-----------------------------------------------------------------------------
+  
   output$Profile <- renderUI({
     tagList(
       div( class = "margeProfile",
-        h3("General information"),
-        p(tags$b("First names :"), USER$infos[1,2]),
-        p(tags$b("Last names :"), USER$infos[1,3]),
-        p(tags$b("User names :"), USER$infos[1,4]),
-        p(tags$b("Email :"), USER$infos[1,5]),
-        p(tags$b("Password (encrypted) :"), USER$infos[1,6]),
-        p(tags$b("User type :"), USER$infos[1,7]),
-        p(tags$b("Country :"), USER$infos[1,8]),
-        p(tags$b("Creation date :"), USER$infos[1,9]),
-        
-        h3("Change the password"),
-        passwordInput("OldPW", "Old password", placeholder = "Your old password" ),
-        passwordInput("NewPW1", "New password", placeholder = "Your new password" ),
-        passwordInput("NewPW2", "New password (verification)", placeholder = "Retype your new password" ),
-        actionButton("ModifyPW", "Modify your password")
+           h3("General information"),
+           p(tags$b("First names :"), USER$infos[1,2]),
+           p(tags$b("Last names :"), USER$infos[1,3]),
+           p(tags$b("User names :"), USER$infos[1,4]),
+           p(tags$b("Email :"), USER$infos[1,5]),
+           p(tags$b("Password (encrypted) :"), USER$infos[1,6]),
+           p(tags$b("User type :"), USER$infos[1,7]),
+           p(tags$b("Country :"), USER$infos[1,8]),
+           p(tags$b("Creation date :"), USER$infos[1,9]),
+           
+           h3("Change the password"),
+           passwordInput("OldPW", "Old password", placeholder = "Your old password" ),
+           passwordInput("NewPW1", "New password", placeholder = "Your new password" ),
+           passwordInput("NewPW2", "New password (verification)", placeholder = "Retype your new password" ),
+           actionButton("ModifyPW", "Modify your password")
       )
     )
   })
