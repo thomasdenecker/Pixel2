@@ -146,15 +146,15 @@ server <- function(input, output, session) {
           ),
           
           sidebarMenu(id = "tabs",
-            menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-            menuItem("Submissions", tabName = "Submissions", icon = icon("plus-circle")),
-            menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
-            menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
-            menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
-                     startExpanded = TRUE,
-                     menuSubItem("Pixeler", tabName = "Pixeler"),
-                     menuSubItem("Pixel", tabName = "Pixel")),
-            menuItem("Profile", tabName = "Profile", icon = icon("user"))
+                      menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
+                      menuItem("Submissions", tabName = "Submissions", icon = icon("plus-circle")),
+                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
+                      menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
+                      menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
+                               startExpanded = F,
+                               menuSubItem("Pixeler", tabName = "Pixeler"),
+                               menuSubItem("Pixel", tabName = "Pixel")),
+                      menuItem("Profile", tabName = "Profile", icon = icon("user"))
           )
         )
       } else {
@@ -164,10 +164,10 @@ server <- function(input, output, session) {
             subtitle = a(icon("sign-out"), "Logout", href = login.page)
           ),
           sidebarMenu("tabMenu",
-            menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-            menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
-            menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
-            menuItem("Profile", tabName = "Profile", icon = icon("user"))
+                      menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
+                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
+                      menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
+                      menuItem("Profile", tabName = "Profile", icon = icon("user"))
           )
         )
       }
@@ -257,9 +257,7 @@ server <- function(input, output, session) {
           tabName = "Profile", 
           h2("Profile"),
           fluidRow(
-            
-            
-            
+            uiOutput("Profile")
           ))
       )
       
@@ -273,6 +271,74 @@ server <- function(input, output, session) {
       updateTabItems (session, "tabs", selected = "Dashboard")
     }
   })
+  
+  
+  output$Profile <- renderUI({
+    tagList(
+      div( class = "margeProfile",
+        h3("General information"),
+        p(tags$b("First names :"), USER$infos[1,2]),
+        p(tags$b("Last names :"), USER$infos[1,3]),
+        p(tags$b("User names :"), USER$infos[1,4]),
+        p(tags$b("Email :"), USER$infos[1,5]),
+        p(tags$b("Password (encrypted) :"), USER$infos[1,6]),
+        p(tags$b("User type :"), USER$infos[1,7]),
+        p(tags$b("Country :"), USER$infos[1,8]),
+        p(tags$b("Creation date :"), USER$infos[1,9]),
+        
+        h3("Change the password"),
+        passwordInput("OldPW", "Old password", placeholder = "Your old password" ),
+        passwordInput("NewPW1", "New password", placeholder = "Your new password" ),
+        passwordInput("NewPW2", "New password (verification)", placeholder = "Retype your new password" ),
+        actionButton("ModifyPW", "Modify your password")
+      )
+    )
+  })
+  
+  observeEvent(input$ModifyPW, {
+    
+    if(input$NewPW1 == input$NewPW2 & input$NewPW1 != "" & input$NewPW2!=""){
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      
+      Password <- isolate(input$OldPW)
+      
+      REQUEST = paste0("SELECT * 
+                 FROM pixeler
+                 WHERE ( email = '",USER$infos[1, 5],"' or user_name = '",USER$infos[1, 4],"') 
+                 AND password = crypt('",Password,"', password);")
+      
+      RESULT_REQUEST = dbGetQuery(con, REQUEST)
+      
+      if(nrow(RESULT_REQUEST) != 0){
+        USER$infos <- RESULT_REQUEST[1,]
+        REQUEST = paste0("UPDATE pixeler SET password = crypt('",
+                         input$NewPW2,"', password) WHERE user_name ='",USER$infos[1, 4],"';")
+        dbGetQuery(con, REQUEST)
+        
+        updateTextInput(session, "OldPW", value="")
+        updateTextInput(session, "NewPW1", value="")
+        updateTextInput(session, "NewPW2", value="")
+        
+        shinyalert("Congratulation", "Your password has been successfully changed!", type = "success")
+        
+      } else {
+        shinyalert("Oops!", "Your old password is not the right one!", type = "error")
+      }
+      
+      dbDisconnect(con)
+    } else {
+      if(input$NewPW1 != input$NewPW2){
+        shinyalert("Oops!", "The two new passwords are not the same!", type = "error")
+      } else {
+        shinyalert("Oops!", "A field has not been entered!", type = "error")
+      }
+    }
+    
+  })
+  
+  
   
   #-----------------------------------------------------------------------------
   # Admin user table 
@@ -401,11 +467,11 @@ server <- function(input, output, session) {
     }
   })
   
-
+  
   observe({
     if(is.null(input$FN_NU) | is.null(input$LN_NU) |
        is.null(input$USERNAME_NU) | is.null(input$EMAIL_NU)){
-     disable("addUser")
+      disable("addUser")
     }else{
       enable("addUser")
     }
