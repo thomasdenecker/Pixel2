@@ -9,6 +9,10 @@ General
 .center {
   text-align: center;
 }
+#UsersMap div {
+  width: auto;
+  margin: 0 auto !important;
+}
 
 p {
   text-align: justify;
