@@ -73,6 +73,7 @@ server <- function(input, output, session) {
   
   
   USERS <- reactiveValues()
+  rv <- reactiveValues()
   
   login <- div( class="authenfication", 
                 h2("Login"),
@@ -153,7 +154,9 @@ server <- function(input, output, session) {
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
                                menuSubItem("Pixeler", tabName = "Pixeler"),
-                               menuSubItem("Pixel", tabName = "Pixel")),
+                               menuSubItem("Pixel", tabName = "Pixel"), 
+                               menuSubItem("Annotation", tabName = "Annotation")),
+                      
                       menuItem("Profile", tabName = "Profile", icon = icon("user"))
           )
         )
@@ -216,7 +219,7 @@ server <- function(input, output, session) {
                     )
                 )
             )
-
+            
           ),
           
           fluidRow(
@@ -263,6 +266,53 @@ server <- function(input, output, session) {
           fluidRow(
             
           )),
+        
+        # Tab content : Annotation
+        tabItem(
+          tabName = "Annotation", 
+          h2("Annotation"),
+          h3("Chromosomal feature"),
+          fluidRow(
+            column(3,
+                   h3("Parameters"),
+                   fileInput("fileCF",label = NULL,
+                             buttonLabel = "Browse...",
+                             placeholder = "No file selected"),align = "center",
+                   tags$hr(),
+                   
+                   # Input: Checkbox if file has header
+                   radioButtons("header_CF", "Header",
+                                choices = c("Yes" = TRUE,
+                                            "No" = FALSE),
+                                selected = TRUE, inline=T),
+                   
+                   # Input: Select separator ----
+                   radioButtons("sep_CF", "Separator",
+                                choices = c(Comma = ",",
+                                            Semicolon = ";",
+                                            Tab = "\t"),
+                                selected = "\t", inline=T),
+                   
+                   # Input: Select quotes ----
+                   radioButtons("quote_CF", "Quote",
+                                choices = c(None = "",
+                                            "Double Quote" = '"',
+                                            "Single Quote" = "'"),
+                                selected = "", inline=T)
+            ), 
+            column(9, 
+                   h3("Preview"),
+                   dataTableOutput(outputId = "contents_CF"))
+          ),
+          actionButton(inputId = "ImportCF", label = "Import", class= "myBtn" ),
+          
+          h3("Data source"),
+          fluidRow(),
+          
+          h3("Supplementary information"),
+          fluidRow()
+          
+          ),
         
         # Tab content : Explorer
         tabItem(
@@ -591,7 +641,6 @@ server <- function(input, output, session) {
     }
   })
   
-  
   observe({
     if(is.null(input$FN_NU) | is.null(input$LN_NU) |
        is.null(input$USERNAME_NU) | is.null(input$EMAIL_NU)){
@@ -599,6 +648,95 @@ server <- function(input, output, session) {
     }else{
       enable("addUser")
     }
+  })
+  
+  #.............................................................................
+  # Annotation
+  #.............................................................................
+  
+  output$contents_CF <-  renderDataTable({
+    
+    req(input$fileCF)
+    
+    df <- read.csv(input$fileCF$datapath,
+                   header = as.logical(input$header_CF),
+                   sep = input$sep_CF,
+                   quote = input$quote_CF,
+                   nrows=10
+    )
+    
+  },  options = list(scrollX = TRUE , dom = 't'))
+  
+  
+  observeEvent(input$ImportCF,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    database = read.csv(input$fileCF$datapath,
+                        header = as.logical(input$header_CF),
+                        sep = input$sep_CF,
+                        quote = input$quote_CF,
+                        stringsAsFactors = F
+    )
+    
+    if(ncol(database) == 9){
+      
+      withProgress(message = 'Import in Database', value = 0, {
+        
+        n <- nrow(database)
+        rv$ERROR = F
+        for(i in 1:nrow(database)){
+          
+          incProgress(1/n, detail = paste("Doing part", i))
+          
+          REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
+          if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
+            REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
+                                   "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
+                                   "',species_name ='",database[i,7], "', url ='",database[i,8] ,"',default_db_name ='",database[i,9] 
+                                   ,"' WHERE Feature_name = '",database[i,1],"';" );
+          } else {
+            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, species_name, url, default_db_name) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6:9],"'")),collapse = ","),
+                                   ");")
+          }
+          
+          tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+                   , error = function(c) {
+                     shinyalert("Error when importing", 
+                                paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
+                                className="alert",
+                                type = "error")
+                     rv$ERROR = T
+                   },warning = function(c) {
+                     shinyalert("Error when importing", 
+                                paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
+                                className="alert",
+                                type = "error")
+                     rv$ERROR = T
+                   }
+          )
+          
+          if(rv$ERROR == T){
+            break()
+          } 
+          
+        }
+        
+        if(rv$ERROR == F){
+          shinyalert("Congratulations!", 
+                     "The import was successful!",
+                     type = "success")
+        }
+      })
+      
+    } else {
+      shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 8."), type = "error")
+    }
+    
+    
   })
   
 }
