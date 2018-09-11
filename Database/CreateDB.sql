@@ -1,4 +1,21 @@
+/*******************************************************************************
+SQL script for PIXEL_DB
+09/2018
+Thomas Denecker
+*******************************************************************************/
+
+/*******************************************************************************
+EXTENSION
+*******************************************************************************/
 CREATE EXTENSION pgcrypto;
+
+/*******************************************************************************
+Tables
+*******************************************************************************/
+
+/*------------------------------------------------------------------------------
+PIXELER
+------------------------------------------------------------------------------*/
 
 CREATE TABLE pixeler (
   id SERIAL PRIMARY KEY,
@@ -7,13 +24,13 @@ CREATE TABLE pixeler (
   user_name TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
-  UserType TEXT NOT NULL,
-  Country TEXT NOT NULL,
+  user_type TEXT NOT NULL,
+  lab_country TEXT NOT NULL,
   creation_date timestamp default current_timestamp
 );
 
 
-INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password, Country) VALUES (
+INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, password, lab_country) VALUES (
   'ad',
   'min',
   'admin',
@@ -23,7 +40,7 @@ INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password
   'France'
 );
 
-INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, password, Country) VALUES (
+INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, password, lab_country) VALUES (
   'Us',
   'er',
   'User',
