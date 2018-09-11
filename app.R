@@ -365,7 +365,7 @@ server <- function(input, output, session) {
   })
   
   output$UsersMap <- renderGvis({
-    REQUEST_MAP = paste0("SELECT country, count(*) FROM pixeler GROUP BY country ;")
+    REQUEST_MAP = paste0("SELECT lab_country, count(*) FROM pixeler GROUP BY lab_country ;")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -374,7 +374,7 @@ server <- function(input, output, session) {
     
     MapTable = dbGetQuery(con, REQUEST_MAP)
     
-    gvisGeoChart(MapTable, locationvar="country", 
+    gvisGeoChart(MapTable, locationvar="lab_country", 
                  colorvar="count",
                  options=list(projection="kavrayskiy-vii",height= 350,
                               colorAxis="{colors:['#ffe6e6','#b30000'], minValue:1}"))
@@ -567,7 +567,7 @@ server <- function(input, output, session) {
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       shinyalert("Oops!", "This user is already in the database", type = "error")
     } else {
-      REQUESTE_ADD = paste0("INSERT INTO pixeler (first_name, last_name, user_name, email, UserType, Country, password) VALUES (
+      REQUESTE_ADD = paste0("INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, lab_country, password) VALUES (
                             '",input$FN_NU, "',
                             '",input$LN_NU, "',
                             '",input$USERNAME_NU,"',

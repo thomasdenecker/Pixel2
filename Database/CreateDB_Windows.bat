@@ -1,3 +1,7 @@
+docker stop PIXEL_DB
+
+docker rm PIXEL_DB
+
 docker build -t pixel_db .
 
 docker build -t pixel_db .
