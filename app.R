@@ -70,7 +70,7 @@ ui <- dashboardPage(skin= "red", header, sidebar, body)
 
 server <- function(input, output, session) {
   
-  
+  options(shiny.maxRequestSize=1000*1024^2)
   
   USERS <- reactiveValues()
   rv <- reactiveValues()
@@ -149,7 +149,8 @@ server <- function(input, output, session) {
           sidebarMenu(id = "tabs",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
                       menuItem("Submissions", tabName = "Submissions", icon = icon("plus-circle")),
-                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
+                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")),
+                      menuItem("Chromosomal features", tabName = "CF_item", icon = icon("search")), 
                       menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
@@ -157,7 +158,8 @@ server <- function(input, output, session) {
                                menuSubItem("Pixel", tabName = "Pixel"), 
                                menuSubItem("Annotation", tabName = "Annotation")),
                       
-                      menuItem("Profile", tabName = "Profile", icon = icon("user"))
+                      menuItem("Profile", tabName = "Profile", icon = icon("user")),
+                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
           )
         )
       } else {
@@ -170,7 +172,8 @@ server <- function(input, output, session) {
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
                       menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
                       menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
-                      menuItem("Profile", tabName = "Profile", icon = icon("user"))
+                      menuItem("Profile", tabName = "Profile", icon = icon("user")),
+                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
           )
         )
       }
@@ -186,6 +189,7 @@ server <- function(input, output, session) {
   output$body <- renderUI({
     if (USER$Logged == TRUE) {
       tabItems(
+        
         # Tab content : Dashboard
         tabItem(
           tabName = "Dashboard", 
@@ -241,6 +245,7 @@ server <- function(input, output, session) {
                 )
             )
           )
+          
         ),
         
         # Tab content : Submissions
@@ -259,6 +264,16 @@ server <- function(input, output, session) {
             
           )),
         
+        # Tab content : Pixel_sets
+        tabItem(
+          tabName = "CF_item", 
+          h2("Chromosomal feature"),
+          fluidRow(
+            uiOutput("title_cf"),
+            div( class = "margeProfile", tabsetPanel(id = "tab_sup_annot"))
+            
+          )),
+        
         # Tab content : Explorer
         tabItem(
           tabName = "Explorer", 
@@ -270,8 +285,46 @@ server <- function(input, output, session) {
         # Tab content : Annotation
         tabItem(
           tabName = "Annotation", 
-          h2("Annotation"),
-          h3("Chromosomal feature"),
+          h2("Chromosomal feature"),
+          h3("1- Annotation source"),
+          fluidRow( class='border-between ', 
+                    column(6,align="center",
+                           h3("Existing Sources"),
+                           uiOutput("SSUI"),
+                           htmlOutput("DescriCFSource")
+                    ),
+                    column(6,align="center",
+                           h3("Create new source"),
+                           h4("Source name"),
+                           textInput("CFSourceName",NULL ),
+                           h4("abbreviation"),
+                           textInput("CFAbbreviation",NULL ),
+                           h4("Source description"),
+                           textAreaInput("CFSourceDescription", NULL, resize = "vertical"),
+                           h4("Source URL"),
+                           textInput("CFSourceURL", NULL),
+                           actionButton("addCFSource", "Add source")
+                    )
+          ),
+          
+          
+          h3("2- Import annotation file"),
+          fluidRow(
+            column(6,align="center",
+                   h4("Annotation type "),
+                   selectInput("importTypeCF",NULL,
+                               c("Main information" = "main",
+                                 "Supplementary information" = "sup"))
+            ),
+            column(6, 
+                   h4("Help "),
+                   textOutput("helpImportTypeCF"),
+                   br(),
+                   uiOutput("Sup")
+                   
+            )
+          ),
+          
           fluidRow(
             column(3,
                    h3("Parameters"),
@@ -304,15 +357,9 @@ server <- function(input, output, session) {
                    h3("Preview"),
                    dataTableOutput(outputId = "contents_CF"))
           ),
-          actionButton(inputId = "ImportCF", label = "Import", class= "myBtn" ),
+          actionButton(inputId = "ImportCF", label = "Import", class= "myBtn" , icon = icon("upload"))
           
-          h3("Data source"),
-          fluidRow(),
-          
-          h3("Supplementary information"),
-          fluidRow()
-          
-          ),
+        ),
         
         # Tab content : Explorer
         tabItem(
@@ -668,6 +715,58 @@ server <- function(input, output, session) {
   },  options = list(scrollX = TRUE , dom = 't'))
   
   
+  observeEvent(input$addCFSource,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    rv$ERROR = F
+    
+    REQUEST_ANNOT = paste0("INSERT INTO CFSource (name,abbreviation, description, url) VALUES ('",
+                           input$CFSourceName, "','", input$CFAbbreviation, "','", input$CFSourceDescription,"','",input$CFSourceURL,"');" )
+    
+    
+    tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+             , error = function(c) {
+               shinyalert("Error when importing", 
+                          paste0(c,"\n The chevron shows you where the error is."), 
+                          className="alert",
+                          type = "error")
+               rv$ERROR = T
+             },warning = function(c) {
+               shinyalert("Error when importing", 
+                          paste0(c,"\n The chevron shows you where the error is."), 
+                          className="alert",
+                          type = "error")
+               rv$ERROR = T
+             }
+    )
+    if(rv$ERROR == F){
+      
+      
+      updateTextAreaInput(session,"CFSourceDescription", value = "")
+      updateTextInput(session,"CFSourceName", value = "" )
+      updateTextInput(session,"CFSourceURL", value = "" )
+      
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      rv$Source = dbGetQuery(con, "select * from CFSource;")
+      
+      dbDisconnect(con)
+      
+      updateSelectInput(session, "selectSource", choices = rv$Source[,2], selected = input$CFSourceName)
+      
+      shinyalert("Congratulations!", 
+                 "The import was successful!",
+                 type = "success")
+    }
+    
+  })
+  
   observeEvent(input$ImportCF,{
     
     pg <- dbDriver("PostgreSQL")
@@ -682,62 +781,305 @@ server <- function(input, output, session) {
                         stringsAsFactors = F
     )
     
-    if(ncol(database) == 9){
-      
-      withProgress(message = 'Import in Database', value = 0, {
+    withProgress(message = 'Import in Database', value = 0, {
+      if(input$importTypeCF == "main"){
+        if(ncol(database) == 8){
+          n <- nrow(database)
+          rv$ERROR = F
+          for(i in 1:nrow(database)){
+            
+            incProgress(1/n, detail = paste("Doing part", i))
+            
+            REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
+            if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
+              REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
+                                     "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
+                                     "',species_name ='",database[i,7], "', url ='",database[i,8] ,"',default_db_name ='",input$selectSource 
+                                     ,"' WHERE Feature_name = '",database[i,1],"';" );
+            } else {
+              REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, species_name, url, default_db_name) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6:8],"'"),paste0("'",input$selectSource,"'")),collapse = ","),
+                                     ");")
+            }
+            
+            tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+                     , error = function(c) {
+                       shinyalert("Error when importing", 
+                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
+                                  className="alert",
+                                  type = "error")
+                       rv$ERROR = T
+                     },warning = function(c) {
+                       shinyalert("Error when importing", 
+                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
+                                  className="alert",
+                                  type = "error")
+                       rv$ERROR = T
+                     }
+            )
+            
+            if(rv$ERROR == T){
+              break()
+            } 
+            
+          }
+          
+          if(rv$ERROR == F){
+            shinyalert("Congratulations!", 
+                       "The import was successful!",
+                       type = "success")
+          }
+          
+          
+        } else {
+          shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 8."), type = "error")
+        }
+      } else {
         
+        # TABLE CREATION
+        newTableName <- input$sup_name
+        columnNewTable <- gsub("[[:punct:]]", "",colnames(database)[-1])
+        columnNewTable <- gsub(" ", "_",columnNewTable )
+        
+        REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
+                        paste(paste( columnNewTable, "TEXT"), collapse = ",")
+                        ,", cfsource_name TEXT, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_name) REFERENCES CFSource (name), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
+        
+        tryCatch(dbSendQuery(con, REQUEST)
+                 , error = function(c) {
+                   shinyalert("Error : Table creation", 
+                              paste0(c,"\n The chevron shows you where the error is."), 
+                              className="alert",
+                              type = "error")
+                   rv$ERROR = T
+                   
+                 },warning = function(c) {
+                   shinyalert("Error : Table creation", 
+                              paste0(c,"\n The chevron shows you where the error is."), 
+                              className="alert",
+                              type = "error")
+                   rv$ERROR = T
+                   
+                 }
+        )
+        
+        # insert in new table
         n <- nrow(database)
         rv$ERROR = F
         for(i in 1:nrow(database)){
           
           incProgress(1/n, detail = paste("Doing part", i))
           
-          REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
-          if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
-            REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
-                                   "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
-                                   "',species_name ='",database[i,7], "', url ='",database[i,8] ,"',default_db_name ='",database[i,9] 
-                                   ,"' WHERE Feature_name = '",database[i,1],"';" );
-          } else {
-            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, species_name, url, default_db_name) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6:9],"'")),collapse = ","),
-                                   ");")
+          if(nrow(dbGetQuery(con,paste0("select * from chromosomalfeature where feature_name ='",gsub("\'"," Prime", database[i,1]),"';")))!=0){
+            
+            REQUEST_ANNOT = paste0("INSERT INTO ",newTableName," (feature_name ,",paste(columnNewTable, collapse = ","),",cfsource_name ) VALUES ( ", paste0("'", gsub("\'"," Prime", database[i,]),"'",collapse = ","),",'",input$selectSource,"');")
+            
+            tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+                     , error = function(c) {
+                       shinyalert("Error when importing",
+                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."),
+                                  className="alert",
+                                  type = "error")
+                       rv$ERROR = T
+                       rv$ERROR_ALL = T
+                       rv$linesNotSaved = c(rv$linesNotSaved , i)
+                       cat(REQUEST_ANNOT, file= stderr())
+                     },warning = function(c) {
+                       shinyalert("Error when importing",
+                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."),
+                                  className="alert",
+                                  type = "error")
+                       rv$ERROR = T
+                       rv$ERROR_ALL = T
+                       rv$linesNotSaved = c(rv$linesNotSaved , i)
+                       cat(REQUEST_ANNOT, file= stderr())
+                     }
+            )
+            
+            REQUEST_ANNOT = paste0("INSERT INTO annotation (feature_name , annot_table) VALUES ('",gsub("\'"," Prime", database[i,1]), "','",newTableName, "');")
+            
+            dbSendQuery(con, REQUEST_ANNOT)
+            
           }
-          
-          tryCatch(dbSendQuery(con, REQUEST_ANNOT)
-                   , error = function(c) {
-                     shinyalert("Error when importing", 
-                                paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
-                                className="alert",
-                                type = "error")
-                     rv$ERROR = T
-                   },warning = function(c) {
-                     shinyalert("Error when importing", 
-                                paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
-                                className="alert",
-                                type = "error")
-                     rv$ERROR = T
-                   }
-          )
-          
-          if(rv$ERROR == T){
-            break()
-          } 
-          
         }
         
+        
         if(rv$ERROR == F){
-          shinyalert("Congratulations!", 
+          shinyalert("Congratulations!",
                      "The import was successful!",
                      type = "success")
         }
-      })
+      }  
+    })
+    
+  })
+  
+  
+  output$helpImportTypeCF <- renderText({ 
+    if(input$importTypeCF == "main"){
+      "By selecting 'Main information', you choose to enter new chromosomal 
+      features or update existing ones. The table must be composed of 7 columns: feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start coordinate, stop coordinate, 
+      url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142').The selected source will be added as the default database. "
+    } else if (input$importTypeCF == "sup"){
+      "By selecting 'Supplementary information', you choose to import additional information. "
+    }
+  })
+  
+  
+  #.............................................................................
+  # Source 
+  #.............................................................................
+  
+  output$SSUI = renderUI({
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    rv$Source = dbGetQuery(con, "select * from CFSource;")
+    
+    dbDisconnect(con)
+    selectInput('selectSource', NULL, rv$Source[,2])
+  })
+  
+  output$DescriCFSource <- renderText({
+    rv$Source[which(rv$Source[, 2] == input$selectSource), 4]
+  })
+  
+  
+  output$Sup = renderUI({
+    if(input$importTypeCF == "sup"){
+      textInput("sup_name", "Name of table")
+    }
+  })
+  
+  
+  
+  CF = reactiveValues()
+  
+  observeEvent(input$searchButton,{
+    updateTabItems (session, "tabs", selected = "CF_item")
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    CF$main_annotation = dbGetQuery(con, paste0("select * from chromosomalfeature where feature_name ='",input$searchText,"';"))
+    CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
+    CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)[-1]),"</b> : ", CF$main_annotation[1,-1])
+    CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
+    
+    CF$name = input$searchText
+    
+    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
+    
+    
+    for(i in 1:nrow(Sup_tab)){
+      CF$sup_annot = c(CF$sup_annot,
+                       paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   ')
+      )
       
-    } else {
-      shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 8."), type = "error")
+      result = paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   ')
+      if(i == 1){
+        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], result),select = T)
+      } else {
+        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], result),select = F)
+      }
     }
     
     
   })
+  
+  
+  output$title_cf <- renderUI(
+    tagList(
+      div( class = "margeProfile",
+           h1(CF$name),
+           h2("Main information"),
+           HTML(CF$main_annotation),
+           h2("Supplementary information")
+      ))
+  )
+  
+  
+  # output$dynamicTabs <- renderUI({
+  #   tabs <- lapply(CF$test,function(x){
+  #     tabPanel(
+  #       title = paste0(CF$test,'_Tab')
+  #       ,h3(paste0('Tab showing:',CF$test))
+  #       ,textOutput(CF$name) ####### Comment this line and input$selectedTab outputs correctly
+  #       ,value=CF$test
+  #     )
+  #   })
+  #   do.call(tabsetPanel,c(tabs,id='selectedTab'))
+  # })
+  
+  # output$CF_informations = renderUI({
+  #   pg <- dbDriver("PostgreSQL")
+  #   con <- dbConnect(pg, user="docker", password="docker",
+  #                    host=ipDB, port=5432)
+  #   on.exit(dbDisconnect(con))
+  #   
+  #   rv$Source = dbGetQuery(con, "select * from CFSource;")
+  #   Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
+  #   
+  #   
+  #   dbDisconnect(con)
+  #   
+  #   h1(input$searchText)
+  #   tabsetPanel(type = "tabs",
+  #               tabPanel(paste('toto_',1 ), p(input$searchText)))
+  #   
+  #   for(i in 1:nrow(Sup_tab)){
+  #         appendTab(inputId = "tabs",
+  #                   tabPanel(paste('toto_',i ), p(paste('toto_',i )))
+  #         )
+  #       }
+  # })
+  # 
+  
+  
+  
+  # output$CF_informations <- renderUI({ 
+  #   
+  #   pg <- dbDriver("PostgreSQL")
+  #   con <- dbConnect(pg, user="docker", password="docker",
+  #                    host=ipDB, port=5432)
+  #   on.exit(dbDisconnect(con))
+  #   
+  #   h1(rv$gene)
+  #   # 
+  #   # 
+  #   # Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
+  #   # # YAL043C
+  #   # 
+  #   # 
+  #   # tabsetPanel(type = "tabs")
+  #   # 
+  #   # for(i in 1:nrow(Sup_tab)){
+  #   #   appendTab(inputId = "tabs",
+  #   #             tabPanel(paste('toto_',i ), p(paste('toto_',i )))
+  #   #   )
+  #   # }
+  #   
+  #   # Sup_tab[i,1]
+  #   
+  #   # p(paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   '))
+  #   # sup_annot = NULL
+  #   
+  #   # sup_annot = c(sup_annot ,
+  #   #               
+  #   # )
+  #   # 
+  #   # cat(paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   '), file = stderr())
+  #   # 
+  #   
+  #   
+  #   dbDisconnect(con)
+  #   
+  #   
+  #   
+  #   # paste(sup_annot, collapse = "<br> ")
+  # })
+  
   
 }
 
