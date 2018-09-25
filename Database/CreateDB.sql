@@ -42,6 +42,17 @@ INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, passwor
 );
 
 INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, password, lab_country) VALUES (
+  'Pix',
+  'Eler',
+  'pixeler',
+  'pixeler@mail.com',
+  'Pixeler',
+  crypt('pixeler', gen_salt('bf')),
+  'France'
+);
+
+
+INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, password, lab_country) VALUES (
   'Us',
   'er',
   'User',
@@ -61,6 +72,9 @@ CREATE TABLE OmicsUnitType (
   name TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL
 );
+
+INSERT INTO OmicsUnitType (name, description) VALUES ('mRNA', 'This is the (polyadenylated) mRNA transcribed from a gene');
+INSERT INTO OmicsUnitType (name, description) VALUES ('protein', 'This is the protein encoded by a gene');
 
 /*------------------------------------------------------------------------------
 CFSource
