@@ -69,12 +69,13 @@ CFSource
 CREATE TABLE CFSource (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
+  abbreviation TEXT UNIQUE,
   description TEXT NOT NULL,
   url TEXT
 );
 
-INSERT INTO CFSource (name, description, url) VALUES ('Saccharomyces genome database', 'The Saccharomyces Genome Database (SGD) provides comprehensive integrated biological information for the budding yeast Saccharomyces cerevisiae along with search and analysis tools to explore these data, enabling the discovery of functional relationships between sequence and gene products in fungi and higher organisms.', 'https://www.yeastgenome.org/');
-INSERT INTO CFSource (name, description, url) VALUES ('Candida genome database', 'This is the home of the Candida Genome Database, a resource for genomic sequence data and gene and protein information for Candida albicans and related species. CGD is based on the Saccharomyces Genome Database and is funded by the National Institute of Dental & Craniofacial Research at the US National Institutes of Health.', 'http://www.candidagenome.org/');
+INSERT INTO CFSource (name,abbreviation, description, url) VALUES ('Saccharomyces genome database','SGD', 'The Saccharomyces Genome Database (SGD) provides comprehensive integrated biological information for the budding yeast Saccharomyces cerevisiae along with search and analysis tools to explore these data, enabling the discovery of functional relationships between sequence and gene products in fungi and higher organisms.', 'https://www.yeastgenome.org/');
+INSERT INTO CFSource (name,abbreviation, description, url) VALUES ('Candida genome database','CGD', 'This is the home of the Candida Genome Database, a resource for genomic sequence data and gene and protein information for Candida albicans and related species. CGD is based on the Saccharomyces Genome Database and is funded by the National Institute of Dental & Craniofacial Research at the US National Institutes of Health.', 'http://www.candidagenome.org/');
 
 /*------------------------------------------------------------------------------
 Species
@@ -102,8 +103,9 @@ CREATE TABLE ChromosomalFeature (
   chromosome TEXT NOT NULL,
   start_coordinate INTEGER NOT NULL,
   stop_coordinate INTEGER NOT NULL,
-  species_name TEXT,
   strand TEXT,
+  description TEXT,
+  species_name TEXT,
   url TEXT,
   default_db_name TEXT NOT NULL,
   CONSTRAINT fks FOREIGN KEY (species_name) REFERENCES Species (name),
@@ -115,10 +117,8 @@ ChromosomalFeature -- CFSource
 ------------------------------------------------------------------------------*/
 
 CREATE TABLE annotation (
-  CFSource_name TEXT,
   feature_name TEXT,
-  PRIMARY KEY (CFSource_name, feature_name),
-  CONSTRAINT fkcfsource FOREIGN KEY (CFSource_name) REFERENCES CFSource (name),
+  annot_table TEXT,
   CONSTRAINT fkfeature_name FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name)
 );
 

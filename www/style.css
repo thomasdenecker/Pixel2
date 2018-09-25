@@ -9,6 +9,13 @@ General
 .center {
   text-align: center;
 }
+
+div.center{
+  display: inline-block;
+  margin: 0 auto;
+  text-align: center;
+}
+
 #UsersMap div {
   width: auto;
   margin: 0 auto !important;
@@ -37,6 +44,23 @@ div.margeProfile{
   margin-left: 20px;
   margin-right: 20px;
 }
+
+
+button.myBtn {
+  color: white;
+  background: #ff3300;
+  border: 2px solid #cc2900;
+  border-radius: 12px;
+  font-size: 24px;
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 40px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  width: 200px;
+}
+
 
 /*******************************************************************************
 Header
@@ -105,4 +129,20 @@ div.authenfication{
 .tableTitle{
   font-weight: bold;
   text-align: center;
+}
+
+
+
+.border-between > [class*='col-']:before {
+   background: #e3e3e3;
+   bottom: 0;
+   content: " ";
+   left: 0;
+   position: absolute;
+   width: 1px;
+   top: 0;
+}
+
+.border-between > [class*='col-']:first-child:before {
+   display: none;
 }
