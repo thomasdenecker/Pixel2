@@ -269,9 +269,12 @@ server <- function(input, output, session) {
           tabName = "CF_item", 
           h2("Chromosomal feature"),
           fluidRow(
-            uiOutput("title_cf"),
-            div( class = "margeProfile", tabsetPanel(id = "tab_sup_annot"))
-            
+            uiOutput("CF_information"),
+            div( class = "margeProfile", 
+                 tabsetPanel(id = "tab_sup_annot"),
+                 h3("PixelSets"),
+                 h3("Tags") 
+            )
           )),
         
         # Tab content : Explorer
@@ -783,7 +786,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Import in Database', value = 0, {
       if(input$importTypeCF == "main"){
-        if(ncol(database) == 8){
+        if(ncol(database) == 9){
           n <- nrow(database)
           rv$ERROR = F
           for(i in 1:nrow(database)){
@@ -794,10 +797,10 @@ server <- function(input, output, session) {
             if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
               REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
                                      "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
-                                     "',species_name ='",database[i,7], "', url ='",database[i,8] ,"',default_db_name ='",input$selectSource 
+                                     "',description ='",gsub("\'"," Prime",database[i,7]),"',species_name ='",database[i,8], "', url ='",database[i,9] ,"',default_db_name ='",input$selectSource 
                                      ,"' WHERE Feature_name = '",database[i,1],"';" );
             } else {
-              REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, species_name, url, default_db_name) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6:8],"'"),paste0("'",input$selectSource,"'")),collapse = ","),
+              REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_name, url, default_db_name) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'"," Prime",database[i,7]),"'"), paste0("'",database[i,8:9],"'"),paste0("'",input$selectSource,"'")),collapse = ","),
                                      ");")
             }
             
@@ -831,18 +834,23 @@ server <- function(input, output, session) {
           
           
         } else {
-          shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 8."), type = "error")
+          shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 9."), type = "error")
         }
       } else {
         
         # TABLE CREATION
         newTableName <- input$sup_name
-        columnNewTable <- gsub("[[:punct:]]", "",colnames(database)[-1])
-        columnNewTable <- gsub(" ", "_",columnNewTable )
-        
+        columnNewTable <- colnames(database)[-1]
+        # columnNewTable <- gsub("[[:punct:]]", "",colnames(database)[-1] )
+        # cat(paste(1,"  ", columnNewTable,"\n"), file = stderr())
+        # columnNewTable <- gsub(" ", "_",columnNewTable)
+        # cat(paste(2,"  ", columnNewTable,"\n"), file = stderr())
+      
         REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
                         ,", cfsource_name TEXT, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_name) REFERENCES CFSource (name), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
+        
+        
         
         tryCatch(dbSendQuery(con, REQUEST)
                  , error = function(c) {
@@ -917,7 +925,7 @@ server <- function(input, output, session) {
   output$helpImportTypeCF <- renderText({ 
     if(input$importTypeCF == "main"){
       "By selecting 'Main information', you choose to enter new chromosomal 
-      features or update existing ones. The table must be composed of 7 columns: feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start coordinate, stop coordinate, 
+      features or update existing ones. The table must be composed of 8 columns: feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start coordinate, stop coordinate, strand, description, species and
       url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142').The selected source will be added as the default database. "
     } else if (input$importTypeCF == "sup"){
       "By selecting 'Supplementary information', you choose to import additional information. "
@@ -973,23 +981,22 @@ server <- function(input, output, session) {
     
     
     for(i in 1:nrow(Sup_tab)){
-      CF$sup_annot = c(CF$sup_annot,
-                       paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   ')
-      )
       
-      result = paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   ')
+      result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))
+      result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
+      result = paste(result, collapse = "<br>")
+      
       if(i == 1){
-        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], result),select = T)
+        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
       } else {
-        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], result),select = F)
+        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
       }
     }
-    
     
   })
   
   
-  output$title_cf <- renderUI(
+  output$CF_information <- renderUI(
     tagList(
       div( class = "margeProfile",
            h1(CF$name),
@@ -1000,85 +1007,24 @@ server <- function(input, output, session) {
   )
   
   
-  # output$dynamicTabs <- renderUI({
-  #   tabs <- lapply(CF$test,function(x){
-  #     tabPanel(
-  #       title = paste0(CF$test,'_Tab')
-  #       ,h3(paste0('Tab showing:',CF$test))
-  #       ,textOutput(CF$name) ####### Comment this line and input$selectedTab outputs correctly
-  #       ,value=CF$test
-  #     )
-  #   })
-  #   do.call(tabsetPanel,c(tabs,id='selectedTab'))
-  # })
-  
-  # output$CF_informations = renderUI({
-  #   pg <- dbDriver("PostgreSQL")
-  #   con <- dbConnect(pg, user="docker", password="docker",
-  #                    host=ipDB, port=5432)
-  #   on.exit(dbDisconnect(con))
-  #   
-  #   rv$Source = dbGetQuery(con, "select * from CFSource;")
-  #   Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
-  #   
-  #   
-  #   dbDisconnect(con)
-  #   
-  #   h1(input$searchText)
-  #   tabsetPanel(type = "tabs",
-  #               tabPanel(paste('toto_',1 ), p(input$searchText)))
-  #   
-  #   for(i in 1:nrow(Sup_tab)){
-  #         appendTab(inputId = "tabs",
-  #                   tabPanel(paste('toto_',i ), p(paste('toto_',i )))
-  #         )
-  #       }
-  # })
-  # 
-  
-  
-  
-  # output$CF_informations <- renderUI({ 
-  #   
-  #   pg <- dbDriver("PostgreSQL")
-  #   con <- dbConnect(pg, user="docker", password="docker",
-  #                    host=ipDB, port=5432)
-  #   on.exit(dbDisconnect(con))
-  #   
-  #   h1(rv$gene)
-  #   # 
-  #   # 
-  #   # Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
-  #   # # YAL043C
-  #   # 
-  #   # 
-  #   # tabsetPanel(type = "tabs")
-  #   # 
-  #   # for(i in 1:nrow(Sup_tab)){
-  #   #   appendTab(inputId = "tabs",
-  #   #             tabPanel(paste('toto_',i ), p(paste('toto_',i )))
-  #   #   )
-  #   # }
-  #   
-  #   # Sup_tab[i,1]
-  #   
-  #   # p(paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   '))
-  #   # sup_annot = NULL
-  #   
-  #   # sup_annot = c(sup_annot ,
-  #   #               
-  #   # )
-  #   # 
-  #   # cat(paste( unlist(dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))), collapse='   '), file = stderr())
-  #   # 
-  #   
-  #   
-  #   dbDisconnect(con)
-  #   
-  #   
-  #   
-  #   # paste(sup_annot, collapse = "<br> ")
-  # })
+  observe({
+    if(is.null(input$fileCF)){
+      disable("ImportCF")
+    } else if(input$importTypeCF =="sup"){
+      if(is.null(input$sup_name) ){
+        disable("ImportCF")
+      }else {
+        if(input$sup_name == ""){
+          disable("ImportCF")
+        } else {
+          enable("ImportCF")
+        }
+      }
+      
+    } else{
+      enable("ImportCF")
+    }
+  })
   
   
 }

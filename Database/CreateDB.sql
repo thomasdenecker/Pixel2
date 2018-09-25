@@ -104,6 +104,7 @@ CREATE TABLE ChromosomalFeature (
   start_coordinate INTEGER NOT NULL,
   stop_coordinate INTEGER NOT NULL,
   strand TEXT,
+  description TEXT,
   species_name TEXT,
   url TEXT,
   default_db_name TEXT NOT NULL,
