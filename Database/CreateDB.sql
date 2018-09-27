@@ -142,7 +142,7 @@ Strain
 
 CREATE TABLE Strain (
   id SERIAL PRIMARY KEY,
-  name TEXT,
+  name TEXT UNIQUE,
   description TEXT,
   ref TEXT,
   species_name TEXT,
@@ -156,7 +156,7 @@ DataSource
 
 CREATE TABLE DataSource (
   id SERIAL PRIMARY KEY,
-  name TEXT,
+  name TEXT UNIQUE,
   description TEXT,
   published BOOLEAN,
   url TEXT
@@ -167,21 +167,57 @@ OmicsArea
 ------------------------------------------------------------------------------*/
 
 CREATE TABLE OmicsArea (
-    id serial primary key,
+    id TEXT PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    descritpion TEXT,
+    description TEXT,
     path ltree
 );
 
 CREATE INDEX tree_path_idx ON OmicsArea using gist (path);
 CREATE INDEX path_idx ON OmicsArea USING btree(path);
 
-insert into OmicsArea (name, descritpion, path) values ('Area', 'Area', 'Area');
-insert into OmicsArea (name, descritpion, path) values ('Proteomic', 'Proteomics is the large-scale study of proteins.', 'Area.Proteomic');
-insert into OmicsArea (name, descritpion, path) values ('Mass spectrometry', 'Mass spectrometry (MS) is an analytical technique that ionizes chemical species and sorts the ions based on their mass-to-charge ratio.', 'Area.Proteomic.Massspectrometry');
-insert into OmicsArea (name, descritpion, path) values ('Transcriptomic', E'Transcriptomics technologies are the techniques used to study an organism\'s transcriptome, the sum of all of its RNA transcripts.', 'Area.Transcriptomic');
-insert into OmicsArea (name, descritpion, path) values ('Microarray', 'A DNA microarray is a collection of microscopic DNA spots attached to a solid surface.', 'Area.Transcriptomic.Microarray');
-insert into OmicsArea (name, descritpion, path) values ('RNAseq', 'RNA-Seq (RNA sequencing), also called whole transcriptome shotgun sequencing (WTSS), uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample at a given moment.', 'Area.Transcriptomic.RNAseq');
+CREATE TABLE temporaire(
+	id TEXT PRIMARY KEY,
+	name TEXT,
+	description TEXT,
+	idOmicsAreaPere TEXT
+);
+
+insert into temporaire (id, name, description) values ('Area','Area', 'Area');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Proteomic', 'Proteomic', 'Proteomics is the large-scale study of proteins.', 'Area');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Massspectrometry','Mass spectrometry', 'Mass spectrometry (MS) is an analytical technique that ionizes chemical species and sorts the ions based on their mass-to-charge ratio.', 'Proteomic');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Transcriptomic','Transcriptomic', 'Transcriptomics technologies are the techniques used to study an organism s transcriptome, the sum of all of its RNA transcripts.', 'Area');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Microarray', 'Microarray', 'A DNA microarray is a collection of microscopic DNA spots attached to a solid surface.', 'Transcriptomic');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('RNAseq', 'RNAseq', 'RNA-Seq (RNA sequencing), also called whole transcriptome shotgun sequencing (WTSS), uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample at a given moment.', 'Transcriptomic');
+
+insert into OmicsArea WITH RECURSIVE nodes_cte(id, name, description, path) AS (
+ SELECT tn.id, tn.name,tn.description, tn.id::TEXT AS path
+ FROM temporaire AS tn
+ WHERE tn.idOmicsAreaPere IS NULL
+UNION ALL
+ SELECT c.id, c.name, c.description, (p.path || '.' || c.id::TEXT)
+ FROM nodes_cte AS p, temporaire AS c
+ WHERE c.idOmicsAreaPere = p.id
+)
+SELECT id, name, description, text2ltree(path) FROM nodes_cte AS n ORDER BY n.id ASC;
+
+delete from temporaire;
+
+
+ /* Move branch */
+ /*
+update OmicsArea set path = DESTINATION_PATH || subpath(path, nlevel(SOURCE_PATH)-1)
+where path <@ SOURCE_PATH;
+
+
+update OmicsArea set path = 'Area.Proteomic.Massspectrometry' || subpath(path, nlevel('Area.Transcriptomic')-1)
+where path <@ 'Area.Transcriptomic';
+
+*/
+
+ /* Remove branch */
+ delete from OmicsArea where 'Area.Transcriptomic.Microarray' @> path;
+
 
 /*------------------------------------------------------------------------------
 Experiment
@@ -189,10 +225,14 @@ Experiment
 
 CREATE TABLE Experiment (
     id serial primary key,
-    omics_area_name TEXT NOT NULL,
+    omicsAreaName TEXT NOT NULL,
     descritpion TEXT,
     completionDate DATE,
-    CONSTRAINT fkomicsarea FOREIGN KEY (omics_area_name) REFERENCES OmicsArea (name)
+    strainName TEXT,
+    DataSourceName TEXT,
+    CONSTRAINT fkomicsarea FOREIGN KEY (omicsAreaName) REFERENCES OmicsArea (name),
+    CONSTRAINT fkDS FOREIGN KEY (DataSourceName) REFERENCES DataSource (name),
+    CONSTRAINT fkStrain FOREIGN KEY (strainName) REFERENCES Strain (name)
 );
 
 /*------------------------------------------------------------------------------

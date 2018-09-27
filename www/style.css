@@ -124,13 +124,18 @@ div.authenfication{
 
 .inputNew{
   width: 100%;
+  margin: 0 auto;
+  display: inline-block;
+
 }
 
 .tableTitle{
   font-weight: bold;
   text-align: center;
 }
-
+.tableTitle-left{
+  font-weight: bold;
+}
 
 
 .border-between > [class*='col-']:before {
@@ -145,4 +150,21 @@ div.authenfication{
 
 .border-between > [class*='col-']:first-child:before {
    display: none;
+}
+
+
+div.tree{
+
+  width: auto;
+  margin: auto;
+  text-align: center;
+}
+
+
+#treeOmicsArea td {
+  border-color: rgba(255,255,255,0);
+}
+
+.google-visualization-orgchart-linenode {
+  border-color: black !important;
 }

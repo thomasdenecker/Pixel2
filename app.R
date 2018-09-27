@@ -262,6 +262,9 @@ server <- function(input, output, session) {
           tabName = "Submissions", 
           h2("Submissions"),
           fluidRow(
+
+            
+            
             
           )),
         
@@ -336,6 +339,70 @@ server <- function(input, output, session) {
                 DTOutput('DT_AddDataSource'))
             
           )),
+        
+        # Tab content : Add dataSource
+        tabItem(
+          tabName = "AddOmicsArea", 
+          h2("Omics area"),
+          fluidRow(
+            div(class = "table_style",
+                
+                
+                
+                h3("Add Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, "path"), 
+                         column(3, "Description"),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",textInput("Add_OmicsArea_name", NULL, placeholder = "Name"))),
+                  column(3,div(class = "inputNew",uiOutput("Add_OmicsArea_path"))),
+                  column(3,div(class = "inputNew",textInput("Add_OmicsArea_description", NULL, placeholder = "Description"))),
+                  column(3,div(class = "inputNew",actionButton('Add_OmicsArea_btn','Add OmicsArea', icon = icon("plus-circle"))))
+                ),
+                
+                h3("Modify Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, "Path"), 
+                         column(3, "Description"),
+                         column(3, "")
+                ),
+                
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_name"))),
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_path"))),
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_description") )),
+                  column(3,div(class = "inputNew",actionButton('Modify_OmicsArea_btn','Modify OmicsArea', icon = icon("pen"))))
+                  
+                ) ,
+                h3("Delete branch Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, ""), 
+                         column(3, ""),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Delete_branch_OmicsArea"))),
+                  column(3,div(class = "inputNew",actionButton('Delete_branch_OmicsArea_btn','Modify OmicsArea', icon = icon("minus")))),
+                  column(3,""),
+                  column(3,"")
+                ) ,
+                
+                div(class= "tree",
+                    h3(class = 'center', "Organisation of omicsArea"),
+                    htmlOutput("treeOmicsArea")
+                    )
+                
+                
+            )
+          )),
+        
+        # Delete_OmicsArea_btn
+        #   Delete_branch_OmicsArea
         
         # Tab content : Annotation
         tabItem(
@@ -1091,7 +1158,7 @@ server <- function(input, output, session) {
   on.exit(dbDisconnect(con))
   AddRV$OUT = dbGetQuery(con," SELECT * from omicsunittype;")
   AddRV$DataSource = dbGetQuery(con," SELECT * from DataSource;")
-  AddRV$OmicsArea = dbGetQuery(con," SELECT * from OmicsArea;")
+  AddRV$OmicsArea = dbGetQuery(con," SELECT * from OmicsArea ORDER BY path;")
   
   
   #.............................................................................
@@ -1228,8 +1295,6 @@ server <- function(input, output, session) {
     }, ignoreNULL = TRUE)
   })
   
-  # Name_DataSource Description_DataSource Published_DataSource URL_DataSource addDataSource_btn
-  
   observeEvent(input$addDataSource_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM datasource
@@ -1258,7 +1323,224 @@ server <- function(input, output, session) {
       dbDisconnect(con)
     }
   })
- 
+  
+  
+  #.............................................................................
+  # Add OmicsArea
+  #.............................................................................
+  
+  
+  output$Add_OmicsArea_path = renderUI({
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    selectInput('Add_OmicsArea_path_SI', NULL, choices)
+  })
+  
+  
+  observeEvent(input$Add_OmicsArea_btn,{
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM OmicsArea
+                              WHERE name = '",input$Add_OmicsArea_name,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', input$Add_OmicsArea_name),"',
+                            '",input$Add_OmicsArea_name, "','",input$Add_OmicsArea_description, "','",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.'),"');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      
+      shinyalert("Nice!", "A new datasource is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+      
+      choices = AddRV$OmicsArea[,'path']
+      namesChoices = NULL
+      for(c in choices){
+        inter = unlist(strsplit(c, "\\."))
+        if(length(inter) != 1){
+          inter[1:(length(inter)-1)] = " - "
+          
+        }
+        namesChoices = c(namesChoices, paste(inter, collapse = ""))
+      }
+      names(choices) = namesChoices
+      
+      updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+      updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+      textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+      
+      dbDisconnect(con)
+    }
+  })
+  
+  output$Modify_OmicsArea_name = renderUI({
+    selectInput('Modify_OmicsArea_name_SI', NULL, AddRV$OmicsArea[,'name'])
+  })
+  
+  output$Modify_OmicsArea_path = renderUI({
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    selectInput('Modify_OmicsArea_path_SI', NULL, choices)
+  })
+  
+  
+  output$Modify_OmicsArea_description = renderUI({
+    textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+  })
+  
+  observeEvent(input$Modify_OmicsArea_name_SI,{
+    updateSelectInput(session, 'Modify_OmicsArea_path_SI', NULL, selected  = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'path'])
+    
+    updateTextInput(session, 'Modify_OmicsArea_description_TI', value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'])
+  })
+  
+  observeEvent(input$Modify_OmicsArea_btn,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    if( input$Modify_OmicsArea_description_TI != AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] ){
+      dbGetQuery(con, paste0("update OmicsArea set description = '",input$Modify_OmicsArea_description_TI,"' where name = '",input$Modify_OmicsArea_name_SI,"';"))
+    }
+    
+    SOURCE_PATH = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'path']
+    
+    if(input$Modify_OmicsArea_path_SI != SOURCE_PATH){
+      dbGetQuery(con, paste0("update OmicsArea set path = '",input$Modify_OmicsArea_path_SI,"' || subpath(path, nlevel('",SOURCE_PATH,"')-1)
+                where path <@ '",SOURCE_PATH,"';"))
+    }
+    
+    shinyalert("Nice!", "Data modified !"
+               , type = "success")
+    
+    REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+    AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+    
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    
+    updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+    updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+    updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+    updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+    textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+    
+  })
+  
+  observeEvent(input$Delete_branch_OmicsArea_btn,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_delete_OA",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_delete_OA, {
+      if (isTRUE(input$confirm_delete_OA)) {
+        dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
+        
+        REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+        AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+        
+        choices = AddRV$OmicsArea[,'path']
+        namesChoices = NULL
+        for(c in choices){
+          inter = unlist(strsplit(c, "\\."))
+          if(length(inter) != 1){
+            inter[1:(length(inter)-1)] = " - "
+            
+          }
+          namesChoices = c(namesChoices, paste(inter, collapse = ""))
+        }
+        names(choices) = namesChoices
+        
+        updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+        updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+        updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+        updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+        textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+        
+      } else {
+        shinyalert("Cancellation", "Deletion cancelled !"
+                   , type = "warning")
+      }
+      
+    })
+    
+  }
+  )
+  output$Delete_branch_OmicsArea = renderUI({
+    selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+  })
+  
+  output$treeOmicsArea <- renderGvis({
+    firstAncestor = NULL
+    for(p in AddRV$OmicsArea[,'path']){
+      inter = unlist(strsplit(p,"\\."))
+      if(length(inter) == 1){
+        
+        firstAncestor = c(firstAncestor, NA)
+      }else{
+        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == inter[length(inter)-1]),'name'] )
+      }
+    }
+    
+    dataplot = as.data.frame(cbind(AddRV$OmicsArea[,'name'], firstAncestor ,AddRV$OmicsArea[,'description']))
+    colnames(dataplot) = c("Omicsarea", "Parent", "Description")
+    
+    gvisOrgChart(dataplot, 
+                 options=list(size='large', color = "#ffb3b3"))
+    
+    
+    
+  })
   
 }
 
