@@ -148,16 +148,26 @@ server <- function(input, output, session) {
           
           sidebarMenu(id = "tabs",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-                      menuItem("Submissions", tabName = "Submissions", icon = icon("plus-circle")),
-                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")),
-                      menuItem("Chromosomal features", tabName = "CF_item", icon = icon("search")), 
-                      menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
+                      menuItem("Submissions", tabName = "Submissions", icon = icon("upload")),
+                      menuItem("Explorer", tabName = "Explorer", icon = icon("search"),
+                               startExpanded = F,
+                               menuSubItem("Chromosomal feature", tabName = "CF_item"),
+                               menuSubItem("Pixel sets", tabName = "Pixel_sets")
+                      ),
+                      menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
+                               startExpanded = F,
+                               menuSubItem("Chromosomal feature", tabName = "Annotation"),
+                               menuSubItem("Omics unit type", tabName = "AddOUT"), 
+                               menuSubItem("Data source", tabName = "AddDataSource"),
+                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
+                               menuSubItem("Species & strains", tabName = "AddSpecies")
+                      ),
+                      
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
                                menuSubItem("Pixeler", tabName = "Pixeler"),
                                menuSubItem("Pixel", tabName = "Pixel"), 
-                               menuSubItem("Annotation", tabName = "Annotation")),
-                      
+                               menuSubItem("Submissions", tabName = "SubmissionsAdmin")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
           )
@@ -253,6 +263,9 @@ server <- function(input, output, session) {
           tabName = "Submissions", 
           h2("Submissions"),
           fluidRow(
+
+            
+            
             
           )),
         
@@ -277,13 +290,120 @@ server <- function(input, output, session) {
             )
           )),
         
-        # Tab content : Explorer
+        # Tab content : Add omicsUnitType
         tabItem(
-          tabName = "Explorer", 
-          h2("Explorer"),
+          tabName = "AddOUT", 
+          h2("Omics unit type"),
           fluidRow(
+            div(class = "table_style",
+                h3("Add Omics unit type"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"), 
+                         column(2, "Description"), 
+                         column(8, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_OUT", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_OUT", NULL, placeholder = "Description"))),
+                  column(8,div(class = "inputNew",actionButton('addOUT_btn','Add OmicsUnitType', icon = icon("plus-circle"))))
+                ),
+                h3("Modify Omics unit type"),
+                DTOutput('DT_AddOUT'))
             
           )),
+        
+        # Tab content : Add dataSource
+        tabItem(
+          tabName = "AddDataSource", 
+          h2("Data source"),
+          fluidRow(
+            div(class = "table_style",
+                h3("Add data source"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"), 
+                         column(2, "Description"), 
+                         column(2, "published"),
+                         column(2, "URL"),
+                         column(4, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_DataSource", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_DataSource", NULL, placeholder = "Description"))),
+                  column(2,div(class = "inputNew",selectInput("Published_DataSource", NULL,
+                                                              c("TRUE" = "TRUE",
+                                                                "FALSE" = "FALSE")))),
+                  column(2,div(class = "inputNew",textInput("URL_DataSource", NULL, placeholder = "URL"))),
+                  column(4,div(class = "inputNew",actionButton('addDataSource_btn','Add DataSource', icon = icon("plus-circle"))))
+                ),
+                
+                h3("Modify Omics unit type"),
+                DTOutput('DT_AddDataSource'))
+            
+          )),
+        
+        # Tab content : Add dataSource
+        tabItem(
+          tabName = "AddOmicsArea", 
+          h2("Omics area"),
+          fluidRow(
+            div(class = "table_style",
+                
+                
+                
+                h3("Add Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, "path"), 
+                         column(3, "Description"),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",textInput("Add_OmicsArea_name", NULL, placeholder = "Name"))),
+                  column(3,div(class = "inputNew",uiOutput("Add_OmicsArea_path"))),
+                  column(3,div(class = "inputNew",textInput("Add_OmicsArea_description", NULL, placeholder = "Description"))),
+                  column(3,div(class = "inputNew",actionButton('Add_OmicsArea_btn','Add OmicsArea', icon = icon("plus-circle"))))
+                ),
+                
+                h3("Modify Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, "Path"), 
+                         column(3, "Description"),
+                         column(3, "")
+                ),
+                
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_name"))),
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_path"))),
+                  column(3,div(class = "inputNew",uiOutput("Modify_OmicsArea_description") )),
+                  column(3,div(class = "inputNew",actionButton('Modify_OmicsArea_btn','Modify OmicsArea', icon = icon("pen"))))
+                  
+                ) ,
+                h3("Delete branch Omics area"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Name"), 
+                         column(3, ""), 
+                         column(3, ""),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Delete_branch_OmicsArea"))),
+                  column(3,div(class = "inputNew",actionButton('Delete_branch_OmicsArea_btn','Modify OmicsArea', icon = icon("minus")))),
+                  column(3,""),
+                  column(3,"")
+                ) ,
+                
+                div(class= "tree",
+                    h3(class = 'center', "Organisation of omicsArea"),
+                    htmlOutput("treeOmicsArea")
+                    )
+                
+                
+            )
+          )),
+        
+        # Delete_OmicsArea_btn
+        #   Delete_branch_OmicsArea
         
         # Tab content : Annotation
         tabItem(
@@ -364,7 +484,63 @@ server <- function(input, output, session) {
           
         ),
         
-        # Tab content : Explorer
+        
+        # Tab content : Species & strains
+        tabItem(
+          tabName = "AddSpecies",
+          h2("Species"),
+          fluidRow(
+            div(class = "table_style",
+                h3("Add new species"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"),
+                         column(2, "Description"),
+                         column(2, "url"),
+                         column(6, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_Species", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_Species", NULL, placeholder = "Description"))),
+                  column(2,div(class = "inputNew",textInput("URL_Species", NULL, placeholder = "url"))),
+                  column(6,div(class = "inputNew",actionButton('addSpecies_btn','Add species', icon = icon("plus-circle"))))
+                ),
+                h3("Modify species"),
+                DTOutput('DT_AddSpecies'))
+
+          ),
+          
+          h2("Strains"),
+          fluidRow(
+            div(class = "table_style",
+                h3("Add Omics unit type"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"),
+                         column(2, "Description"),
+                         column(2, "Reference"),
+                         column(2, "Species"),
+                         column(4, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_Strain", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_Strain", NULL, placeholder = "Description"))),
+                  column(2,div(class = "inputNew",textInput("Ref_Strain", NULL, placeholder = "Reference"))),
+                  column(2,div(class = "inputNew",uiOutput("Species_Strain"))),
+                  column(4,div(class = "inputNew",actionButton('addStrain_btn','Add strain', icon = icon("plus-circle"))))
+                ),
+                h3("Modify strain"),
+                DTOutput('DT_AddStrain'))
+            
+          )
+          
+          
+          
+          
+          ),
+        
+        
+        
+        
+        # Tab content : Pixeler
         tabItem(
           tabName = "Pixeler", 
           h2("Pixeler"),
@@ -395,12 +571,14 @@ server <- function(input, output, session) {
                                                             selected = "France"))),
                 column(2,div(class = "inputNew",selectInput("UserType", NULL,
                                                             c("Admin" = "Admin",
+                                                              "Pixeler" = "Pixeler", 
                                                               "User" = "User"))))
               ),
               actionButton('addUser', class = "pull-right",
                            'Add pixeler', icon = icon("plus-circle"))
               
           )),
+        
         # Tab content : Pixel_sets
         tabItem(
           tabName = "Profile", 
@@ -845,7 +1023,7 @@ server <- function(input, output, session) {
         # cat(paste(1,"  ", columnNewTable,"\n"), file = stderr())
         # columnNewTable <- gsub(" ", "_",columnNewTable)
         # cat(paste(2,"  ", columnNewTable,"\n"), file = stderr())
-      
+        
         REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
                         ,", cfsource_name TEXT, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_name) REFERENCES CFSource (name), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
@@ -1025,6 +1203,581 @@ server <- function(input, output, session) {
       enable("ImportCF")
     }
   })
+  
+  #-----------------------------------------------------------------------------
+  # Add information
+  #-----------------------------------------------------------------------------
+  
+  AddRV = reactiveValues()
+  pg <- dbDriver("PostgreSQL")
+  con <- dbConnect(pg, user="docker", password="docker",
+                   host=ipDB, port=5432)
+  on.exit(dbDisconnect(con))
+  AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
+  AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
+  AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
+  AddRV$Species = dbGetQuery(con,"SELECT * from species;")
+  AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
+  
+  #.............................................................................
+  # Add OUT
+  #.............................................................................
+  
+  output$DT_AddOUT <- renderDT(AddRV$OUT, selection = 'none', 
+                               editable = TRUE,
+                               options = list(scrollX = TRUE))
+  
+  
+  # Edit OUT
+  
+  proxyOUT = dataTableProxy('DT_AddOUT')
+  
+  observeEvent(input$DT_AddOUT_cell_edit, {
+    info = input$DT_AddOUT_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_OUT",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$OUT[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_modif_OUT, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_OUT)) {
+          AddRV$OUT[i, j] <<- DT::coerceValue(v, AddRV$OUT[i, j])
+          replaceData(proxyOUT, AddRV$OUT, resetPaging = F)  # important
+          
+          REQUEST = paste0("UPDATE omicsunittype SET ",colnames(AddRV$OUT)[j] ," = '",
+                           AddRV$OUT[i, j],"' WHERE id =",AddRV$OUT[i, 1],";")
+          
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        } 
+      }else {
+        AddRV$OUT[i, j] <<- DT::coerceValue(AddRV$OUT[i, j], AddRV$OUT[i, j])
+        replaceData(proxyOUT, AddRV$OUT, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+  
+  
+  observeEvent(input$addOUT_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM omicsunittype
+                              WHERE name = '",input$Name_OUT,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This OmicsUnitType is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO omicsunittype (name, description) VALUES (
+                            '",input$Name_OUT, "',
+                            '",input$Description_OUT, "');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new OmicsUnitType is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM OmicsUnitType;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$OUT = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+  })
+  
+  
+  #.............................................................................
+  # Add Datasource
+  #.............................................................................
+  
+  output$DT_AddDataSource <- renderDT(AddRV$DataSource, selection = 'none', 
+                                      editable = TRUE,
+                                      options = list(scrollX = TRUE))
+  
+  
+  # Edit OUT
+  
+  proxyDS = dataTableProxy('DT_AddDataSource')
+  
+  observeEvent(input$DT_AddDataSource_cell_edit, {
+    info = input$DT_AddDataSource_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_DS",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$DataSource[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_modif_DS, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_DS)) {
+          AddRV$DataSource[i, j] <<- DT::coerceValue(v, AddRV$DataSource[i, j])
+          replaceData(proxyDS, AddRV$DataSource, resetPaging = F)  # important
+          
+          REQUEST = paste0("UPDATE datasource SET ",colnames(AddRV$DataSource)[j] ," = '",
+                           AddRV$DataSource[i, j],"' WHERE id =",AddRV$DataSource[i, 1],";")
+          
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        } 
+      }else {
+        AddRV$DataSource[i, j] <<- DT::coerceValue(AddRV$DataSource[i, j], AddRV$DataSource[i, j])
+        replaceData(proxyDS, AddRV$DataSource, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+  
+  observeEvent(input$addDataSource_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM datasource
+                              WHERE name = '",input$Name_DataSource,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO datasource (name, description, published, url) VALUES (
+                            '",input$Name_DataSource, "','",input$Description_DataSource, "','",input$Published_DataSource, "','",input$URL_DataSource, "');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new datasource is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM datasource;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$DataSource = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+  })
+  
+  
+  #.............................................................................
+  # Add OmicsArea
+  #.............................................................................
+  
+  
+  output$Add_OmicsArea_path = renderUI({
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    selectInput('Add_OmicsArea_path_SI', NULL, choices)
+  })
+  
+  
+  observeEvent(input$Add_OmicsArea_btn,{
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM OmicsArea
+                              WHERE name = '",input$Add_OmicsArea_name,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', input$Add_OmicsArea_name),"',
+                            '",input$Add_OmicsArea_name, "','",input$Add_OmicsArea_description, "','",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.'),"');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      
+      shinyalert("Nice!", "A new datasource is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+      
+      choices = AddRV$OmicsArea[,'path']
+      namesChoices = NULL
+      for(c in choices){
+        inter = unlist(strsplit(c, "\\."))
+        if(length(inter) != 1){
+          inter[1:(length(inter)-1)] = " - "
+          
+        }
+        namesChoices = c(namesChoices, paste(inter, collapse = ""))
+      }
+      names(choices) = namesChoices
+      
+      updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+      updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+      textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+      
+      dbDisconnect(con)
+    }
+  })
+  
+  output$Modify_OmicsArea_name = renderUI({
+    selectInput('Modify_OmicsArea_name_SI', NULL, AddRV$OmicsArea[,'name'])
+  })
+  
+  output$Modify_OmicsArea_path = renderUI({
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    selectInput('Modify_OmicsArea_path_SI', NULL, choices)
+  })
+  
+  
+  output$Modify_OmicsArea_description = renderUI({
+    textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+  })
+  
+  observeEvent(input$Modify_OmicsArea_name_SI,{
+    updateSelectInput(session, 'Modify_OmicsArea_path_SI', NULL, selected  = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'path'])
+    
+    updateTextInput(session, 'Modify_OmicsArea_description_TI', value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'])
+  })
+  
+  observeEvent(input$Modify_OmicsArea_btn,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    if( input$Modify_OmicsArea_description_TI != AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] ){
+      dbGetQuery(con, paste0("update OmicsArea set description = '",input$Modify_OmicsArea_description_TI,"' where name = '",input$Modify_OmicsArea_name_SI,"';"))
+    }
+    
+    SOURCE_PATH = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'path']
+    
+    if(input$Modify_OmicsArea_path_SI != SOURCE_PATH){
+      dbGetQuery(con, paste0("update OmicsArea set path = '",input$Modify_OmicsArea_path_SI,"' || subpath(path, nlevel('",SOURCE_PATH,"')-1)
+                where path <@ '",SOURCE_PATH,"';"))
+    }
+    
+    shinyalert("Nice!", "Data modified !"
+               , type = "success")
+    
+    REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+    AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+    
+    choices = AddRV$OmicsArea[,'path']
+    namesChoices = NULL
+    for(c in choices){
+      inter = unlist(strsplit(c, "\\."))
+      if(length(inter) != 1){
+        inter[1:(length(inter)-1)] = " - "
+        
+      }
+      namesChoices = c(namesChoices, paste(inter, collapse = ""))
+    }
+    names(choices) = namesChoices
+    
+    updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+    updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+    updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+    updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+    textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+    
+  })
+  
+  observeEvent(input$Delete_branch_OmicsArea_btn,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_delete_OA",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_delete_OA, {
+      if (isTRUE(input$confirm_delete_OA)) {
+        dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
+        
+        REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+        AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+        
+        choices = AddRV$OmicsArea[,'path']
+        namesChoices = NULL
+        for(c in choices){
+          inter = unlist(strsplit(c, "\\."))
+          if(length(inter) != 1){
+            inter[1:(length(inter)-1)] = " - "
+            
+          }
+          namesChoices = c(namesChoices, paste(inter, collapse = ""))
+        }
+        names(choices) = namesChoices
+        
+        updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+        updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+        updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+        updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+        textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+        
+      } else {
+        shinyalert("Cancellation", "Deletion cancelled !"
+                   , type = "warning")
+      }
+      
+    })
+    
+  }
+  )
+  output$Delete_branch_OmicsArea = renderUI({
+    selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+  })
+  
+  output$treeOmicsArea <- renderGvis({
+    firstAncestor = NULL
+    for(p in AddRV$OmicsArea[,'path']){
+      inter = unlist(strsplit(p,"\\."))
+      if(length(inter) == 1){
+        
+        firstAncestor = c(firstAncestor, NA)
+      }else{
+        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == inter[length(inter)-1]),'name'] )
+      }
+    }
+    
+    dataplot = as.data.frame(cbind(AddRV$OmicsArea[,'name'], firstAncestor ,AddRV$OmicsArea[,'description']))
+    colnames(dataplot) = c("Omicsarea", "Parent", "Description")
+    
+    gvisOrgChart(dataplot, 
+                 options=list(size='large', color = "#ffb3b3"))
+    
+    
+    
+  })
+  
+  
+
+  #.............................................................................
+  # Add Species
+  #.............................................................................
+
+  output$DT_AddSpecies <- renderDT(AddRV$Species, selection = 'none',
+                               editable = TRUE,
+                               options = list(scrollX = TRUE))
+
+
+  # Edit OUT
+
+  proxySpecies = dataTableProxy('DT_AddSpecies')
+
+  observeEvent(input$DT_AddSpecies_cell_edit, {
+    info = input$DT_AddSpecies_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_Species",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$Species[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+
+    observeEvent(input$confirm_modif_Species, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_Species)) {
+          AddRV$Species[i, j] <<- DT::coerceValue(v, AddRV$Species[i, j])
+          replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
+
+          REQUEST = paste0("UPDATE species SET ",colnames(AddRV$Species)[j] ," = '",
+                           AddRV$Species[i, j],"' WHERE id =",AddRV$Species[i, 1],";")
+
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        }
+      }else {
+        AddRV$Species[i, j] <<- DT::coerceValue(AddRV$Species[i, j], AddRV$Species[i, j])
+        replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+
+
+  observeEvent(input$addSpecies_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM species
+                              WHERE name = '",input$Name_Species,"';")
+
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This species is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
+                            '",input$Name_Species, "',
+                            '",input$Description_Species, "',
+                            '",input$URL_Species, "');")
+
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new species is in the database"
+                 , type = "success")
+
+      REQUEST = "SELECT * FROM species;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$Species = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+      
+      
+      updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
+    }
+  })
+  
+  
+  
+  #.............................................................................
+  # Add Strain
+  #.............................................................................
+  
+  output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
+                                   editable = TRUE,
+                                   options = list(scrollX = TRUE))
+  
+  
+  # Edit OUT
+  
+  proxyStrain = dataTableProxy('DT_AddStrain')
+  
+  observeEvent(input$DT_AddStrain_cell_edit, {
+    info = input$DT_AddStrain_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_Strain",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$Strain[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_modif_Strain, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_Strain)) {
+          AddRV$Strain[i, j] <<- DT::coerceValue(v, AddRV$Strain[i, j])
+          replaceData(proxyStrain, AddRV$Strain, resetPaging = F)  # important
+          
+          REQUEST = paste0("UPDATE strain SET ",colnames(AddRV$Strain)[j] ," = '",
+                           AddRV$Strain[i, j],"' WHERE id =",AddRV$Strain[i, 1],";")
+          
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        }
+      }else {
+        AddRV$Strain[i, j] <<- DT::coerceValue(AddRV$Strain[i, j], AddRV$Strain[i, j])
+        replaceData(proxyStrain, AddRV$Strain, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+  
+  
+  observeEvent(input$addStrain_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM strain
+                              WHERE name = '",input$Name_Strain,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This strain is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO strain (name, description, ref, species_name) VALUES (
+                            '",input$Name_Strain, "',
+                            '",input$Description_Strain, "',
+                            '",input$Ref_Strain, "',
+                            '",input$Species_Strain_SI, "');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new strain is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM strain;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$Strain = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+  })
+  
+  output$Species_Strain = renderUI({
+    selectInput('Species_Strain_SI', NULL, AddRV$Species[,'name'])
+  })
+
   
   
 }
