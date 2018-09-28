@@ -261,13 +261,40 @@ server <- function(input, output, session) {
         # Tab content : Submissions
         tabItem(
           tabName = "Submissions", 
-          h2("Submissions"),
-          fluidRow(
-
-            
-            
-            
-          )),
+          div(class = "table_style",
+              h2("Submissions"),
+              fluidRow(
+                h3("Experiment"),
+                p("This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
+                h4("Description"),
+                textAreaInput('submission_Exp_description', NULL, resize = "vertical"),
+                h4("Completion date"),
+                selectInput(
+                  inputId = "year",
+                  label = NULL,
+                  c(2000, as.integer(format(Sys.Date(), "%Y")))
+                ),
+                h4('Omics area'),
+                uiOutput("Submission_Exp_omicsArea"),
+                h4('Data source'),
+                uiOutput("Submission_Exp_dataSource"),
+                h4('Stain'),
+                uiOutput("Submission_Exp_Strain"),
+                h4('Tag'),
+                fluidRow(
+                  column(6,uiOutput("Submission_Exp_tags")),
+                  column(6,textInput("Submission_Exp_tags_NewName", NULL, placeholder = "Name"),
+                         textInput("Submission_Exp_tags_NewDescription", NULL, placeholder = "Description"),
+                         actionButton("Submission_Exp_tags_Newbtn", "Add tag"))
+                ),
+                
+                h3("Analysis"),
+                p("This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process.")
+                
+                
+                
+                
+              ))),
         
         # Tab content : Pixel_sets
         tabItem(
@@ -396,7 +423,7 @@ server <- function(input, output, session) {
                 div(class= "tree",
                     h3(class = 'center', "Organisation of omicsArea"),
                     htmlOutput("treeOmicsArea")
-                    )
+                )
                 
                 
             )
@@ -506,7 +533,7 @@ server <- function(input, output, session) {
                 ),
                 h3("Modify species"),
                 DTOutput('DT_AddSpecies'))
-
+            
           ),
           
           h2("Strains"),
@@ -535,7 +562,7 @@ server <- function(input, output, session) {
           
           
           
-          ),
+        ),
         
         
         
@@ -1601,27 +1628,27 @@ server <- function(input, output, session) {
   })
   
   
-
+  
   #.............................................................................
   # Add Species
   #.............................................................................
-
+  
   output$DT_AddSpecies <- renderDT(AddRV$Species, selection = 'none',
-                               editable = TRUE,
-                               options = list(scrollX = TRUE))
-
-
+                                   editable = TRUE,
+                                   options = list(scrollX = TRUE))
+  
+  
   # Edit OUT
-
+  
   proxySpecies = dataTableProxy('DT_AddSpecies')
-
+  
   observeEvent(input$DT_AddSpecies_cell_edit, {
     info = input$DT_AddSpecies_cell_edit
     str(info)
     i = info$row
     j = info$col
     v = info$value
-
+    
     confirmSweetAlert(
       session = session,
       inputId = "confirm_modif_Species",
@@ -1630,16 +1657,16 @@ server <- function(input, output, session) {
       text = paste(AddRV$Species[i, j], "->", v ),
       danger_mode = TRUE
     )
-
+    
     observeEvent(input$confirm_modif_Species, {
       if(j != 1){
         if (isTRUE(input$confirm_modif_Species)) {
           AddRV$Species[i, j] <<- DT::coerceValue(v, AddRV$Species[i, j])
           replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
-
+          
           REQUEST = paste0("UPDATE species SET ",colnames(AddRV$Species)[j] ," = '",
                            AddRV$Species[i, j],"' WHERE id =",AddRV$Species[i, 1],";")
-
+          
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
                            host=ipDB, port=5432)
@@ -1652,17 +1679,17 @@ server <- function(input, output, session) {
       }
     }, ignoreNULL = TRUE)
   })
-
-
+  
+  
   observeEvent(input$addSpecies_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM species
                               WHERE name = '",input$Name_Species,"';")
-
+    
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
-
+    
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       shinyalert("Oops!", "This species is already in the database", type = "error")
     } else {
@@ -1670,12 +1697,12 @@ server <- function(input, output, session) {
                             '",input$Name_Species, "',
                             '",input$Description_Species, "',
                             '",input$URL_Species, "');")
-
+      
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
       shinyalert("Nice!", "A new species is in the database"
                  , type = "success")
-
+      
       REQUEST = "SELECT * FROM species;"
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -1695,8 +1722,8 @@ server <- function(input, output, session) {
   #.............................................................................
   
   output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
-                                   editable = TRUE,
-                                   options = list(scrollX = TRUE))
+                                  editable = TRUE,
+                                  options = list(scrollX = TRUE))
   
   
   # Edit OUT
@@ -1777,8 +1804,72 @@ server <- function(input, output, session) {
   output$Species_Strain = renderUI({
     selectInput('Species_Strain_SI', NULL, AddRV$Species[,'name'])
   })
-
   
+  #=============================================================================
+  # Submission
+  #=============================================================================
+  
+  #-----------------------------------------------------------------------------
+  # Experiment
+  #-----------------------------------------------------------------------------
+  
+  output$Submission_Exp_omicsArea = renderUI({
+    selectInput('Submission_Exp_omicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+  })
+  
+  output$Submission_Exp_dataSource = renderUI({
+    selectInput('Submission_Exp_dataSource_SI', NULL, AddRV$DataSource[,'name'])
+  })
+  
+  output$Submission_Exp_Strain = renderUI({
+    selectInput('Submission_Exp_Strain_SI', NULL, AddRV$Strain[,'name'])
+  })
+  
+  TAG = reactiveValues()
+  pg <- dbDriver("PostgreSQL")
+  con <- dbConnect(pg, user="docker", password="docker",
+                   host=ipDB, port=5432)
+  REQUEST = paste0("select * from tag;")
+  TAG$table = dbGetQuery(con, REQUEST)
+  dbDisconnect(con)
+  
+  output$Submission_Exp_tags = renderUI({
+    checkboxGroupInput("Submission_Exp_tags_CBG", NULL,
+                       choices = TAG$table[,"name"], inline = T)
+    
+  })
+  
+  observeEvent(input$Submission_Exp_tags_Newbtn,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                                FROM tag
+                              WHERE name = '",input$Submission_Exp_tags_NewName,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This user is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",input$Submission_Exp_tags_NewName, "',
+                            '",input$Submission_Exp_tags_NewDescription, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      shinyalert("Nice!", "A new pixeler is in the database"
+                 , type = "success")
+      
+      
+      REQUEST = paste0("select * from tag;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"Submission_Exp_tags_NewName",value = "")
+    updateTextInput(session,"Submission_Exp_tags_NewDescription",value = "")
+    dbDisconnect(con)
+  })
   
 }
 
