@@ -159,7 +159,8 @@ server <- function(input, output, session) {
                                menuSubItem("Chromosomal feature", tabName = "Annotation"),
                                menuSubItem("Omics unit type", tabName = "AddOUT"), 
                                menuSubItem("Data source", tabName = "AddDataSource"),
-                               menuSubItem("Omics area", tabName = "AddOmicsArea")
+                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
+                               menuSubItem("Species & strains", tabName = "AddSpecies")
                       ),
                       
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
@@ -482,6 +483,62 @@ server <- function(input, output, session) {
           actionButton(inputId = "ImportCF", label = "Import", class= "myBtn" , icon = icon("upload"))
           
         ),
+        
+        
+        # Tab content : Species & strains
+        tabItem(
+          tabName = "AddSpecies",
+          h2("Species"),
+          fluidRow(
+            div(class = "table_style",
+                h3("Add new species"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"),
+                         column(2, "Description"),
+                         column(2, "url"),
+                         column(6, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_Species", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_Species", NULL, placeholder = "Description"))),
+                  column(2,div(class = "inputNew",textInput("URL_Species", NULL, placeholder = "url"))),
+                  column(6,div(class = "inputNew",actionButton('addSpecies_btn','Add species', icon = icon("plus-circle"))))
+                ),
+                h3("Modify species"),
+                DTOutput('DT_AddSpecies'))
+
+          ),
+          
+          h2("Strains"),
+          fluidRow(
+            div(class = "table_style",
+                h3("Add Omics unit type"),
+                fluidRow(class= "tableTitle",
+                         column(2, "Name"),
+                         column(2, "Description"),
+                         column(2, "Reference"),
+                         column(2, "Species"),
+                         column(4, "")
+                ),
+                fluidRow(
+                  column(2,div(class = "inputNew",textInput("Name_Strain", NULL, placeholder = "Name"))),
+                  column(2,div(class = "inputNew",textInput("Description_Strain", NULL, placeholder = "Description"))),
+                  column(2,div(class = "inputNew",textInput("Ref_Strain", NULL, placeholder = "Reference"))),
+                  column(2,div(class = "inputNew",uiOutput("Species_Strain"))),
+                  column(4,div(class = "inputNew",actionButton('addStrain_btn','Add strain', icon = icon("plus-circle"))))
+                ),
+                h3("Modify strain"),
+                DTOutput('DT_AddStrain'))
+            
+          )
+          
+          
+          
+          
+          ),
+        
+        
+        
         
         # Tab content : Pixeler
         tabItem(
@@ -1156,10 +1213,11 @@ server <- function(input, output, session) {
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
   on.exit(dbDisconnect(con))
-  AddRV$OUT = dbGetQuery(con," SELECT * from omicsunittype;")
-  AddRV$DataSource = dbGetQuery(con," SELECT * from DataSource;")
-  AddRV$OmicsArea = dbGetQuery(con," SELECT * from OmicsArea ORDER BY path;")
-  
+  AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
+  AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
+  AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
+  AddRV$Species = dbGetQuery(con,"SELECT * from species;")
+  AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
   
   #.............................................................................
   # Add OUT
@@ -1541,6 +1599,186 @@ server <- function(input, output, session) {
     
     
   })
+  
+  
+
+  #.............................................................................
+  # Add Species
+  #.............................................................................
+
+  output$DT_AddSpecies <- renderDT(AddRV$Species, selection = 'none',
+                               editable = TRUE,
+                               options = list(scrollX = TRUE))
+
+
+  # Edit OUT
+
+  proxySpecies = dataTableProxy('DT_AddSpecies')
+
+  observeEvent(input$DT_AddSpecies_cell_edit, {
+    info = input$DT_AddSpecies_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_Species",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$Species[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+
+    observeEvent(input$confirm_modif_Species, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_Species)) {
+          AddRV$Species[i, j] <<- DT::coerceValue(v, AddRV$Species[i, j])
+          replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
+
+          REQUEST = paste0("UPDATE species SET ",colnames(AddRV$Species)[j] ," = '",
+                           AddRV$Species[i, j],"' WHERE id =",AddRV$Species[i, 1],";")
+
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        }
+      }else {
+        AddRV$Species[i, j] <<- DT::coerceValue(AddRV$Species[i, j], AddRV$Species[i, j])
+        replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+
+
+  observeEvent(input$addSpecies_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM species
+                              WHERE name = '",input$Name_Species,"';")
+
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This species is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
+                            '",input$Name_Species, "',
+                            '",input$Description_Species, "',
+                            '",input$URL_Species, "');")
+
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new species is in the database"
+                 , type = "success")
+
+      REQUEST = "SELECT * FROM species;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$Species = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+      
+      
+      updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
+    }
+  })
+  
+  
+  
+  #.............................................................................
+  # Add Strain
+  #.............................................................................
+  
+  output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
+                                   editable = TRUE,
+                                   options = list(scrollX = TRUE))
+  
+  
+  # Edit OUT
+  
+  proxyStrain = dataTableProxy('DT_AddStrain')
+  
+  observeEvent(input$DT_AddStrain_cell_edit, {
+    info = input$DT_AddStrain_cell_edit
+    str(info)
+    i = info$row
+    j = info$col
+    v = info$value
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_Strain",
+      type = "warning",
+      title = "Want to confirm ?",
+      text = paste(AddRV$Strain[i, j], "->", v ),
+      danger_mode = TRUE
+    )
+    
+    observeEvent(input$confirm_modif_Strain, {
+      if(j != 1){
+        if (isTRUE(input$confirm_modif_Strain)) {
+          AddRV$Strain[i, j] <<- DT::coerceValue(v, AddRV$Strain[i, j])
+          replaceData(proxyStrain, AddRV$Strain, resetPaging = F)  # important
+          
+          REQUEST = paste0("UPDATE strain SET ",colnames(AddRV$Strain)[j] ," = '",
+                           AddRV$Strain[i, j],"' WHERE id =",AddRV$Strain[i, 1],";")
+          
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
+        }
+      }else {
+        AddRV$Strain[i, j] <<- DT::coerceValue(AddRV$Strain[i, j], AddRV$Strain[i, j])
+        replaceData(proxyStrain, AddRV$Strain, resetPaging = F)  # important
+      }
+    }, ignoreNULL = TRUE)
+  })
+  
+  
+  observeEvent(input$addStrain_btn, {
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM strain
+                              WHERE name = '",input$Name_Strain,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      shinyalert("Oops!", "This strain is already in the database", type = "error")
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO strain (name, description, ref, species_name) VALUES (
+                            '",input$Name_Strain, "',
+                            '",input$Description_Strain, "',
+                            '",input$Ref_Strain, "',
+                            '",input$Species_Strain_SI, "');")
+      
+      dbGetQuery(con, REQUESTE_ADD)
+      dbDisconnect(con)
+      shinyalert("Nice!", "A new strain is in the database"
+                 , type = "success")
+      
+      REQUEST = "SELECT * FROM strain;"
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      AddRV$Strain = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+  })
+  
+  output$Species_Strain = renderUI({
+    selectInput('Species_Strain_SI', NULL, AddRV$Species[,'name'])
+  })
+
+  
   
 }
 
