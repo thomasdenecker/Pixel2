@@ -102,7 +102,7 @@ server <- function(input, output, session) {
       
       REQUEST = paste0("SELECT * 
             FROM pixeler
-            WHERE ( email = '",Username,"' or user_name = '",Username,"') 
+            WHERE user_name = '",Username,"'
             AND password = crypt('",Password,"', password);")
       
       pg <- dbDriver("PostgreSQL")
@@ -264,37 +264,84 @@ server <- function(input, output, session) {
           div(class = "table_style",
               h2("Submissions"),
               fluidRow(
-                h3("Experiment"),
-                p("This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
-                h4("Description"),
-                textAreaInput('submission_Exp_description', NULL, resize = "vertical"),
-                h4("Completion date"),
-                selectInput(
-                  inputId = "year",
-                  label = NULL,
-                  c(2000, as.integer(format(Sys.Date(), "%Y")))
-                ),
-                h4('Omics area'),
-                uiOutput("Submission_Exp_omicsArea"),
-                h4('Data source'),
-                uiOutput("Submission_Exp_dataSource"),
-                h4('Stain'),
-                uiOutput("Submission_Exp_Strain"),
-                h4('Tag'),
-                fluidRow(
-                  column(6,uiOutput("Submission_Exp_tags")),
-                  column(6,textInput("Submission_Exp_tags_NewName", NULL, placeholder = "Name"),
-                         textInput("Submission_Exp_tags_NewDescription", NULL, placeholder = "Description"),
-                         actionButton("Submission_Exp_tags_Newbtn", "Add tag"))
-                ),
+                column(6,
+                       
+                       h3("Experiment"),
+                       p("This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
+                       h4("Description"),
+                       textAreaInput('submission_Exp_description', NULL, resize = "vertical", width ='100%' ),
+                       h4("Completion date"),
+                       selectInput(
+                         inputId = "submission_Exp_completionDate",
+                         label = NULL,
+                         2000:as.integer(format(Sys.Date(), "%Y"))
+                       ),
+                       h4('Omics area'),
+                       uiOutput("Submission_Exp_omicsArea"),
+                       h4('Data source'),
+                       uiOutput("Submission_Exp_dataSource"),
+                       h4('Stain'),
+                       uiOutput("Submission_Exp_Strain")
+                       
+                ), 
+                column(6,
+                       h3("Analysis"),
+                       p("This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process."),
+                       h4("Description"),
+                       textAreaInput('submission_Analysis_description', NULL, resize = "vertical"),
+                       h4("Completion date"),
+                       selectInput(
+                         inputId = "submission_Analysis_completionDate",
+                         label = NULL,
+                         2000:as.integer(format(Sys.Date(), "%Y"))
+                       ),
+                       h4('Notebook'),
+                       fileInput("submission_Analysis_notebook",label = NULL,
+                                 buttonLabel = "Browse...",
+                                 placeholder = "No file selected"),
+                       
+                       h4('Secondary data file'),
+                       
+                       fileInput("submission_Analysis_secondary_data",label = NULL,
+                                 buttonLabel = "Browse...",
+                                 placeholder = "No file selected")
+                )
                 
-                h3("Analysis"),
-                p("This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process.")
-                
-                
-                
-                
-              ))),
+              ),
+              
+              fluidRow(
+                h3("Tags", class='center'),
+                column(4,h4("Experiment tags"), uiOutput("Submission_Exp_tags")),
+                column(4,h4("Add new tag"),
+                       textInput("Submission_tags_NewName", NULL, placeholder = "Name"),
+                       textInput("Submission_tags_NewDescription", NULL, placeholder = "Description"),
+                       actionButton("Submission_Exp_tags_Newbtn", "Add tag")),
+                column(4,h4("Analysis tags"),uiOutput("Submission_Analysis_tags"))
+              ),
+              
+              h3("Pixel data sets"),
+              p("This section lists and describes each pixel datasets to be imported in the system. These files have to be associated to the secondary datafile (and the notebook datafile if available) during the import process. A specific comment can be added for each set of Pixel to better describe their differences."),
+              selectInput(
+                inputId = "submission_pixelSet_nbr",
+                label = NULL,
+                1:10
+              ),
+              tabsetPanel(id = "tab_PixelSets"),
+              
+              #submission_pixelSet_nbr
+              #tab_PixelSets
+              # h4("Name"),
+              # textInput('submission_pixelSet_name', NULL),
+              # h4("Description"),
+              # textAreaInput('submission_pixelSet_description', NULL, resize = "vertical"),
+              # fileInput("submission_pixelSet_file",label = NULL,
+              #           buttonLabel = "Browse...",
+              #           placeholder = "No file selected"),
+              
+              
+              actionButton("Submission", "Submission")
+              
+          )),
         
         # Tab content : Pixel_sets
         tabItem(
@@ -539,7 +586,7 @@ server <- function(input, output, session) {
           h2("Strains"),
           fluidRow(
             div(class = "table_style",
-                h3("Add Omics unit type"),
+                h3("Add strain"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"),
                          column(2, "Description"),
@@ -1168,8 +1215,16 @@ server <- function(input, output, session) {
   
   
   CF = reactiveValues()
-  
+  CF$sup_id = NULL 
   observeEvent(input$searchButton,{
+    
+    if(!is.null(CF$sup_id)){
+      for(i in CF$sup_id){
+        removeTab("tab_sup_annot", i)
+      }
+      CF$sup_id = NULL 
+    }
+    
     updateTabItems (session, "tabs", selected = "CF_item")
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -1196,6 +1251,8 @@ server <- function(input, output, session) {
       } else {
         appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
       }
+      
+      CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
     }
     
   })
@@ -1814,15 +1871,30 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   output$Submission_Exp_omicsArea = renderUI({
-    selectInput('Submission_Exp_omicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+    if(nrow(AddRV$OmicsArea) != 0){
+      selectInput('Submission_Exp_omicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+    } else {
+      p(class="warning","No saved Omicsarea")
+    }
+    
   })
   
   output$Submission_Exp_dataSource = renderUI({
-    selectInput('Submission_Exp_dataSource_SI', NULL, AddRV$DataSource[,'name'])
+    if(nrow(AddRV$DataSource) !=0){
+      selectInput('Submission_Exp_dataSource_SI', NULL, AddRV$DataSource[,'name'])
+    } else {
+      p(class="warning","No saved data sources")
+    }
   })
   
   output$Submission_Exp_Strain = renderUI({
-    selectInput('Submission_Exp_Strain_SI', NULL, AddRV$Strain[,'name'])
+    
+    if(nrow(AddRV$Strain) !=0){
+      selectInput('Submission_Exp_Strain_SI', NULL, AddRV$Strain[,'name'])
+    } else {
+      p(class="warning","No saved strain")
+    }
+    
   })
   
   TAG = reactiveValues()
@@ -1834,16 +1906,31 @@ server <- function(input, output, session) {
   dbDisconnect(con)
   
   output$Submission_Exp_tags = renderUI({
-    checkboxGroupInput("Submission_Exp_tags_CBG", NULL,
-                       choices = TAG$table[,"name"], inline = T)
+    if(nrow(TAG$table) !=0){
+      checkboxGroupInput("Submission_Exp_tags_CBG", NULL,
+                         choices = TAG$table[,"name"], inline = T)
+    } else {
+      p(class="warning","No saved tag")
+    }
     
   })
+  
+  output$Submission_Analysis_tags = renderUI({
+    if(nrow(TAG$table) !=0){
+      checkboxGroupInput("Submission_Analysis_tags_CBG", NULL,
+                         choices = TAG$table[,"name"], inline = T)
+    } else {
+      p(class="warning","No saved tag")
+    }
+    
+  })
+  
   
   observeEvent(input$Submission_Exp_tags_Newbtn,{
     
     REQUEST_EXISTING = paste0("SELECT *
                                 FROM tag
-                              WHERE name = '",input$Submission_Exp_tags_NewName,"';")
+                              WHERE name = '",input$Submission_tags_NewName,"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -1853,8 +1940,8 @@ server <- function(input, output, session) {
       shinyalert("Oops!", "This user is already in the database", type = "error")
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",input$Submission_Exp_tags_NewName, "',
-                            '",input$Submission_Exp_tags_NewDescription, "');
+                            '",input$Submission_tags_NewName, "',
+                            '",input$Submission_tags_NewDescription, "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       shinyalert("Nice!", "A new pixeler is in the database"
@@ -1866,10 +1953,106 @@ server <- function(input, output, session) {
       dbDisconnect(con)
     }
     
-    updateTextInput(session,"Submission_Exp_tags_NewName",value = "")
-    updateTextInput(session,"Submission_Exp_tags_NewDescription",value = "")
+    updateTextInput(session,"Submission_tags_NewName",value = "")
+    updateTextInput(session,"Submission_tags_NewDescription",value = "")
     dbDisconnect(con)
   })
+  
+  # submission_Exp_description submission_Exp_completionDate Submission_Exp_omicsArea Submission_Exp_dataSource Submission_Exp_Strain Submission_Exp_tags
+  observeEvent(input$Submission,{
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    time = format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
+    
+    # Add experiment
+    id_exp = paste0("Exp_",time )
+    REQUEST_Exp =  paste0("insert into experiment (id, omicsAreaName, description, completionDate,strainName, DataSourceName) values ('",id_exp,"','",input$Submission_Exp_omicsArea_SI,"','",input$submission_Exp_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",input$Submission_Exp_Strain_SI,"','",input$Submission_Exp_dataSource_SI,"');")
+    dbGetQuery(con, REQUEST_Exp)
+    
+    # Add tag associated 
+    if(length(input$Submission_Exp_tags_CBG) !=0){
+      REQUEST_Exp_tag = paste0("insert into Tag_Experiment (id_tag, id_experiment) SELECT id, '",id_exp,"' from tag where name in (",paste0("'",input$Submission_Exp_tags_CBG,"'", collapse = ","),");")
+      dbGetQuery(con, REQUEST_Exp_tag)
+    }
+    
+    
+    # Add analysis
+    id_analysis = paste0("Analysis_",time)
+    adresse_analysis = paste0("Files/Analysis/",id_analysis,"/")
+    adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
+    adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
+    
+    dir.create(adresse_analysis)
+    file.copy(input$submission_Analysis_notebook$datapath, adresse_analysis_notebook)
+    file.copy(input$submission_Analysis_secondary_data$datapath, adresse_analysis_SD)
+    
+    REQUEST_Analysis =  paste0("insert into analysis (id, description, completionDate, notebook_file,secondary_data_file) values ('",id_analysis,"','",input$submission_Analysis_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",adresse_analysis_notebook,"','",adresse_analysis_SD,"');")
+    dbGetQuery(con, REQUEST_Analysis)
+    
+    # Add tag associated 
+    if(length(input$Submission_Analysis_tags_CBG) !=0){
+      REQUEST_Analysis_tag = paste0("insert into Tag_Analysis (id_tag, id_analysis) SELECT id, '",id_analysis,"' from tag where name in (",paste0("'",input$Submission_Analysis_tags_CBG,"'", collapse = ","),");")
+      dbGetQuery(con, REQUEST_Analysis_tag)
+      
+    }
+    
+    # add link analysis / experiment
+    REQUEST_Analysis_Exp = paste0("insert into Analysis_Experiment (id_experiment, id_analysis) values('",id_exp,"','",id_analysis,"');")
+    dbGetQuery(con, REQUEST_Analysis_Exp)
+    
+    # Add Submission
+    id_Submission = paste0("Submission_",time)
+    REQUEST_Submission = paste0("insert into Submission (id, submission_date, status, pixeler_user_name) values('",id_Submission,"', to_date('",Sys.Date(),"', 'YYYY-MM-DD'), FALSE, '",isolate(input$USER),"');")
+    dbGetQuery(con, REQUEST_Submission)
+    
+    # Add PixelSet
+    # submission_pixelSet_name submission_pixelSet_description submission_pixelSet_file
+    
+    id_PixelSets = paste0("PixelSet_",time)
+    adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
+    dir.create(adresse_PixelSet)
+    adresse_analysis_file = paste0(adresse_PixelSet,input$submission_pixelSet_file$name)
+    file.copy(input$submission_pixelSet_file$datapath, adresse_analysis_file)
+    
+    REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",input$submission_pixelSet_name,"','",adresse_analysis_file,"','",input$submission_pixelSet_description,"','",id_analysis,"','",id_Submission,"');")
+    dbGetQuery(con, REQUEST_PixelSet)
+    
+    
+    dbDisconnect(con)
+  })
+  
+  
+  
+  #submission_pixelSet_nbr
+  #tab_PixelSets
+  # h4("Name"),
+  # textInput('submission_pixelSet_name', NULL),
+  # h4("Description"),
+  # textAreaInput('submission_pixelSet_description', NULL, resize = "vertical"),
+  # fileInput("submission_pixelSet_file",label = NULL,
+  #           buttonLabel = "Browse...",
+  #           placeholder = "No file selected"),
+  
+  observeEvent(input$submission_pixelSet_nbr,{
+    
+    for(i in 1:input$submission_pixelSet_nbr){
+      appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
+                                          h4(paste("Name",i)) ,
+                                          textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                          h4("Description"),
+                                          textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
+                                          fileInput(paste0("submission_pixelSet_file",i),label = NULL,
+                                                    buttonLabel = "Browse...",
+                                                    placeholder = "No file selected")),select = T)
+    }
+    
+  })
+  
+  
+
   
 }
 
