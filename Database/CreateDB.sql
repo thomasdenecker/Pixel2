@@ -69,7 +69,7 @@ OmicsUnitType
 
 CREATE TABLE OmicsUnitType (
   id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
+  name TEXT UNIQUE NOT NULL,
   description TEXT NOT NULL
 );
 
@@ -119,11 +119,11 @@ CREATE TABLE ChromosomalFeature (
   stop_coordinate INTEGER NOT NULL,
   strand TEXT,
   description TEXT,
-  species_name TEXT,
+  species_id INTEGER,
   url TEXT,
-  default_db_name TEXT NOT NULL,
-  CONSTRAINT fks FOREIGN KEY (species_name) REFERENCES Species (name),
-  CONSTRAINT fkcfsource FOREIGN KEY (default_db_name) REFERENCES CFSource (name)
+  default_db_id INTEGER NOT NULL,
+  CONSTRAINT fks FOREIGN KEY (species_id) REFERENCES Species (id),
+  CONSTRAINT fkcfsource FOREIGN KEY (default_db_id) REFERENCES CFSource (id)
 );
 
 /*------------------------------------------------------------------------------
@@ -145,8 +145,8 @@ CREATE TABLE Strain (
   name TEXT UNIQUE,
   description TEXT,
   ref TEXT,
-  species_name TEXT,
-  CONSTRAINT fkspecies FOREIGN KEY (species_name) REFERENCES Species (name)
+  species_id INTEGER,
+  CONSTRAINT fkspecies FOREIGN KEY (species_id) REFERENCES Species (id)
 );
 
 
@@ -225,14 +225,14 @@ Experiment
 
 CREATE TABLE Experiment (
     id TEXT primary key,
-    omicsAreaName TEXT NOT NULL,
+    omicsAreaid TEXT NOT NULL,
     description TEXT,
     completionDate DATE,
-    strainName TEXT,
-    DataSourceName TEXT,
-    CONSTRAINT fkomicsarea FOREIGN KEY (omicsAreaName) REFERENCES OmicsArea (name),
-    CONSTRAINT fkDS FOREIGN KEY (DataSourceName) REFERENCES DataSource (name),
-    CONSTRAINT fkStrain FOREIGN KEY (strainName) REFERENCES Strain (name)
+    strainId INTEGER,
+    DataSourceId INTEGER,
+    CONSTRAINT fkomicsarea FOREIGN KEY (omicsAreaid) REFERENCES OmicsArea (id),
+    CONSTRAINT fkDS FOREIGN KEY (DataSourceId) REFERENCES DataSource (id),
+    CONSTRAINT fkStrain FOREIGN KEY (strainId) REFERENCES Strain (id)
 );
 
 /*------------------------------------------------------------------------------
@@ -305,8 +305,8 @@ CREATE TABLE Submission (
   id TEXT primary key,
   submission_date Date,
   status BOOLEAN,
-  pixeler_user_name TEXT,
-  CONSTRAINT fkpixeler FOREIGN KEY (pixeler_user_name) REFERENCES pixeler (user_name)
+  pixeler_user_id INTEGER,
+  CONSTRAINT fkpixeler FOREIGN KEY (pixeler_user_id) REFERENCES pixeler (id)
 );
 
 /*------------------------------------------------------------------------------
@@ -315,7 +315,7 @@ PixelSet
 
 CREATE TABLE PixelSet (
   id TEXT primary key,
-  name TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
   pixelSet_file TEXT,
   description TEXT,
   id_analysis TEXT,
@@ -335,8 +335,8 @@ CREATE TABLE Pixel (
   quality_score NUMERIc,
   pixelSet_id TEXT,
   cf_feature_name TEXT,
-  OmicsUnitType_name TEXT,
+  OmicsUnitType_id INTEGER,
   CONSTRAINT fkpixelerset FOREIGN KEY (pixelSet_id) REFERENCES PixelSet (id),
   CONSTRAINT fkcf FOREIGN KEY (cf_feature_name) REFERENCES ChromosomalFeature (feature_name),
-  CONSTRAINT fkout FOREIGN KEY (OmicsUnitType_name) REFERENCES OmicsUnitType (name)
+  CONSTRAINT fkout FOREIGN KEY (OmicsUnitType_id) REFERENCES OmicsUnitType (id)
 );
