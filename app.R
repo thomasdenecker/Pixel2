@@ -377,7 +377,14 @@ server <- function(input, output, session) {
             div( class = "margeProfile", 
                  tabsetPanel(id = "tab_sup_annot"),
                  h3("PixelSets"),
-                 h3("Tags") 
+                 DTOutput("CF_PixelSET"),
+                 h3("Pixel"),
+                 DTOutput("CF_Pixel"),
+                 h3("Tags"),
+                 h4("Analysis"), 
+                 DTOutput("CF_Tag_analysis"),
+                 h4("Experiment"),
+                 DTOutput("CF_Tag_experiment")
             )
           )),
         
@@ -1237,6 +1244,8 @@ server <- function(input, output, session) {
   
   CF = reactiveValues()
   CF$sup_id = NULL 
+  
+  
   observeEvent(input$searchButton,{
     
     if(!is.null(CF$sup_id)){
@@ -1251,29 +1260,50 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
-    CF$main_annotation = dbGetQuery(con, paste0("select * from chromosomalfeature where feature_name ='",input$searchText,"';"))
+    
+    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",input$searchText,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
     CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
-    CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)[-1]),"</b> : ", CF$main_annotation[1,-1])
+    CF$main_annotation[1, 'species_name'] = paste0("<i>",CF$main_annotation[1, 'species_name'], "</i>")
+    CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)),"</b> : ", CF$main_annotation[1,])
     CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
     
     CF$name = input$searchText
+    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",input$searchText,"' and pixel.pixelset_id = pixelset.id;"))
+    CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",input$searchText,"';"))
+    
+    
+    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+                                                  where pixel.cf_feature_name ='",input$searchText,"' and
+                                                  pixel.pixelset_id = PS.id 
+                                                  and ps.id_analysis = analysis.id 
+                                                  and Tag_Analysis.id_analysis = analysis.id 
+                                                  and tag.id = Tag_Analysis.id_tag;"))
+    
+    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                  where pixel.cf_feature_name ='",input$searchText,"'
+                                                and pixel.pixelset_id = PS.id 
+                                                and ps.id_analysis = analysis.id
+                                                and Analysis_Experiment.id_analysis = analysis.id
+                                                and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                and tag.id = Tag_experiment.id_tag;"))
     
     Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
     
-    
-    for(i in 1:nrow(Sup_tab)){
-      
-      result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))
-      result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
-      result = paste(result, collapse = "<br>")
-      
-      if(i == 1){
-        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
-      } else {
-        appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
+    if(nrow(Sup_tab) != 0){
+      for(i in 1:nrow(Sup_tab)){
+        
+        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))
+        result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
+        result = paste(result, collapse = "<br>")
+        
+        if(i == 1){
+          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
+        } else {
+          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
+        }
+        
+        CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
       }
-      
-      CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
     }
     
   })
@@ -1288,6 +1318,27 @@ server <- function(input, output, session) {
            h2("Supplementary information")
       ))
   )
+  
+  output$CF_PixelSET <- renderDT(CF$PIXELSET, 
+                                 selection = 'none', 
+                                 editable = TRUE,
+                                 options = list(scrollX = TRUE))
+  
+  output$CF_Pixel <- renderDT(CF$PIXEL, 
+                              selection = 'none', 
+                              editable = TRUE,
+                              options = list(scrollX = TRUE))
+  
+  output$CF_Tag_experiment <- renderDT(CF$CF_Tag_experiment, 
+                                       selection = 'none', 
+                                       editable = TRUE,
+                                       options = list(scrollX = TRUE))
+  
+  output$CF_Tag_analysis <- renderDT(CF$CF_Tag_analysis, 
+                                     selection = 'none', 
+                                     editable = TRUE,
+                                     options = list(scrollX = TRUE))
+  
   
   
   observe({
@@ -2001,14 +2052,14 @@ server <- function(input, output, session) {
     warning_sub = NULL
     for( i in 1:input$submission_pixelSet_nbr){
       inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                         header = as.logical(input$header_PS),
-                         sep = input$sep_PS,
-                         quote = input$quote_PS
+                                 header = as.logical(input$header_PS),
+                                 sep = input$sep_PS,
+                                 quote = input$quote_PS
       )
       pos = !(inter_warning[,1] %in% CF_Temp[,1])
       refused = inter_warning[pos,1]
       
-      warning_sub= c(warning_sub, paste0("PixelSet ", i, paste(refused, collapse = "\t"),"\n\n"))
+      warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
     }
     cat(warning_sub, file = stderr())
     
@@ -2019,7 +2070,7 @@ server <- function(input, output, session) {
       inputId = "confirm_submission_warning",
       type = "warning",
       title = "Want to confirm ?",
-      text = HTML(paste("<p>",warning_sub,"</p>", collapse = "<br/>")),
+      text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database.</i></p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
       danger_mode = TRUE,  html = TRUE
     )
   })
@@ -2093,6 +2144,20 @@ server <- function(input, output, session) {
         
         REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
         dbGetQuery(con, REQUEST_PixelSet)
+        
+        inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                           header = as.logical(input$header_PS),
+                           sep = input$sep_PS,
+                           quote = input$quote_PS
+        )
+        
+        # Add pixel
+        for(j in 1:nrow(inter)){
+          REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",eval(parse(text = paste0("input$submission_pixelSet_OUT",i))),"');")
+          dbGetQuery(con, REQUEST_Pixel)
+        }
+        
+        
       }
       
       dbDisconnect(con)
@@ -2100,9 +2165,6 @@ server <- function(input, output, session) {
       shinyalert("Cancellation", "Submission is cancelled", type = "error")
     }
   })
-  
-  
-  
   
   observeEvent(input$submission_pixelSet_nbr,{
     
@@ -2115,6 +2177,9 @@ server <- function(input, output, session) {
     
     submissionRV$nbrPixelSet = input$submission_pixelSet_nbr
     
+    choices = AddRV$OUT[,1]
+    names(choices) = AddRV$OUT[,2]
+    
     for(i in 1:input$submission_pixelSet_nbr){
       if(i == 1){
         appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
@@ -2124,17 +2189,25 @@ server <- function(input, output, session) {
                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
                                                       buttonLabel = "Browse...",
-                                                      placeholder = "No file selected")),select = T)
+                                                      placeholder = "No file selected"),
+                                            h4("Omics unit type"),
+                                            selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
+                                                        choices)
+        ),select = T)
         
       }else{
-        appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
-                                            h4("Name") ,
-                                            textInput(paste0('submission_pixelSet_name_',i), NULL),
-                                            h4("Description"),
-                                            textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
-                                            fileInput(paste0("submission_pixelSet_file",i),label = NULL,
-                                                      buttonLabel = "Browse...",
-                                                      placeholder = "No file selected")),select = F)
+        appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
+                                             h4("Name") ,
+                                             textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                             h4("Description"),
+                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
+                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
+                                                       buttonLabel = "Browse...",
+                                                       placeholder = "No file selected"),
+                                             h4("Omics unit type"),
+                                             selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
+                                                         choices)
+        ),select = F)
         
       }
       
