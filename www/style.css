@@ -168,3 +168,9 @@ div.tree{
 .google-visualization-orgchart-linenode {
   border-color: black !important;
 }
+
+
+p.warning{
+  color:red;
+  font-weight: bold;
+}
