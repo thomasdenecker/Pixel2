@@ -66,6 +66,10 @@ button.myBtn {
 Header
 *******************************************************************************/
 
+.content-wrapper{
+    background-color: white;
+}
+
 /* main sidebar */
 
 .skin-red .main-sidebar {
