@@ -789,7 +789,7 @@ server <- function(input, output, session) {
   output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)],
                                             selection = 'none',
                                             options = list(scrollX = TRUE))
-
+  
   output$PixelsByOmicsUnitType <- renderGvis({
     data<-data.frame(c('mRNA','Protein'),c(15,85))
     gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
@@ -1193,7 +1193,7 @@ server <- function(input, output, session) {
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
                         ,", cfsource_id INTEGER, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_id) REFERENCES CFSource (id), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
         
-        cat(REQUEST, file = stderr())
+        # cat(REQUEST, file = stderr())
         
         tryCatch(dbSendQuery(con, REQUEST)
                  , error = function(c) {
@@ -2525,7 +2525,7 @@ server <- function(input, output, session) {
       
       warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
     }
-    cat(warning_sub, file = stderr())
+    # cat(warning_sub, file = stderr())
     
     dbDisconnect(con)
     
@@ -2596,34 +2596,41 @@ server <- function(input, output, session) {
       dbGetQuery(con, REQUEST_Submission)
       
       # Add PixelSet
-      
-      for( i in 1:input$submission_pixelSet_nbr){
-        id_PixelSets = paste0("PixelSet_",time,"_",i)
-        adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
-        dir.create(paste0("www/",adresse_PixelSet))
-        
-        adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
-        
-        file.copy(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))), paste0("www/", adresse_analysis_file))   
-        
-        REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
-        dbGetQuery(con, REQUEST_PixelSet)
-        
-        inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                           header = as.logical(input$header_PS),
-                           sep = input$sep_PS,
-                           quote = input$quote_PS
-        )
-        
-        # Add pixel
-        for(j in 1:nrow(inter)){
-          REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",eval(parse(text = paste0("input$submission_pixelSet_OUT",i))),"');")
-          dbGetQuery(con, REQUEST_Pixel)
+      withProgress(message = 'PixelSet imported', value = 0, {
+        m = as.numeric(input$submission_pixelSet_nbr)
+        for( i in 1:input$submission_pixelSet_nbr){
+          
+          id_PixelSets = paste0("PixelSet_",time,"_",i)
+          adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
+          dir.create(paste0("www/",adresse_PixelSet))
+          
+          adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
+          
+          file.copy(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))), paste0("www/", adresse_analysis_file))   
+          
+          REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
+          dbGetQuery(con, REQUEST_PixelSet)
+          
+          inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                             header = as.logical(input$header_PS),
+                             sep = input$sep_PS,
+                             quote = input$quote_PS
+          )
+          
+          # Add pixel
+          
+          withProgress(message = 'Pixel', value = 0, {
+            n = nrow(inter)
+            for(j in 1:nrow(inter)){
+              incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",eval(parse(text = paste0("input$submission_pixelSet_OUT",i))),"');")
+              dbGetQuery(con, REQUEST_Pixel)
+            }
+          })
+          
+          incProgress(1/m, detail = paste0("Imported :", floor(i/m*100))) 
         }
-        
-        
-      }
-      
+      })
       dbDisconnect(con)
     } else {
       shinyalert("Cancellation", "Submission is cancelled", type = "error")
