@@ -365,33 +365,44 @@ server <- function(input, output, session) {
         tabItem(
           tabName = "Pixel_sets", 
           h2("Pixel sets"),
-          fluidRow(
-            
-            column(6,
-                   fluidRow(
-                     h3("Properties"),
-                     htmlOutput("PixelSet_explo")
-                   ),
-                   fluidRow(
-                     h3("Tags"),
-                     h4("Analysis"), 
-                     uiOutput("PS_Tag_analysis_UI"),
-                     h4("Experiment"),
-                     uiOutput("PS_Tag_experiment_UI")
-                   )
-            ),
-            column(6,
-                   fluidRow(
-                     plotlyOutput("PixelSetHistoValue")
-                   ), 
-                   fluidRow(
-                     plotlyOutput("PixelSetHistoQS")
-                   )
-                   )
-          ),
-          h3("Pixels"),
-          DTOutput("PixelSet_explo_Pixel")
-        ),
+          div( class = "PixelSet",
+               fluidRow(
+                 
+                 column(6,
+                        fluidRow(
+                          h3("Properties"),
+                          htmlOutput("PixelSet_explo")
+                        ),
+                        fluidRow(
+                          h3("Tags"),
+                          h4("Analysis"), 
+                          uiOutput("PS_Tag_analysis_UI"),
+                          h4("Experiment"),
+                          uiOutput("PS_Tag_experiment_UI")
+                        )
+                 ),
+                 column(6,
+                        fluidRow(div(class= "search",h3("Graphical representations"))), 
+                        fluidRow(
+                          htmlOutput("PixelSetHistoValue")
+                        ), 
+                        fluidRow(
+                          htmlOutput("PixelSetHistoQS")
+                        ),
+                        fluidRow(div(class= "search",
+                                     h3("Search genes list"),
+                                     p("To search a list of genes, separate them by';' To return to the complete list of genes, click on the clear button."),
+                                     tags$textarea(id = "PS_searchGenelist", rows = 5),
+                                     actionButton("PS_searchGenelist_clear_btn",label = "Clear"),
+                                     actionButton("PS_searchGenelist_btn",label = "Search")
+                        )
+                        
+                        )
+                 )
+               ),
+               h3("Pixels"),
+               DTOutput("PixelSet_explo_Pixel")
+          )),
         
         # Tab content : Tags
         tabItem(
@@ -1386,71 +1397,6 @@ server <- function(input, output, session) {
   # PIXELSET
   #=============================================================================
   
-  output$PixelSet_explo <- renderText({
-    PIXELSET_RV$info
-  })
-  
-  output$PixelSet_explo_Pixel <- renderDT( PIXELSET_RV$Pixel, 
-                                           selection = 'single', 
-                                           editable = F,
-                                           extensions = 'Buttons',
-                                           options = list(scrollX = TRUE, extensions = 'Buttons', searchHighlight = TRUE,
-                                                          dom = 'Bfrtip',
-                                                          buttons = c('copy', 'print')))
-  
-  output$PixelSetHistoValue <- renderPlotly({
-    plot_ly(x=~PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"], type = "histogram",
-            marker = list(size = 10,
-                          color = 'red',
-                          line = list(color = 'firebrick',
-                                      width = 2))) %>%
-      layout(title = "Pixel values", 
-             xaxis = list(
-        title = ""
-      ),
-      height = 200, margin = list(b = 50,t = 50,pad = 0)
-      )
-  })
-  
-  output$PixelSetHistoQS <- renderPlotly({
-    plot_ly(x=~PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"], type = "histogram", 
-            marker = list(size = 10,
-                          color = 'royalblue',
-                          line = list(color = 'blue',
-                                      width = 2))) %>%
-      layout(title = "Pixel quality scorces", 
-             xaxis = list(
-               title = ""
-             ),
-             height = 200, margin = list(b = 50,t = 50,pad = 0)
-      )
-  })
-  
-  output$PS_Tag_experiment_UI <- renderUI({
-    if(nrow(PIXELSET_RV$PS_Tag_experiment) == 0){
-      p("No tags for analysis.")
-    } else {
-      DTOutput("PS_Tag_experiment")
-    }
-  })
-  
-  output$PS_Tag_experiment <- renderDT(PIXELSET_RV$PS_Tag_experiment, 
-                                       selection = 'single', 
-                                       editable = F,
-                                       options = list(scrollX = TRUE, searchHighlight = TRUE))
-  
-  output$PS_Tag_analysis_UI <- renderUI({
-    if(nrow(PIXELSET_RV$PS_Tag_analysis) == 0){
-      p("No tags for analysis.")
-    } else {
-      DTOutput("PS_Tag_analysis")
-    }
-  })
-  
-  output$PS_Tag_analysis <- renderDT(PIXELSET_RV$PS_Tag_analysis, 
-                                     selection = 'single', 
-                                     editable = F,
-                                     options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   PIXELSET_RV = reactiveValues()
   
@@ -1464,23 +1410,23 @@ server <- function(input, output, session) {
     PIXELSET_RV$ID = CF$PIXELSET[input$CF_PixelSET_rows_selected,"pixelset_id"]
     
     REQUEST_Info = paste0("with OUT AS (
-                                select DISTINCT OmicsUnitType.name
-                                from OmicsUnitType,pixel, PixelSet
-                                where pixelset.id = '",PIXELSET_RV$ID,"'
-                                and pixel.pixelSet_id = PixelSet.id
-                                and pixel.OmicsUnitType_id = OmicsUnitType.id
-                          )
+                          select DISTINCT OmicsUnitType.name
+                          from OmicsUnitType,pixel, PixelSet
+                          where pixelset.id = '",PIXELSET_RV$ID,"'
+                          and pixel.pixelSet_id = PixelSet.id
+                          and pixel.OmicsUnitType_id = OmicsUnitType.id
+    )
                           select PS.id as",'"',"ID",'"', ", PS.pixelSet_file as ",'"',"Filename",'"',", species.name as ",'"',"Species",'"',", OUT.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"User name",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
                           from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, OUT
                           where PS.id = '",PIXELSET_RV$ID,"'
-                            and PS.id_analysis = analysis.id
-                            and analysis.id = AE.id_analysis
-                            and AE.id_experiment = experiment.id
-                            and experiment.strainId = strain.id
-                            and strain.species_id = species.id
-                            and experiment.omicsAreaid = OmicsArea.id
-                            and PS.id_submission = Submission.id
-                            and Submission.pixeler_user_id = pixeler.id
+                          and PS.id_analysis = analysis.id
+                          and analysis.id = AE.id_analysis
+                          and AE.id_experiment = experiment.id
+                          and experiment.strainId = strain.id
+                          and strain.species_id = species.id
+                          and experiment.omicsAreaid = OmicsArea.id
+                          and PS.id_submission = Submission.id
+                          and Submission.pixeler_user_id = pixeler.id
                           ;")
     
     
@@ -1489,6 +1435,7 @@ server <- function(input, output, session) {
     inter = unlist(strsplit(PIXELSET_RV$info[1,"Filename"], "/"))
     inter = inter[length(inter)]
     PIXELSET_RV$info[1,"Filename"] = paste("<a href='",PIXELSET_RV$info[1,"Filename"],"' target='blank' >",inter ,"</a>")
+    PIXELSET_RV$info[1,"Species"] = paste("<i>",PIXELSET_RV$info[1,"Species"],"</i>")
     PIXELSET_RV$info = paste("<tr><td><b>", colnames(PIXELSET_RV$info ),"</b> </td><td>", PIXELSET_RV$info [1,], "</td>")
     PIXELSET_RV$info = paste('<table class="table table-striped"><tbody>', paste(PIXELSET_RV$info, collapse = ""),"</tbody></table>")
     
@@ -1508,13 +1455,266 @@ server <- function(input, output, session) {
                                                    and tag.id = Tag_experiment.id_tag;"))
     
     PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
-    
+    PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
     dbDisconnect(con)
     proxy = dataTableProxy('CF_PixelSET')
     proxy %>% selectRows(NULL)
   })
   
+  output$PixelSet_explo <- renderText({
+    PIXELSET_RV$info
+  })
   
+  #-----------------------------------------------------------------------------
+  # PixelSet : Pixel
+  #-----------------------------------------------------------------------------
+  
+  output$PixelSet_explo_Pixel <- renderDT( PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,], server = FALSE,
+                                           selection = 'single', 
+                                           editable = F,
+                                           extensions = 'Buttons',
+                                           options = list(scrollX = TRUE, extensions = 'Buttons', searchHighlight = TRUE,
+                                                          dom = 'Bfrtip',
+                                                          buttons = c('csv', 'excel','print') ))
+  
+  observeEvent(input$PixelSet_explo_Pixel_rows_selected,{
+    updateTabItems (session, "tabs", selected = "CF_item")
+    
+    if(!is.null(CF$sup_id)){
+      for(i in CF$sup_id){
+        removeTab("tab_sup_annot", i)
+      }
+      CF$sup_id = NULL 
+    }
+    
+    updateTabItems (session, "tabs", selected = "CF_item")
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    CF$name = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_selected,"Feature name"]
+    
+    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",CF$name,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
+    CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
+    CF$main_annotation[1, 'species_name'] = paste0("<i>",CF$main_annotation[1, 'species_name'], "</i>")
+    CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)),"</b> : ", CF$main_annotation[1,])
+    CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
+    
+    
+    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",CF$name,"' and pixel.pixelset_id = pixelset.id;"))
+    CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",CF$name,"';"))
+    
+    
+    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+                                                where pixel.cf_feature_name ='",CF$name,"' and
+                                                pixel.pixelset_id = PS.id 
+                                                and ps.id_analysis = analysis.id 
+                                                and Tag_Analysis.id_analysis = analysis.id 
+                                                and tag.id = Tag_Analysis.id_tag;"))
+    
+    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                   where pixel.cf_feature_name ='",CF$name,"'
+                                                   and pixel.pixelset_id = PS.id 
+                                                   and ps.id_analysis = analysis.id
+                                                   and Analysis_Experiment.id_analysis = analysis.id
+                                                   and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                   and tag.id = Tag_experiment.id_tag;"))
+    
+    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",CF$name,"';"))
+    
+    if(nrow(Sup_tab) != 0){
+      for(i in 1:nrow(Sup_tab)){
+        
+        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",CF$name,"';"))
+        result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
+        result = paste(result, collapse = "<br>")
+        
+        if(i == 1){
+          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
+        } else {
+          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
+        }
+        
+        CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
+      }
+    }
+    
+    dbDisconnect(con)
+    
+    proxy = dataTableProxy('PixelSet_explo_Pixel')
+    proxy %>% selectRows(NULL)
+  })
+  
+  
+  #-----------------------------------------------------------------------------
+  # PixelSet : Histo
+  #-----------------------------------------------------------------------------
+  
+  output$PixelSetHistoValue <- renderGvis({
+    
+    if (is.null(PIXELSET_RV$Pixel)){
+      NULL
+    } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
+      Hist <-gvisHistogram(data.frame(Value = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"]), options=list(
+        colors="['#ff0000']",
+        legend="{ position: 'none'}",
+        title="Values",
+        width='100%', height=360),
+        "PixelSetHistoValue")
+      Hist
+    } else{
+      NULL
+    }
+    
+    
+  })
+  
+  output$PixelSetHistoQS <- renderGvis({
+    
+    if(is.null(PIXELSET_RV$Pixel)){
+      NULL
+    } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
+      
+      gvisHistogram(data.frame(QS = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]), 
+                    options=list(
+                      colors="['#3366ff']",
+                      legend="{ position: 'none'}",
+                      title="Quality scores",
+                      width='100%', height=360),
+                    "PixelSetHistoQS")
+      
+    } else{
+      NULL
+    }
+    
+  })
+  
+  #-----------------------------------------------------------------------------
+  # PixelSet : Search
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$PS_searchGenelist_btn,{
+    
+    PIXELSET_RV$SEARCH = which(PIXELSET_RV$Pixel[, "Feature name"] %in% unlist(strsplit(gsub(" ","", input$PS_searchGenelist), ";")))
+    
+    if( length(PIXELSET_RV$SEARCH) == 0){
+      PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
+      shinyalert("Oops!", "None of the genes were found in the Pixel table.", type = "error")
+    }
+    
+  })
+  
+  observeEvent(input$PS_searchGenelist_clear_btn,{
+    updateTextAreaInput(session,inputId = "PS_searchGenelist", value = "")
+    PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
+  })
+  
+  
+  #-----------------------------------------------------------------------------
+  # PixelSet : Tag
+  #-----------------------------------------------------------------------------
+  
+  output$PS_Tag_experiment_UI <- renderUI({
+    if(is.null(PIXELSET_RV$PS_Tag_experiment)) {
+      NULL 
+    } else if(nrow(PIXELSET_RV$PS_Tag_experiment) == 0){
+      p("No tags for analysis.")
+    } else {
+      DTOutput("PS_Tag_experiment")
+    }
+  })
+  
+  output$PS_Tag_experiment <- renderDT(PIXELSET_RV$PS_Tag_experiment, 
+                                       selection = 'single', 
+                                       editable = F,
+                                       options = list(scrollX = TRUE, searchHighlight = TRUE))
+  
+  
+  output$PS_Tag_analysis_UI <- renderUI({
+    if(is.null(PIXELSET_RV$PS_Tag_analysis)) {
+      NULL 
+    } else if(nrow(PIXELSET_RV$PS_Tag_analysis) == 0){
+      p("No tags for analysis.")
+    } else {
+      DTOutput("PS_Tag_analysis")
+    }
+  })
+  
+  output$PS_Tag_analysis <- renderDT(PIXELSET_RV$PS_Tag_analysis, 
+                                     selection = 'single', 
+                                     editable = F,
+                                     options = list(scrollX = TRUE, searchHighlight = TRUE))
+  
+  
+  observeEvent(input$PS_Tag_experiment_rows_selected,{
+    updateTabItems (session, "tabs", selected = "Tags")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    TAG$NAME = PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"]
+    TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
+                                              FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                              WHERE tag.name ='",PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"],"' 
+                                              AND ps.id_analysis = analysis.id
+                                              AND Analysis_Experiment.id_analysis = analysis.id
+                                              AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                              AND tag.id = Tag_experiment.id_tag;"))
+    
+    TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
+                                                   FROM  pixelset PS, analysis, Tag_Analysis, tag 
+                                                   WHERE tag.name ='",PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"],"' 
+                                                   AND ps.id_analysis = analysis.id 
+                                                   AND Tag_Analysis.id_analysis = analysis.id 
+                                                   AND tag.id = Tag_Analysis.id_tag;"))
+    
+    dbDisconnect(con)
+    
+    proxy = dataTableProxy('PS_Tag_experiment')
+    proxy %>% selectRows(NULL)
+  })
+  
+  observeEvent(input$PS_Tag_analysis_rows_selected,{
+    updateTabItems (session, "tabs", selected = "Tags")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    TAG$NAME = PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"]
+    
+    TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
+                                              FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                              WHERE tag.name ='",PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"],"' 
+                                              AND ps.id_analysis = analysis.id
+                                              AND Analysis_Experiment.id_analysis = analysis.id
+                                              AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                              AND tag.id = Tag_experiment.id_tag;"))
+    
+    
+    
+    TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
+                                                   FROM  pixelset PS, analysis, Tag_Analysis, tag 
+                                                   WHERE tag.name ='",PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"],"' 
+                                                   AND ps.id_analysis = analysis.id 
+                                                   AND Tag_Analysis.id_analysis = analysis.id 
+                                                   AND tag.id = Tag_Analysis.id_tag;"))
+    
+    
+    dbDisconnect(con)
+    
+    proxy = dataTableProxy('PS_Tag_analysis')
+    proxy %>% selectRows(NULL)
+  })
+  
+  
+  
+  #=============================================================================
+  # END PIXELSET
+  #=============================================================================
   
   observeEvent(input$CF_Tag_experiment_rows_selected,{
     updateTabItems (session, "tabs", selected = "Tags")
