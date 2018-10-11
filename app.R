@@ -390,7 +390,7 @@ server <- function(input, output, session) {
                           htmlOutput("PixelSetHistoQS")
                         ),
                         fluidRow(div(class= "search",
-                                     h3("Search genes list"),
+                                     h3("Search gene list"),
                                      p("To search a list of genes, separate them by';' To return to the complete list of genes, click on the clear button."),
                                      tags$textarea(id = "PS_searchGenelist", rows = 5),
                                      actionButton("PS_searchGenelist_clear_btn",label = "Clear"),
@@ -741,22 +741,32 @@ server <- function(input, output, session) {
   })
   
   
-  #-----------------------------------------------------------------------------
+  #=============================================================================
   # Dashboard
-  #-----------------------------------------------------------------------------
+  #=============================================================================
+  DASHBOARD_RV = reactiveValues()
+  
+  pg <- dbDriver("PostgreSQL")
+  con <- dbConnect(pg, user="docker", password="docker",
+                   host=ipDB, port=5432)
+  on.exit(dbDisconnect(con))
+  DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+  DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+  DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+  dbDisconnect(con)
+  
   
   output$nbPixelSet <- renderValueBox({
     valueBox(
-      8, "Pixelsets", icon = icon("folder"),
+      DASHBOARD_RV$PIXELSET, "Pixelsets", icon = icon("folder"),
       color = "red"
     )
   })
   
-  output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)], options = list(scrollX = TRUE))
   
   output$nbPixel <- renderValueBox({
     valueBox(
-      35200, "Pixels", icon = icon("puzzle-piece"),
+      DASHBOARD_RV$PIXEL, "Pixels", icon = icon("puzzle-piece"),
       color = "purple"
     )
   })
@@ -771,14 +781,15 @@ server <- function(input, output, session) {
   
   output$DataEntries <- renderValueBox({
     valueBox(
-      21531, "Data entries", icon = icon("database"),
+      DASHBOARD_RV$CF, "Chromosomal features", icon = icon("database"),
       color = "blue"
     )
   })
   
-  
-  # PixelsByOmicsUnitType PixelsBySpecies
-  
+  output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)],
+                                            selection = 'none',
+                                            options = list(scrollX = TRUE))
+
   output$PixelsByOmicsUnitType <- renderGvis({
     data<-data.frame(c('mRNA','Protein'),c(15,85))
     gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
@@ -806,6 +817,9 @@ server <- function(input, output, session) {
     
   })
   
+  #=============================================================================
+  # END Dashboard
+  #=============================================================================
   
   #-----------------------------------------------------------------------------
   # Log
