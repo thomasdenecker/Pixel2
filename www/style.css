@@ -66,6 +66,10 @@ button.myBtn {
 Header
 *******************************************************************************/
 
+.content-wrapper{
+    background-color: white;
+}
+
 /* main sidebar */
 
 .skin-red .main-sidebar {
@@ -173,4 +177,42 @@ div.tree{
 p.warning{
   color:red;
   font-weight: bold;
+}
+
+
+div.search{
+  width: 100%;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+div.search textarea{
+  display: block;
+   width: 100%;
+   -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+           box-sizing: border-box;
+}
+
+textarea {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+
+	width: 100%;
+  resize: vertical;
+}
+
+.PixelSet
+{
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.PixelSet h3{
+  background-color: #ffe6e6;
+  margin-left: -10px;
+  padding-left: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
