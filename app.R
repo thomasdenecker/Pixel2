@@ -59,7 +59,8 @@ body <- dashboardBody(useShinyjs(), useShinyalert(),
                       
                       # Add css style
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
-                                     href="style.css" />')),
+                                     href="style.css" />'))
+                      ,
                       uiOutput("body"))
 ui <- dashboardPage(skin= "red", header, sidebar, body)
 
@@ -200,7 +201,6 @@ server <- function(input, output, session) {
   output$body <- renderUI({
     if (USER$Logged == TRUE) {
       tabItems(
-        
         # Tab content : Dashboard
         tabItem(
           tabName = "Dashboard", 
@@ -252,6 +252,18 @@ server <- function(input, output, session) {
                     div(class="box-body",
                         h2(class="center","Pixeler informations"), br(),
                         DT::dataTableOutput('pixelerInfo')
+                    )
+                )
+            )
+          ),
+          
+          
+          fluidRow(
+            div(class="col-sm-12",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Last PixelSet imported"), br(),
+                        DT::dataTableOutput('PixelSetInfo')
                     )
                 )
             )
@@ -327,6 +339,8 @@ server <- function(input, output, session) {
                 label = NULL,
                 1:10
               ),
+              
+              
               tabsetPanel(id = "tab_PixelSets"),
               fluidRow(
                 column(3,
@@ -356,6 +370,8 @@ server <- function(input, output, session) {
                        h3("Preview"),
                        dataTableOutput(outputId = "contents_PS"))
               ),
+              h4("Omics unit type"),
+              uiOutput("submission_pixelSet_OUT_UI"),
               
               actionButton("Submission", "Submission")
               
@@ -753,6 +769,7 @@ server <- function(input, output, session) {
   DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
   DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
   DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+  DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
   dbDisconnect(con)
   
   
@@ -788,7 +805,73 @@ server <- function(input, output, session) {
   
   output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)],
                                             selection = 'none',
-                                            options = list(scrollX = TRUE))
+                                            options = list(scrollX = TRUE, pageLength = 5))
+  
+  output$PixelSetInfo <- DT::renderDataTable(DASHBOARD_RV$PixelSetTABLE,
+                                             selection = 'single',
+                                             options = list(scrollX = TRUE, pageLength = 10))
+  
+  observeEvent(input$PixelSetInfo_rows_selected,{
+    updateTabItems (session, "tabs", selected = "Pixel_sets")
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    PIXELSET_RV$ID = DASHBOARD_RV$PixelSetTABLE[input$PixelSetInfo_rows_selected,"id"]
+    
+    REQUEST_Info = paste0("with OUT AS (
+                          select DISTINCT OmicsUnitType.name
+                          from OmicsUnitType,pixel, PixelSet
+                          where pixelset.id = '",PIXELSET_RV$ID,"'
+                          and pixel.pixelSet_id = PixelSet.id
+                          and pixel.OmicsUnitType_id = OmicsUnitType.id
+    )
+                          select PS.id as",'"',"ID",'"', ", PS.pixelSet_file as ",'"',"Filename",'"',", species.name as ",'"',"Species",'"',", OUT.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"User name",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                          from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, OUT
+                          where PS.id = '",PIXELSET_RV$ID,"'
+                          and PS.id_analysis = analysis.id
+                          and analysis.id = AE.id_analysis
+                          and AE.id_experiment = experiment.id
+                          and experiment.strainId = strain.id
+                          and strain.species_id = species.id
+                          and experiment.omicsAreaid = OmicsArea.id
+                          and PS.id_submission = Submission.id
+                          and Submission.pixeler_user_id = pixeler.id
+                          ;")
+    
+    
+    # Properties
+    PIXELSET_RV$info = dbGetQuery(con,REQUEST_Info)
+    inter = unlist(strsplit(PIXELSET_RV$info[1,"Filename"], "/"))
+    inter = inter[length(inter)]
+    PIXELSET_RV$info[1,"Filename"] = paste("<a href='",PIXELSET_RV$info[1,"Filename"],"' target='blank' >",inter ,"</a>")
+    PIXELSET_RV$info[1,"Species"] = paste("<i>",PIXELSET_RV$info[1,"Species"],"</i>")
+    PIXELSET_RV$info = paste("<tr><td><b>", colnames(PIXELSET_RV$info ),"</b> </td><td>", PIXELSET_RV$info [1,], "</td>")
+    PIXELSET_RV$info = paste('<table class="table table-striped"><tbody>', paste(PIXELSET_RV$info, collapse = ""),"</tbody></table>")
+    
+    
+    PIXELSET_RV$PS_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixelset PS, analysis, Tag_Analysis, tag 
+                                                         where  PS.id = '",PIXELSET_RV$ID,"'
+                                                         and ps.id_analysis = analysis.id 
+                                                         and Tag_Analysis.id_analysis = analysis.id 
+                                                         and tag.id = Tag_Analysis.id_tag;"))
+    
+    
+    PIXELSET_RV$PS_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                            where PS.id = '",PIXELSET_RV$ID,"' 
+                                                            and ps.id_analysis = analysis.id
+                                                            and Analysis_Experiment.id_analysis = analysis.id
+                                                            and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                            and tag.id = Tag_experiment.id_tag;"))
+    
+    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',",CF.gene_name as ",'"',"Gene name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
+    PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
+    dbDisconnect(con)
+    proxy = dataTableProxy('PixelSetInfo')
+    proxy %>% selectRows(NULL)
+  })
+  
   
   output$PixelsByOmicsUnitType <- renderGvis({
     data<-data.frame(c('mRNA','Protein'),c(15,85))
@@ -1335,14 +1418,14 @@ server <- function(input, output, session) {
     CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",input$searchText,"';"))
     
     
-    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
                                                   where pixel.cf_feature_name ='",input$searchText,"' and
                                                   pixel.pixelset_id = PS.id 
                                                   and ps.id_analysis = analysis.id 
                                                   and Tag_Analysis.id_analysis = analysis.id 
                                                   and tag.id = Tag_Analysis.id_tag;"))
     
-    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
                                                   where pixel.cf_feature_name ='",input$searchText,"'
                                                 and pixel.pixelset_id = PS.id 
                                                 and ps.id_analysis = analysis.id
@@ -1468,7 +1551,7 @@ server <- function(input, output, session) {
                                                    and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                                    and tag.id = Tag_experiment.id_tag;"))
     
-    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
+    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',",CF.gene_name as ",'"',"Gene name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
     PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
     dbDisconnect(con)
     proxy = dataTableProxy('CF_PixelSET')
@@ -1487,7 +1570,10 @@ server <- function(input, output, session) {
                                            selection = 'single', 
                                            editable = F,
                                            extensions = 'Buttons',
-                                           options = list(scrollX = TRUE, extensions = 'Buttons', searchHighlight = TRUE,
+                                           options = list(scrollX = TRUE, 
+                                                          pageLength = 50, 
+                                                          extensions = 'Buttons', 
+                                                          searchHighlight = TRUE,
                                                           dom = 'Bfrtip',
                                                           buttons = c('csv', 'excel','print') ))
   
@@ -1834,6 +1920,7 @@ server <- function(input, output, session) {
                    host=ipDB, port=5432)
   on.exit(dbDisconnect(con))
   AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
+
   AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
   AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
   AddRV$Species = dbGetQuery(con,"SELECT * from species;")
@@ -1901,7 +1988,12 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This OmicsUnitType is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This OmicsUnitType is already in the database.",
+        type = "error"
+      )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO omicsunittype (name, description) VALUES (
                             '",input$Name_OUT, "',
@@ -1909,8 +2001,13 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new OmicsUnitType is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !!",
+        text = "A new OmicsUnitType is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM OmicsUnitType;"
       pg <- dbDriver("PostgreSQL")
@@ -1983,15 +2080,26 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This datasource is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO datasource (name, description, published, url) VALUES (
                             '",input$Name_DataSource, "','",input$Description_DataSource, "','",input$Published_DataSource, "','",input$URL_DataSource, "');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new datasource is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new datasource is in the database",
+        type = "success"
+      ) 
       
       REQUEST = "SELECT * FROM datasource;"
       pg <- dbDriver("PostgreSQL")
@@ -2034,7 +2142,12 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This datasource is already in the database",
+        type = "error"
+      )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', input$Add_OmicsArea_name),"',
                             '",input$Add_OmicsArea_name, "','",input$Add_OmicsArea_description, "','",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.'),"');")
@@ -2042,8 +2155,12 @@ server <- function(input, output, session) {
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
       
-      shinyalert("Nice!", "A new datasource is in the database"
-                 , type = "success")
+      sendSweetAlert(
+        session = session,
+        title = "Nice !!",
+        text = "A new datasource is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
       pg <- dbDriver("PostgreSQL")
@@ -2118,8 +2235,12 @@ server <- function(input, output, session) {
                 where path <@ '",SOURCE_PATH,"';"))
     }
     
-    shinyalert("Nice!", "Data modified !"
-               , type = "success")
+    sendSweetAlert(
+      session = session,
+      title = "Nice !!",
+      text = "Data modified !",
+      type = "success"
+    )
     
     REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
     AddRV$OmicsArea = dbGetQuery(con, REQUEST)
@@ -2186,8 +2307,12 @@ server <- function(input, output, session) {
         textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
         
       } else {
-        shinyalert("Cancellation", "Deletion cancelled !"
-                   , type = "warning")
+        sendSweetAlert(
+          session = session,
+          title = "Cancellation...",
+          text = "Deletion cancelled !",
+          type = "warning"
+        )
       }
       
     })
@@ -2284,7 +2409,13 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This species is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This species is already in the database",
+        type = "error"
+      )
+
     } else {
       REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
                             '",input$Name_Species, "',
@@ -2293,8 +2424,13 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new species is in the database"
-                 , type = "success")
+
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new species is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM species;"
       pg <- dbDriver("PostgreSQL")
@@ -2374,7 +2510,13 @@ server <- function(input, output, session) {
     species_ID = dbGetQuery(con, paste0("SELECT id from species where name ='",input$Species_Strain_SI,"';"))[1,1] 
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This strain is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !",
+        text = "This strain is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO strain (name, description, ref, species_id) VALUES (
                             '",input$Name_Strain, "',
@@ -2384,8 +2526,13 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new strain is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new strain is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM strain;"
       pg <- dbDriver("PostgreSQL")
@@ -2405,6 +2552,7 @@ server <- function(input, output, session) {
   #=============================================================================
   
   submissionRV = reactiveValues()
+  submissionRV$CorrectImported = F
   
   #-----------------------------------------------------------------------------
   # Experiment
@@ -2477,16 +2625,26 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This user is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This user is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
                             '",input$Submission_tags_NewName, "',
                             '",input$Submission_tags_NewDescription, "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
-      shinyalert("Nice!", "A new pixeler is in the database"
-                 , type = "success")
       
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new pixeler is in the database",
+        type = "success"
+      )
       
       REQUEST = paste0("select * from tag;")
       TAG$table = dbGetQuery(con, REQUEST)
@@ -2599,6 +2757,7 @@ server <- function(input, output, session) {
       withProgress(message = 'PixelSet imported', value = 0, {
         m = as.numeric(input$submission_pixelSet_nbr)
         for( i in 1:input$submission_pixelSet_nbr){
+          incProgress(1/m, detail = paste0("Imported :", floor(i/m*100),"%"))
           
           id_PixelSets = paste0("PixelSet_",time,"_",i)
           adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
@@ -2623,18 +2782,37 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",eval(parse(text = paste0("input$submission_pixelSet_OUT",i))),"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })
-          
-          incProgress(1/m, detail = paste0("Imported :", floor(i/m*100))) 
         }
       })
+      
+      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+      updateTabItems (session, "tabs", selected = "Dashboard")
+      submissionRV$test
+      
+      sendSweetAlert(
+        session = session,
+        title = "Successfully imported!",
+        text = "The pixels have been successfully imported.",
+        type = "success"
+      )
+      
       dbDisconnect(con)
     } else {
-      shinyalert("Cancellation", "Submission is cancelled", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation !",
+        text = "Submission is cancelled",
+        type = "warning"
+      )
     }
+  })
+  
+  observeEvent(submissionRV$test,{
+    
   })
   
   observeEvent(input$submission_pixelSet_nbr,{
@@ -2660,10 +2838,8 @@ server <- function(input, output, session) {
                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
                                                       buttonLabel = "Browse...",
-                                                      placeholder = "No file selected"),
-                                            h4("Omics unit type"),
-                                            selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
-                                                        choices)
+                                                      placeholder = "No file selected")
+                                            
         ),select = T)
         
       }else{
@@ -2674,15 +2850,20 @@ server <- function(input, output, session) {
                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                              fileInput(paste0("submission_pixelSet_file",i),label = NULL,
                                                        buttonLabel = "Browse...",
-                                                       placeholder = "No file selected"),
-                                             h4("Omics unit type"),
-                                             selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
-                                                         choices)
+                                                       placeholder = "No file selected")
         ),select = F)
         
       }
       
     }
+    
+  })
+  
+  output$submission_pixelSet_OUT_UI <- renderUI({
+    choices = AddRV$OUT[,1]
+    names(choices) = AddRV$OUT[,2]
+    selectInput("submission_pixelSet_OUT",label = NULL,
+                choices)
     
   })
   
