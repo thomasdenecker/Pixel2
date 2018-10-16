@@ -53,7 +53,8 @@ ipDB = read.table("Database/ipDB.txt", header = F, stringsAsFactors = F)[1,1]
 
 header <- dashboardHeader(title = "Pixel")
 sidebar <- dashboardSidebar(uiOutput("sidebarpanel"))
-body <- dashboardBody(useShinyjs(), useShinyalert(),
+body <- dashboardBody(useShinyjs(), 
+                      useShinyalert(),
                       tags$head(tags$link(href = "Images/pixel_icon.png",
                                           rel ="icon", type="image/png")),
                       
@@ -274,108 +275,143 @@ server <- function(input, output, session) {
         # Tab content : Submissions
         tabItem(
           tabName = "Submissions", 
-          div(class = "table_style",
-              h2("Submissions"),
-              fluidRow(
-                column(6,
-                       
-                       h3("Experiment"),
-                       p("This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
-                       h4("Description"),
-                       textAreaInput('submission_Exp_description', NULL, resize = "vertical", width ='100%' ),
-                       h4("Completion date"),
-                       selectInput(
-                         inputId = "submission_Exp_completionDate",
-                         label = NULL,
-                         2000:as.integer(format(Sys.Date(), "%Y"))
-                       ),
-                       h4('Omics area'),
-                       uiOutput("Submission_Exp_omicsArea"),
-                       h4('Data source'),
-                       uiOutput("Submission_Exp_dataSource"),
-                       h4('Stain'),
-                       uiOutput("Submission_Exp_Strain")
-                       
-                ), 
-                column(6,
-                       h3("Analysis"),
-                       p("This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process."),
-                       h4("Description"),
-                       textAreaInput('submission_Analysis_description', NULL, resize = "vertical"),
-                       h4("Completion date"),
-                       selectInput(
-                         inputId = "submission_Analysis_completionDate",
-                         label = NULL,
-                         2000:as.integer(format(Sys.Date(), "%Y"))
-                       ),
-                       h4('Notebook'),
-                       fileInput("submission_Analysis_notebook",label = NULL,
-                                 buttonLabel = "Browse...",
-                                 placeholder = "No file selected"),
-                       
-                       h4('Secondary data file'),
-                       
-                       fileInput("submission_Analysis_secondary_data",label = NULL,
-                                 buttonLabel = "Browse...",
-                                 placeholder = "No file selected")
-                )
-                
-              ),
-              
-              fluidRow(
-                h3("Tags", class='center'),
-                column(4,h4("Experiment tags"), uiOutput("Submission_Exp_tags")),
-                column(4,h4("Add new tag"),
-                       textInput("Submission_tags_NewName", NULL, placeholder = "Name"),
-                       textInput("Submission_tags_NewDescription", NULL, placeholder = "Description"),
-                       actionButton("Submission_Exp_tags_Newbtn", "Add tag")),
-                column(4,h4("Analysis tags"),uiOutput("Submission_Analysis_tags"))
-              ),
-              
-              h3("Pixel data sets"),
-              p("This section lists and describes each pixel datasets to be imported in the system. These files have to be associated to the secondary datafile (and the notebook datafile if available) during the import process. A specific comment can be added for each set of Pixel to better describe their differences."),
-              selectInput(
-                inputId = "submission_pixelSet_nbr",
-                label = NULL,
-                1:10
-              ),
-              
-              
-              tabsetPanel(id = "tab_PixelSets"),
-              fluidRow(
-                column(3,
-                       h3("Parameters"),
-                       # Input: Checkbox if file has header
-                       radioButtons("header_PS", "Header",
-                                    choices = c("Yes" = TRUE,
-                                                "No" = FALSE),
-                                    selected = TRUE, inline=T),
-                       
-                       # Input: Select separator ----
-                       radioButtons("sep_PS", "Separator",
-                                    choices = c(Comma = ",",
-                                                Semicolon = ";",
-                                                Tab = "\t",
-                                                Space = " "),
-                                    selected = "\t", inline=T),
-                       
-                       # Input: Select quotes ----
-                       radioButtons("quote_PS", "Quote",
-                                    choices = c(None = "",
-                                                "Double Quote" = '"',
-                                                "Single Quote" = "'"),
-                                    selected = "", inline=T)
-                ), 
-                column(9, 
-                       h3("Preview"),
-                       dataTableOutput(outputId = "contents_PS"))
-              ),
-              h4("Omics unit type"),
-              uiOutput("submission_pixelSet_OUT_UI"),
-              
-              actionButton("Submission", "Submission")
-              
-          )),
+          
+          h2("Submissions"),
+          fluidRow( class="box-submission",
+                    box( 
+                      title = "1- Experiment", status = "danger", solidHeader = TRUE,
+                      collapsible = TRUE,
+                      p(class="info","This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
+                      h4("Description"),
+                      textAreaInput("submission_Exp_description", rows = 5, resize = "vertical", label = NULL),
+                      h4("Completion date"),
+                      selectInput(
+                        inputId = "submission_Exp_completionDate",
+                        label = NULL,
+                        2000:as.integer(format(Sys.Date(), "%Y"))
+                      ),
+                      h4('Omics area'),
+                      uiOutput("Submission_Exp_omicsArea"),
+                      h4("Omics unit type"),
+                      uiOutput("submission_pixelSet_OUT_UI"),
+                      h4('Data source'),
+                      uiOutput("Submission_Exp_dataSource"),
+                      h4('Species'),
+                      uiOutput("Submission_Exp_Species"),
+                      
+                      h4('Strain'),
+                      uiOutput("Submission_Exp_Strain"),
+                      
+                      div(class="inline", h4("Tag ")),
+                      div(class="inline tag-inline",dropdownButton(
+                        h4("Add new tag"),
+                        textInput("Submission_tags_NewName", NULL, placeholder = "Name"),
+                        textInput("Submission_tags_NewDescription", NULL, placeholder = "Description"),
+                        actionButton("Submission_Exp_tags_Newbtn", "Add tag"), size = "xs",
+                        circle = TRUE, status = "danger", icon = icon("plus"), width = "300px",
+                        tooltip = tooltipOptions(title = "Add new tag")
+                      )),
+                      tags$br(class="clearBoth"),
+                      uiOutput("Submission_Exp_tags")
+                      
+                    ),
+                    
+                    
+                    box( 
+                      title = "2- Analysis", status = "danger", solidHeader = TRUE, 
+                      collapsible = TRUE,
+                      
+                      p(class = "info","This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process."),
+                      
+                      h4("Description"),
+                      textAreaInput("submission_Analysis_description", rows = 5, resize = "vertical", label = NULL),
+
+                      h4("Completion date"),
+                      selectInput(
+                        inputId = "submission_Analysis_completionDate",
+                        label = NULL,
+                        2000:as.integer(format(Sys.Date(), "%Y"))
+                      ),
+                      
+                      h4('Notebook'),
+                      fileInput("submission_Analysis_notebook",label = NULL,
+                                buttonLabel = "Browse...",
+                                placeholder = "No file selected"),
+                      
+                      h4('Secondary data file'),
+                      fileInput("submission_Analysis_secondary_data",label = NULL,
+                                buttonLabel = "Browse...",
+                                placeholder = "No file selected"),
+                      
+                      div(class="inline", h4("Tag ")),
+                      div(class="inline tag-inline",dropdownButton(
+                        h4("Add new tag"),
+                        textInput("Submission_tags_NewName_analysis", NULL, placeholder = "Name"),
+                        textInput("Submission_tags_NewDescription_analysis", NULL, placeholder = "Description"),
+                        actionButton("Submission_Exp_tags_Newbtn_analysis", "Add tag"), size = "xs",
+                        circle = TRUE, status = "danger", icon = icon("plus"), width = "300px",
+                        tooltip = tooltipOptions(title = "Add new tag")
+                      )),
+                      tags$br(class="clearBoth"),
+                      
+                      uiOutput("Submission_Analysis_tags")
+                    )
+          ),
+          fluidRow(class="box-submission",
+                   box( 
+                     title = "3- Pixel data sets", status = "danger", solidHeader = TRUE,
+                     collapsible = TRUE,width = 12,
+                     p(class="info","This section lists and describes each pixel datasets to be imported in the system. These files have to be associated to the secondary datafile (and the notebook datafile if available) during the import process. A specific comment can be added for each set of Pixel to better describe their differences."),
+                     selectInput(
+                       inputId = "submission_pixelSet_nbr",
+                       label = NULL,
+                       1:10
+                     ),
+                     
+                     tabsetPanel(id = "tab_PixelSets"),
+                     h4("Reading settings"),
+                     fluidRow(
+                       column(3,
+                              h5("Parameters"),
+                              # Input: Checkbox if file has header
+                              radioButtons("header_PS", "Header",
+                                           choices = c("Yes" = TRUE,
+                                                       "No" = FALSE),
+                                           selected = TRUE, inline=T),
+                              
+                              # Input: Select separator ----
+                              radioButtons("sep_PS", "Separator",
+                                           choices = c(Comma = ",",
+                                                       Semicolon = ";",
+                                                       Tab = "\t",
+                                                       Space = " "),
+                                           selected = "\t", inline=T),
+                              
+                              # Input: Select quotes ----
+                              radioButtons("quote_PS", "Quote",
+                                           choices = c(None = "",
+                                                       "Double Quote" = '"',
+                                                       "Single Quote" = "'"),
+                                           selected = "", inline=T)
+                       ), 
+                       column(9, 
+                              h5("Preview"),
+                              dataTableOutput(outputId = "contents_PS"))
+                     )
+                   )
+          ),
+          
+          fluidRow(class="box-submission",
+                   box( 
+                     title = "4- Submission", status = "danger", solidHeader = TRUE,
+                     collapsible = TRUE,width = 12,
+                     actionButton("SubmissionClear", "Clear"),
+                     actionButton("Submission", "Submission")
+                     
+                   )
+          )
+          
+        ),
         
         # Tab content : Pixel_sets
         tabItem(
@@ -1920,11 +1956,12 @@ server <- function(input, output, session) {
                    host=ipDB, port=5432)
   on.exit(dbDisconnect(con))
   AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
-
+  
   AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
   AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
   AddRV$Species = dbGetQuery(con,"SELECT * from species;")
   AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
+  AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
   
   #.............................................................................
   # Add OUT
@@ -2415,7 +2452,7 @@ server <- function(input, output, session) {
         text = "This species is already in the database",
         type = "error"
       )
-
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
                             '",input$Name_Species, "',
@@ -2424,7 +2461,7 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-
+      
       sendSweetAlert(
         session = session,
         title = "Nice !",
@@ -2539,6 +2576,7 @@ server <- function(input, output, session) {
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       AddRV$Strain = dbGetQuery(con, REQUEST)
+      AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
       dbDisconnect(con)
     }
   })
@@ -2552,7 +2590,7 @@ server <- function(input, output, session) {
   #=============================================================================
   
   submissionRV = reactiveValues()
-  submissionRV$CorrectImported = F
+  submissionRV$Read = F
   
   #-----------------------------------------------------------------------------
   # Experiment
@@ -2575,10 +2613,25 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  observeEvent(input$Submission_Exp_Species_SI,{
+    updateSelectInput(session,"Submission_Exp_Strain_SI", choices = unique(AddRV$StrainSpecies[which(AddRV$StrainSpecies[,"species"] == input$Submission_Exp_Species_SI),'strain'] ))
+  })
+  
+  output$Submission_Exp_Species = renderUI({
+    
+    if(nrow(AddRV$StrainSpecies) !=0){
+      div(class="italic",selectInput('Submission_Exp_Species_SI', label = NULL, choices =  unique(AddRV$StrainSpecies[,'species'])))
+    } else {
+      p(class="warning","No saved link between species and strain.")
+    }
+    
+  })
+  
   output$Submission_Exp_Strain = renderUI({
     
     if(nrow(AddRV$Strain) !=0){
-      selectInput('Submission_Exp_Strain_SI', NULL, AddRV$Strain[,'name'])
+      selectInput('Submission_Exp_Strain_SI', NULL, AddRV$StrainSpecies[which(AddRV$StrainSpecies[,"species"] == input$Submission_Exp_Species_SI),'strain'])
     } else {
       p(class="warning","No saved strain")
     }
@@ -2589,7 +2642,7 @@ server <- function(input, output, session) {
   pg <- dbDriver("PostgreSQL")
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
-  REQUEST = paste0("select * from tag;")
+  REQUEST = paste0("SELECT * FROM tag ORDER BY name;")
   TAG$table = dbGetQuery(con, REQUEST)
   dbDisconnect(con)
   
@@ -2646,7 +2699,7 @@ server <- function(input, output, session) {
         type = "success"
       )
       
-      REQUEST = paste0("select * from tag;")
+      REQUEST = paste0("select * from tag ORDER BY name;")
       TAG$table = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
     }
@@ -2656,7 +2709,64 @@ server <- function(input, output, session) {
     dbDisconnect(con)
   })
   
-  # submission_Exp_description submission_Exp_completionDate Submission_Exp_omicsArea Submission_Exp_dataSource Submission_Exp_Strain Submission_Exp_tags
+  observeEvent(input$Submission_Exp_tags_Newbtn_analysis,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM tag
+                              WHERE name = '",input$Submission_tags_NewName_analysis,"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This user is already in the database",
+        type = "error"
+      )
+      
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",input$Submission_tags_NewName_analysis, "',
+                            '",input$Submission_tags_NewDescription_analysis, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new pixeler is in the database",
+        type = "success"
+      )
+      
+      REQUEST = paste0("select * from tag ORDER BY name;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"Submission_tags_NewName_analysis",value = "")
+    updateTextInput(session,"Submission_tags_NewDescription_analysis",value = "")
+    dbDisconnect(con)
+  })
+  
+  
+  
+  observeEvent(input$SubmissionClear,{
+    reset('submission_Analysis_notebook')
+    reset('submission_Analysis_secondary_data')
+    updateTextAreaInput(session, "submission_Exp_description", value = "")
+    updateTextAreaInput(session, "submission_Analysis_description", value = "")
+    updateCheckboxGroupInput(session,"Submission_Exp_tags_CBG", selected = character(0))
+    updateCheckboxGroupInput(session,"Submission_Analysis_tags_CBG", selected = character(0))
+    updateSelectInput(session, "submission_pixelSet_nbr", selected = 2)
+    updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
+    submissionRV$Read = F
+    
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  
   observeEvent(input$Submission,{
     
     pg <- dbDriver("PostgreSQL")
@@ -2790,9 +2900,19 @@ server <- function(input, output, session) {
       })
       
       DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      updateTabItems (session, "tabs", selected = "Dashboard")
-      submissionRV$test
       
+      # Clear after submission
+      reset('submission_Analysis_notebook')
+      reset('submission_Analysis_secondary_data')
+      updateTextAreaInput(session, "submission_Exp_description", value = "")
+      updateTextAreaInput(session, "submission_Analysis_description", value = "")
+      updateCheckboxGroupInput(session,"Submission_Exp_tags_CBG", selected = character(0))
+      updateCheckboxGroupInput(session,"Submission_Analysis_tags_CBG", selected = character(0))
+      updateSelectInput(session, "submission_pixelSet_nbr", selected = 2)
+      updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
+      submissionRV$Read = F
+      
+      updateTabItems (session, "tabs", selected = "Dashboard")
       sendSweetAlert(
         session = session,
         title = "Successfully imported!",
@@ -2801,6 +2921,7 @@ server <- function(input, output, session) {
       )
       
       dbDisconnect(con)
+      shinyjs::runjs("window.scrollTo(0, 0)")
     } else {
       sendSweetAlert(
         session = session,
@@ -2811,8 +2932,8 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(submissionRV$test,{
-    
+  observeEvent(input$col, {
+    js$pageCol(input$col)
   })
   
   observeEvent(input$submission_pixelSet_nbr,{
@@ -2867,16 +2988,29 @@ server <- function(input, output, session) {
     
   })
   
+  observeEvent(input$submission_pixelSet_file1,{
+    if(input$submission_pixelSet_file1$datapath != ""){
+      submissionRV$Read = T
+    } else {
+      submissionRV$Read = F
+    }
+  })
+  
   output$contents_PS <-  renderDataTable({
     
     req(input$submission_pixelSet_file1)
     
-    df <- read.csv2(input$submission_pixelSet_file1$datapath,
-                    header = as.logical(input$header_PS),
-                    sep = input$sep_PS,
-                    quote = input$quote_PS,
-                    nrows=5
-    )
+    if(submissionRV$Read){
+      df <- read.csv2(input$submission_pixelSet_file1$datapath,
+                      header = as.logical(input$header_PS),
+                      sep = input$sep_PS,
+                      quote = input$quote_PS,
+                      nrows=5
+      ) 
+    } else {
+      NULL
+    }
+    
     
   },  options = list(scrollX = TRUE , dom = 't'))
   
