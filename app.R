@@ -154,7 +154,7 @@ server <- function(input, output, session) {
                       menuItem("Explorer", tabName = "Explorer", icon = icon("search"),
                                startExpanded = F,
                                menuSubItem("Chromosomal feature", tabName = "CF_item"),
-                               menuSubItem("Pixel sets", tabName = "Pixel_sets"),
+                               menuSubItem("PixelSet", tabName = "PixelSet"),
                                menuSubItem("Tags", tabName = "Tags")
                       ),
                       menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
@@ -183,7 +183,7 @@ server <- function(input, output, session) {
           ),
           sidebarMenu("tabMenu",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
+                      menuItem("PixelSet", tabName = "PixelSet", icon = icon("search")), 
                       menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
@@ -202,7 +202,9 @@ server <- function(input, output, session) {
   output$body <- renderUI({
     if (USER$Logged == TRUE) {
       tabItems(
+        ########################################################################
         # Tab content : Dashboard
+        ########################################################################
         tabItem(
           tabName = "Dashboard", 
           h2("Dashboard"),
@@ -214,9 +216,6 @@ server <- function(input, output, session) {
           ),
           
           fluidRow(
-            # box(title = "Pixels by OmicsUnitType", width = 6, htmlOutput("PixelsByOmicsUnitType") ),
-            # box(title = "Pixels by Species", width = 6, htmlOutput("PixelsByOmicsUnitType"))
-            # 
             
             div(class="col-sm-6",
                 div(class="box box-primary",
@@ -271,8 +270,9 @@ server <- function(input, output, session) {
           )
           
         ),
-        
+        ########################################################################
         # Tab content : Submissions
+        ########################################################################
         tabItem(
           tabName = "Submissions", 
           
@@ -325,7 +325,7 @@ server <- function(input, output, session) {
                       
                       h4("Description"),
                       textAreaInput("submission_Analysis_description", rows = 5, resize = "vertical", label = NULL),
-
+                      
                       h4("Completion date"),
                       selectInput(
                         inputId = "submission_Analysis_completionDate",
@@ -412,11 +412,12 @@ server <- function(input, output, session) {
           )
           
         ),
-        
-        # Tab content : Pixel_sets
+        ########################################################################
+        # Tab content : PixelSet
+        ########################################################################
         tabItem(
-          tabName = "Pixel_sets", 
-          h2("Pixel sets"),
+          tabName = "PixelSet", 
+          h2("PixelSet"),
           div( class = "PixelSet",
                fluidRow(
                  
@@ -452,11 +453,13 @@ server <- function(input, output, session) {
                         )
                  )
                ),
+               fluidRow(
                h3("Pixels"),
-               DTOutput("PixelSet_explo_Pixel")
+               DTOutput("PixelSet_explo_Pixel"))
           )),
-        
+        ########################################################################
         # Tab content : Tags
+        ########################################################################
         tabItem(
           tabName = "Tags", 
           h2("Tags"),
@@ -469,23 +472,63 @@ server <- function(input, output, session) {
                  DTOutput("Tag_experiment")
                ))),
         
+        ########################################################################
         # Tab content : Chromosomal feature
+        ########################################################################
         tabItem(
           tabName = "CF_item", 
-          h2("Chromosomal feature"),
+          uiOutput("CF_title"),
           fluidRow(
-            uiOutput("CF_information"),
+            div(class="col-md-6",
+                uiOutput("CF_information")
+            ),
+            div(class="col-md-6",
+                h2(class="title-cf","Supplementary information"),
+                tabsetPanel(id = "tab_sup_annot")
+            )
+          ),
+          
+          h2(class="title-cf", "Graphical representations"),
+          fluidRow(
+            div(class="col-md-6",
+                h3(class="center","Omics Unit type"), br(),
+                htmlOutput("CF_OUT_graph")
+            ),
+            div(class="col-md-6",
+                h3(class="center","Omics Area"), br(),
+                htmlOutput("CF_OmicsArea_graph")
+            )
+          ),
+          
+          fluidRow(
+            div(class="col-md-6",
+                h3(class="center","Analysis tags"), br(),
+                htmlOutput("CF_Tag_Analysis_graph")
+            ),
+            div(class="col-md-6",
+                h3(class="center","Experiment tags"), br(),
+                htmlOutput("CF_Tag_Exp_graph")
+            )
+          ),
+          
+          
+          fluidRow(
             div( class = "margeProfile", 
-                 tabsetPanel(id = "tab_sup_annot"),
-                 h3("PixelSets"),
+                 h3(class ="title-cf","PixelSets"),
                  DTOutput("CF_PixelSET"),
-                 h3("Pixel"),
+                 h3(class="title-cf","Pixel"),
                  DTOutput("CF_Pixel"),
-                 h3("Tags"),
-                 h4("Analysis"), 
-                 DTOutput("CF_Tag_analysis"),
-                 h4("Experiment"),
-                 DTOutput("CF_Tag_experiment")
+                 h3(class="title-cf","Tags"),
+                 fluidRow(
+                   div(class="col-md-6",
+                       h4("Analysis"), 
+                       DTOutput("CF_Tag_analysis")
+                   ),
+                   div(class="col-md-6",
+                       h4("Experiment"),
+                       DTOutput("CF_Tag_experiment")
+                   )
+                 )
             )
           )),
         
@@ -736,9 +779,6 @@ server <- function(input, output, session) {
           
         ),
         
-        
-        
-        
         # Tab content : Pixeler
         tabItem(
           tabName = "Pixeler", 
@@ -778,7 +818,9 @@ server <- function(input, output, session) {
               
           )),
         
-        # Tab content : Pixel_sets
+        ########################################################################
+        # Tab content : Profile
+        ########################################################################
         tabItem(
           tabName = "Profile", 
           h2("Profile"),
@@ -848,7 +890,7 @@ server <- function(input, output, session) {
                                              options = list(scrollX = TRUE, pageLength = 10))
   
   observeEvent(input$PixelSetInfo_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Pixel_sets")
+    updateTabItems (session, "tabs", selected = "PixelSet")
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
@@ -1451,7 +1493,10 @@ server <- function(input, output, session) {
     
     CF$name = input$searchText
     CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",input$searchText,"' and pixel.pixelset_id = pixelset.id;"))
-    CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",input$searchText,"';"))
+    CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
+                                       from pixel,OmicsUnitType 
+                                       where cf_feature_name = '",input$searchText,"'
+                                       and omicsunittype_id = OmicsUnitType.id;"))
     
     
     CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
@@ -1468,6 +1513,44 @@ server <- function(input, output, session) {
                                                 and Analysis_Experiment.id_analysis = analysis.id
                                                 and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                                 and tag.id = Tag_experiment.id_tag;"))
+    
+    CF$CF_OmicsArea =  dbGetQuery(con, paste0("select omicsarea.name, count(*)
+    from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
+    where pixel.cf_feature_name ='",input$searchText,"'
+    and pixel.pixelset_id = PS.id 
+    and ps.id_analysis = analysis.id
+    and Analysis_Experiment.id_analysis = analysis.id
+    and experiment.id = Analysis_Experiment.id_experiment 
+    and omicsAreaid = omicsArea.id
+    group by omicsarea.name;"))
+    
+    
+    CF$CF_OmicsUnitType =  dbGetQuery(con, paste0("SELECT OmicsUnitType.name, count(*)
+    from pixel, OmicsUnitType
+    where pixel.cf_feature_name ='",input$searchText,"'
+    and OmicsUnitType_id = OmicsUnitType.id
+    group by OmicsUnitType.name;"))
+    
+    CF$CF_Tag_Exp_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
+                                                  from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                  where pixel.cf_feature_name ='",input$searchText,"'
+                                                      and pixel.pixelset_id = PS.id 
+                                                      and ps.id_analysis = analysis.id
+                                                      and Analysis_Experiment.id_analysis = analysis.id
+                                                      and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                      and tag.id = Tag_experiment.id_tag
+                                                      group by tag.name;"))
+    
+    
+    CF$CF_Tag_Analysis_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
+                                                  from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+                                                  where pixel.cf_feature_name ='",input$searchText,"' and
+                                                      pixel.pixelset_id = PS.id 
+                                                      and ps.id_analysis = analysis.id 
+                                                      and Tag_Analysis.id_analysis = analysis.id 
+                                                      and tag.id = Tag_Analysis.id_tag
+                                                      group by tag.name;"))
+    
     
     Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
     
@@ -1490,16 +1573,57 @@ server <- function(input, output, session) {
     
   })
   
+  output$CF_title <- renderUI(
+    if(!is.null(CF$name) & length(CF$name) != 0){
+      h1(paste("Chromosomal feature - ",CF$name))
+    } else {
+      h1("Chromosomal feature")
+    }
+    
+    )
   
   output$CF_information <- renderUI(
     tagList(
-      div( class = "margeProfile",
-           h1(CF$name),
-           h2("Main information"),
-           HTML(CF$main_annotation),
-           h2("Supplementary information")
-      ))
+         h2(class="title-cf", "Main information"),
+         HTML(CF$main_annotation)
+      )
   )
+  
+  # CF_OUT_graph CF_OmicsArea_graph
+  # CF$CF_OmicsArea CF$CF_OmicsUnitType
+  output$CF_OUT_graph <- renderGvis({
+    if(!is.null(CF$CF_OmicsUnitType)){
+      gvisPieChart(CF$CF_OmicsUnitType,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+    
+  })
+  
+  output$CF_OmicsArea_graph <- renderGvis({
+    if(!is.null(CF$CF_OmicsArea)){
+      gvisPieChart(CF$CF_OmicsArea,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+  })
+  
+  output$CF_Tag_Analysis_graph <- renderGvis({
+    if(!is.null(CF$CF_Tag_Analysis_graph)){
+      gvisPieChart(CF$CF_Tag_Analysis_graph,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+    
+  })
+  
+  output$CF_Tag_Exp_graph <- renderGvis({
+    if(!is.null(CF$CF_Tag_Exp_graph)){
+      gvisPieChart(CF$CF_Tag_Exp_graph,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+  })
   
   output$CF_PixelSET <- renderDT(CF$PIXELSET, 
                                  selection = 'single', 
@@ -1534,7 +1658,7 @@ server <- function(input, output, session) {
   PIXELSET_RV = reactiveValues()
   
   observeEvent(input$CF_PixelSET_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Pixel_sets")
+    updateTabItems (session, "tabs", selected = "PixelSet")
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
@@ -2365,10 +2489,9 @@ server <- function(input, output, session) {
     for(p in AddRV$OmicsArea[,'path']){
       inter = unlist(strsplit(p,"\\."))
       if(length(inter) == 1){
-        
         firstAncestor = c(firstAncestor, NA)
       }else{
-        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == inter[length(inter)-1]),'name'] )
+        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'id'] == inter[length(inter)-1]),'name'] )
       }
     }
     
@@ -2378,10 +2501,7 @@ server <- function(input, output, session) {
     gvisOrgChart(dataplot, 
                  options=list(size='large', color = "#ffb3b3"))
     
-    
-    
   })
-  
   
   
   #.............................................................................
@@ -2490,7 +2610,6 @@ server <- function(input, output, session) {
   output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
                                   editable = TRUE,
                                   options = list(scrollX = TRUE))
-  
   
   # Edit OUT
   
@@ -2671,7 +2790,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                                 FROM tag
-                              WHERE name = '",input$Submission_tags_NewName,"';")
+                              WHERE name = '",tolower(input$Submission_tags_NewName),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -2681,13 +2800,13 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "Oops!",
-        text = "This user is already in the database",
+        text = "This tag is already in the database",
         type = "error"
       )
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",input$Submission_tags_NewName, "',
+                            '",tolower(input$Submission_tags_NewName), "',
                             '",input$Submission_tags_NewDescription, "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
@@ -2695,7 +2814,7 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "Nice !",
-        text = "A new pixeler is in the database",
+        text = "A new tag is in the database",
         type = "success"
       )
       
@@ -2713,7 +2832,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                               FROM tag
-                              WHERE name = '",input$Submission_tags_NewName_analysis,"';")
+                              WHERE name = '",tolower(input$Submission_tags_NewName_analysis),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -2729,7 +2848,7 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",input$Submission_tags_NewName_analysis, "',
+                            '",tolower(input$Submission_tags_NewName_analysis), "',
                             '",input$Submission_tags_NewDescription_analysis, "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
@@ -2778,7 +2897,6 @@ server <- function(input, output, session) {
     #---------------------------------------------------------------------------
     
     CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
-    
     
     
     warning_sub = NULL

@@ -198,11 +198,11 @@ textarea {
 }
 
 .PixelSet h3 {
-  background-color: #ffe6e6;
   margin-left: -10px;
-  padding-left: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
 }
 
 .box-submission div div.box {
@@ -223,4 +223,12 @@ div.inline { float:left; }
 
 .italic {
   font-style: italic;
+}
+
+
+.title-cf {
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
 }
