@@ -53,13 +53,15 @@ ipDB = read.table("Database/ipDB.txt", header = F, stringsAsFactors = F)[1,1]
 
 header <- dashboardHeader(title = "Pixel")
 sidebar <- dashboardSidebar(uiOutput("sidebarpanel"))
-body <- dashboardBody(useShinyjs(), useShinyalert(),
+body <- dashboardBody(useShinyjs(), 
+                      useShinyalert(),
                       tags$head(tags$link(href = "Images/pixel_icon.png",
                                           rel ="icon", type="image/png")),
                       
                       # Add css style
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
-                                     href="style.css" />')),
+                                     href="style.css" />'))
+                      ,
                       uiOutput("body"))
 ui <- dashboardPage(skin= "red", header, sidebar, body)
 
@@ -152,7 +154,7 @@ server <- function(input, output, session) {
                       menuItem("Explorer", tabName = "Explorer", icon = icon("search"),
                                startExpanded = F,
                                menuSubItem("Chromosomal feature", tabName = "CF_item"),
-                               menuSubItem("Pixel sets", tabName = "Pixel_sets"),
+                               menuSubItem("PixelSet", tabName = "PixelSet"),
                                menuSubItem("Tags", tabName = "Tags")
                       ),
                       menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
@@ -181,7 +183,7 @@ server <- function(input, output, session) {
           ),
           sidebarMenu("tabMenu",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-                      menuItem("Pixel sets", tabName = "Pixel_sets", icon = icon("search")), 
+                      menuItem("PixelSet", tabName = "PixelSet", icon = icon("search")), 
                       menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
@@ -200,8 +202,9 @@ server <- function(input, output, session) {
   output$body <- renderUI({
     if (USER$Logged == TRUE) {
       tabItems(
-        
+        ########################################################################
         # Tab content : Dashboard
+        ########################################################################
         tabItem(
           tabName = "Dashboard", 
           h2("Dashboard"),
@@ -213,9 +216,6 @@ server <- function(input, output, session) {
           ),
           
           fluidRow(
-            # box(title = "Pixels by OmicsUnitType", width = 6, htmlOutput("PixelsByOmicsUnitType") ),
-            # box(title = "Pixels by Species", width = 6, htmlOutput("PixelsByOmicsUnitType"))
-            # 
             
             div(class="col-sm-6",
                 div(class="box box-primary",
@@ -255,116 +255,169 @@ server <- function(input, output, session) {
                     )
                 )
             )
+          ),
+          
+          
+          fluidRow(
+            div(class="col-sm-12",
+                div(class="box box-primary",
+                    div(class="box-body",
+                        h2(class="center","Last PixelSet imported"), br(),
+                        DT::dataTableOutput('PixelSetInfo')
+                    )
+                )
+            )
           )
           
         ),
-        
+        ########################################################################
         # Tab content : Submissions
+        ########################################################################
         tabItem(
           tabName = "Submissions", 
-          div(class = "table_style",
-              h2("Submissions"),
-              fluidRow(
-                column(6,
-                       
-                       h3("Experiment"),
-                       p("This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
-                       h4("Description"),
-                       textAreaInput('submission_Exp_description', NULL, resize = "vertical", width ='100%' ),
-                       h4("Completion date"),
-                       selectInput(
-                         inputId = "submission_Exp_completionDate",
-                         label = NULL,
-                         2000:as.integer(format(Sys.Date(), "%Y"))
-                       ),
-                       h4('Omics area'),
-                       uiOutput("Submission_Exp_omicsArea"),
-                       h4('Data source'),
-                       uiOutput("Submission_Exp_dataSource"),
-                       h4('Stain'),
-                       uiOutput("Submission_Exp_Strain")
-                       
-                ), 
-                column(6,
-                       h3("Analysis"),
-                       p("This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process."),
-                       h4("Description"),
-                       textAreaInput('submission_Analysis_description', NULL, resize = "vertical"),
-                       h4("Completion date"),
-                       selectInput(
-                         inputId = "submission_Analysis_completionDate",
-                         label = NULL,
-                         2000:as.integer(format(Sys.Date(), "%Y"))
-                       ),
-                       h4('Notebook'),
-                       fileInput("submission_Analysis_notebook",label = NULL,
-                                 buttonLabel = "Browse...",
-                                 placeholder = "No file selected"),
-                       
-                       h4('Secondary data file'),
-                       
-                       fileInput("submission_Analysis_secondary_data",label = NULL,
-                                 buttonLabel = "Browse...",
-                                 placeholder = "No file selected")
-                )
-                
-              ),
-              
-              fluidRow(
-                h3("Tags", class='center'),
-                column(4,h4("Experiment tags"), uiOutput("Submission_Exp_tags")),
-                column(4,h4("Add new tag"),
-                       textInput("Submission_tags_NewName", NULL, placeholder = "Name"),
-                       textInput("Submission_tags_NewDescription", NULL, placeholder = "Description"),
-                       actionButton("Submission_Exp_tags_Newbtn", "Add tag")),
-                column(4,h4("Analysis tags"),uiOutput("Submission_Analysis_tags"))
-              ),
-              
-              h3("Pixel data sets"),
-              p("This section lists and describes each pixel datasets to be imported in the system. These files have to be associated to the secondary datafile (and the notebook datafile if available) during the import process. A specific comment can be added for each set of Pixel to better describe their differences."),
-              selectInput(
-                inputId = "submission_pixelSet_nbr",
-                label = NULL,
-                1:10
-              ),
-              tabsetPanel(id = "tab_PixelSets"),
-              fluidRow(
-                column(3,
-                       h3("Parameters"),
-                       # Input: Checkbox if file has header
-                       radioButtons("header_PS", "Header",
-                                    choices = c("Yes" = TRUE,
-                                                "No" = FALSE),
-                                    selected = TRUE, inline=T),
-                       
-                       # Input: Select separator ----
-                       radioButtons("sep_PS", "Separator",
-                                    choices = c(Comma = ",",
-                                                Semicolon = ";",
-                                                Tab = "\t",
-                                                Space = " "),
-                                    selected = "\t", inline=T),
-                       
-                       # Input: Select quotes ----
-                       radioButtons("quote_PS", "Quote",
-                                    choices = c(None = "",
-                                                "Double Quote" = '"',
-                                                "Single Quote" = "'"),
-                                    selected = "", inline=T)
-                ), 
-                column(9, 
-                       h3("Preview"),
-                       dataTableOutput(outputId = "contents_PS"))
-              ),
-              
-              actionButton("Submission", "Submission")
-              
-          )),
-        
-        # Tab content : Pixel_sets
+          
+          h2("Submissions"),
+          fluidRow( class="box-submission",
+                    box( 
+                      title = "1- Experiment", status = "danger", solidHeader = TRUE,
+                      collapsible = TRUE,
+                      p(class="info","This section describes the experimental conditions that were applied to obtain the secondary datafile (see section 'Analysis' below). Note that these experiments can be already published (in this situation a DOI is required) or not (in this situation a laboratory has to be specified)."),
+                      h4("Description"),
+                      textAreaInput("submission_Exp_description", rows = 5, resize = "vertical", label = NULL),
+                      h4("Completion date"),
+                      selectInput(
+                        inputId = "submission_Exp_completionDate",
+                        label = NULL,
+                        2000:as.integer(format(Sys.Date(), "%Y"))
+                      ),
+                      h4('Omics area'),
+                      uiOutput("Submission_Exp_omicsArea"),
+                      h4("Omics unit type"),
+                      uiOutput("submission_pixelSet_OUT_UI"),
+                      h4('Data source'),
+                      uiOutput("Submission_Exp_dataSource"),
+                      h4('Species'),
+                      uiOutput("Submission_Exp_Species"),
+                      
+                      h4('Strain'),
+                      uiOutput("Submission_Exp_Strain"),
+                      
+                      div(class="inline", h4("Tag ")),
+                      div(class="inline tag-inline",dropdownButton(
+                        h4("Add new tag"),
+                        textInput("Submission_tags_NewName", NULL, placeholder = "Name"),
+                        textInput("Submission_tags_NewDescription", NULL, placeholder = "Description"),
+                        actionButton("Submission_Exp_tags_Newbtn", "Add tag"), size = "xs",
+                        circle = TRUE, status = "danger", icon = icon("plus"), width = "300px",
+                        tooltip = tooltipOptions(title = "Add new tag")
+                      )),
+                      tags$br(class="clearBoth"),
+                      uiOutput("Submission_Exp_tags")
+                      
+                    ),
+                    
+                    
+                    box( 
+                      title = "2- Analysis", status = "danger", solidHeader = TRUE, 
+                      collapsible = TRUE,
+                      
+                      p(class = "info","This section describes the data analyses that were performed on secondary datasets to obtain pixel datasets. The secondary datafile has to be associated to the pixel datasets during the import process."),
+                      
+                      h4("Description"),
+                      textAreaInput("submission_Analysis_description", rows = 5, resize = "vertical", label = NULL),
+                      
+                      h4("Completion date"),
+                      selectInput(
+                        inputId = "submission_Analysis_completionDate",
+                        label = NULL,
+                        2000:as.integer(format(Sys.Date(), "%Y"))
+                      ),
+                      
+                      h4('Notebook'),
+                      fileInput("submission_Analysis_notebook",label = NULL,
+                                buttonLabel = "Browse...",
+                                placeholder = "No file selected"),
+                      
+                      h4('Secondary data file'),
+                      fileInput("submission_Analysis_secondary_data",label = NULL,
+                                buttonLabel = "Browse...",
+                                placeholder = "No file selected"),
+                      
+                      div(class="inline", h4("Tag ")),
+                      div(class="inline tag-inline",dropdownButton(
+                        h4("Add new tag"),
+                        textInput("Submission_tags_NewName_analysis", NULL, placeholder = "Name"),
+                        textInput("Submission_tags_NewDescription_analysis", NULL, placeholder = "Description"),
+                        actionButton("Submission_Exp_tags_Newbtn_analysis", "Add tag"), size = "xs",
+                        circle = TRUE, status = "danger", icon = icon("plus"), width = "300px",
+                        tooltip = tooltipOptions(title = "Add new tag")
+                      )),
+                      tags$br(class="clearBoth"),
+                      
+                      uiOutput("Submission_Analysis_tags")
+                    )
+          ),
+          fluidRow(class="box-submission",
+                   box( 
+                     title = "3- Pixel data sets", status = "danger", solidHeader = TRUE,
+                     collapsible = TRUE,width = 12,
+                     p(class="info","This section lists and describes each pixel datasets to be imported in the system. These files have to be associated to the secondary datafile (and the notebook datafile if available) during the import process. A specific comment can be added for each set of Pixel to better describe their differences."),
+                     selectInput(
+                       inputId = "submission_pixelSet_nbr",
+                       label = NULL,
+                       1:10
+                     ),
+                     
+                     tabsetPanel(id = "tab_PixelSets"),
+                     h4("Reading settings"),
+                     fluidRow(
+                       column(3,
+                              h5("Parameters"),
+                              # Input: Checkbox if file has header
+                              radioButtons("header_PS", "Header",
+                                           choices = c("Yes" = TRUE,
+                                                       "No" = FALSE),
+                                           selected = TRUE, inline=T),
+                              
+                              # Input: Select separator ----
+                              radioButtons("sep_PS", "Separator",
+                                           choices = c(Comma = ",",
+                                                       Semicolon = ";",
+                                                       Tab = "\t",
+                                                       Space = " "),
+                                           selected = "\t", inline=T),
+                              
+                              # Input: Select quotes ----
+                              radioButtons("quote_PS", "Quote",
+                                           choices = c(None = "",
+                                                       "Double Quote" = '"',
+                                                       "Single Quote" = "'"),
+                                           selected = "", inline=T)
+                       ), 
+                       column(9, 
+                              h5("Preview"),
+                              dataTableOutput(outputId = "contents_PS"))
+                     )
+                   )
+          ),
+          
+          fluidRow(class="box-submission",
+                   box( 
+                     title = "4- Submission", status = "danger", solidHeader = TRUE,
+                     collapsible = TRUE,width = 12,
+                     actionButton("SubmissionClear", "Clear"),
+                     actionButton("Submission", "Submission")
+                     
+                   )
+          )
+          
+        ),
+        ########################################################################
+        # Tab content : PixelSet
+        ########################################################################
         tabItem(
-          tabName = "Pixel_sets", 
-          h2("Pixel sets"),
+          tabName = "PixelSet", 
+          h2("PixelSet"),
           div( class = "PixelSet",
                fluidRow(
                  
@@ -400,11 +453,13 @@ server <- function(input, output, session) {
                         )
                  )
                ),
+               fluidRow(
                h3("Pixels"),
-               DTOutput("PixelSet_explo_Pixel")
+               DTOutput("PixelSet_explo_Pixel"))
           )),
-        
+        ########################################################################
         # Tab content : Tags
+        ########################################################################
         tabItem(
           tabName = "Tags", 
           h2("Tags"),
@@ -417,23 +472,63 @@ server <- function(input, output, session) {
                  DTOutput("Tag_experiment")
                ))),
         
+        ########################################################################
         # Tab content : Chromosomal feature
+        ########################################################################
         tabItem(
           tabName = "CF_item", 
-          h2("Chromosomal feature"),
+          uiOutput("CF_title"),
           fluidRow(
-            uiOutput("CF_information"),
+            div(class="col-md-6",
+                uiOutput("CF_information")
+            ),
+            div(class="col-md-6",
+                h2(class="title-cf","Supplementary information"),
+                tabsetPanel(id = "tab_sup_annot")
+            )
+          ),
+          
+          h2(class="title-cf", "Graphical representations"),
+          fluidRow(
+            div(class="col-md-6",
+                h3(class="center","Omics Unit type"), br(),
+                htmlOutput("CF_OUT_graph")
+            ),
+            div(class="col-md-6",
+                h3(class="center","Omics Area"), br(),
+                htmlOutput("CF_OmicsArea_graph")
+            )
+          ),
+          
+          fluidRow(
+            div(class="col-md-6",
+                h3(class="center","Analysis tags"), br(),
+                htmlOutput("CF_Tag_Analysis_graph")
+            ),
+            div(class="col-md-6",
+                h3(class="center","Experiment tags"), br(),
+                htmlOutput("CF_Tag_Exp_graph")
+            )
+          ),
+          
+          
+          fluidRow(
             div( class = "margeProfile", 
-                 tabsetPanel(id = "tab_sup_annot"),
-                 h3("PixelSets"),
+                 h3(class ="title-cf","PixelSets"),
                  DTOutput("CF_PixelSET"),
-                 h3("Pixel"),
+                 h3(class="title-cf","Pixel"),
                  DTOutput("CF_Pixel"),
-                 h3("Tags"),
-                 h4("Analysis"), 
-                 DTOutput("CF_Tag_analysis"),
-                 h4("Experiment"),
-                 DTOutput("CF_Tag_experiment")
+                 h3(class="title-cf","Tags"),
+                 fluidRow(
+                   div(class="col-md-6",
+                       h4("Analysis"), 
+                       DTOutput("CF_Tag_analysis")
+                   ),
+                   div(class="col-md-6",
+                       h4("Experiment"),
+                       DTOutput("CF_Tag_experiment")
+                   )
+                 )
             )
           )),
         
@@ -684,9 +779,6 @@ server <- function(input, output, session) {
           
         ),
         
-        
-        
-        
         # Tab content : Pixeler
         tabItem(
           tabName = "Pixeler", 
@@ -726,7 +818,9 @@ server <- function(input, output, session) {
               
           )),
         
-        # Tab content : Pixel_sets
+        ########################################################################
+        # Tab content : Profile
+        ########################################################################
         tabItem(
           tabName = "Profile", 
           h2("Profile"),
@@ -753,6 +847,7 @@ server <- function(input, output, session) {
   DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
   DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
   DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+  DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
   dbDisconnect(con)
   
   
@@ -788,7 +883,73 @@ server <- function(input, output, session) {
   
   output$pixelerInfo <- DT::renderDataTable(USERS$infos[,c(2:5, 7:8)],
                                             selection = 'none',
-                                            options = list(scrollX = TRUE))
+                                            options = list(scrollX = TRUE, pageLength = 5))
+  
+  output$PixelSetInfo <- DT::renderDataTable(DASHBOARD_RV$PixelSetTABLE,
+                                             selection = 'single',
+                                             options = list(scrollX = TRUE, pageLength = 10))
+  
+  observeEvent(input$PixelSetInfo_rows_selected,{
+    updateTabItems (session, "tabs", selected = "PixelSet")
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    PIXELSET_RV$ID = DASHBOARD_RV$PixelSetTABLE[input$PixelSetInfo_rows_selected,"id"]
+    
+    REQUEST_Info = paste0("with OUT AS (
+                          select DISTINCT OmicsUnitType.name
+                          from OmicsUnitType,pixel, PixelSet
+                          where pixelset.id = '",PIXELSET_RV$ID,"'
+                          and pixel.pixelSet_id = PixelSet.id
+                          and pixel.OmicsUnitType_id = OmicsUnitType.id
+    )
+                          select PS.id as",'"',"ID",'"', ", PS.pixelSet_file as ",'"',"Filename",'"',", species.name as ",'"',"Species",'"',", OUT.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"User name",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                          from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, OUT
+                          where PS.id = '",PIXELSET_RV$ID,"'
+                          and PS.id_analysis = analysis.id
+                          and analysis.id = AE.id_analysis
+                          and AE.id_experiment = experiment.id
+                          and experiment.strainId = strain.id
+                          and strain.species_id = species.id
+                          and experiment.omicsAreaid = OmicsArea.id
+                          and PS.id_submission = Submission.id
+                          and Submission.pixeler_user_id = pixeler.id
+                          ;")
+    
+    
+    # Properties
+    PIXELSET_RV$info = dbGetQuery(con,REQUEST_Info)
+    inter = unlist(strsplit(PIXELSET_RV$info[1,"Filename"], "/"))
+    inter = inter[length(inter)]
+    PIXELSET_RV$info[1,"Filename"] = paste("<a href='",PIXELSET_RV$info[1,"Filename"],"' target='blank' >",inter ,"</a>")
+    PIXELSET_RV$info[1,"Species"] = paste("<i>",PIXELSET_RV$info[1,"Species"],"</i>")
+    PIXELSET_RV$info = paste("<tr><td><b>", colnames(PIXELSET_RV$info ),"</b> </td><td>", PIXELSET_RV$info [1,], "</td>")
+    PIXELSET_RV$info = paste('<table class="table table-striped"><tbody>', paste(PIXELSET_RV$info, collapse = ""),"</tbody></table>")
+    
+    
+    PIXELSET_RV$PS_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixelset PS, analysis, Tag_Analysis, tag 
+                                                         where  PS.id = '",PIXELSET_RV$ID,"'
+                                                         and ps.id_analysis = analysis.id 
+                                                         and Tag_Analysis.id_analysis = analysis.id 
+                                                         and tag.id = Tag_Analysis.id_tag;"))
+    
+    
+    PIXELSET_RV$PS_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                            where PS.id = '",PIXELSET_RV$ID,"' 
+                                                            and ps.id_analysis = analysis.id
+                                                            and Analysis_Experiment.id_analysis = analysis.id
+                                                            and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                            and tag.id = Tag_experiment.id_tag;"))
+    
+    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',",CF.gene_name as ",'"',"Gene name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
+    PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
+    dbDisconnect(con)
+    proxy = dataTableProxy('PixelSetInfo')
+    proxy %>% selectRows(NULL)
+  })
+  
   
   output$PixelsByOmicsUnitType <- renderGvis({
     data<-data.frame(c('mRNA','Protein'),c(15,85))
@@ -1332,23 +1493,64 @@ server <- function(input, output, session) {
     
     CF$name = input$searchText
     CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",input$searchText,"' and pixel.pixelset_id = pixelset.id;"))
-    CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",input$searchText,"';"))
+    CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
+                                       from pixel,OmicsUnitType 
+                                       where cf_feature_name = '",input$searchText,"'
+                                       and omicsunittype_id = OmicsUnitType.id;"))
     
     
-    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
                                                   where pixel.cf_feature_name ='",input$searchText,"' and
                                                   pixel.pixelset_id = PS.id 
                                                   and ps.id_analysis = analysis.id 
                                                   and Tag_Analysis.id_analysis = analysis.id 
                                                   and tag.id = Tag_Analysis.id_tag;"))
     
-    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
                                                   where pixel.cf_feature_name ='",input$searchText,"'
                                                 and pixel.pixelset_id = PS.id 
                                                 and ps.id_analysis = analysis.id
                                                 and Analysis_Experiment.id_analysis = analysis.id
                                                 and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                                 and tag.id = Tag_experiment.id_tag;"))
+    
+    CF$CF_OmicsArea =  dbGetQuery(con, paste0("select omicsarea.name, count(*)
+    from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
+    where pixel.cf_feature_name ='",input$searchText,"'
+    and pixel.pixelset_id = PS.id 
+    and ps.id_analysis = analysis.id
+    and Analysis_Experiment.id_analysis = analysis.id
+    and experiment.id = Analysis_Experiment.id_experiment 
+    and omicsAreaid = omicsArea.id
+    group by omicsarea.name;"))
+    
+    
+    CF$CF_OmicsUnitType =  dbGetQuery(con, paste0("SELECT OmicsUnitType.name, count(*)
+    from pixel, OmicsUnitType
+    where pixel.cf_feature_name ='",input$searchText,"'
+    and OmicsUnitType_id = OmicsUnitType.id
+    group by OmicsUnitType.name;"))
+    
+    CF$CF_Tag_Exp_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
+                                                  from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                  where pixel.cf_feature_name ='",input$searchText,"'
+                                                      and pixel.pixelset_id = PS.id 
+                                                      and ps.id_analysis = analysis.id
+                                                      and Analysis_Experiment.id_analysis = analysis.id
+                                                      and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                      and tag.id = Tag_experiment.id_tag
+                                                      group by tag.name;"))
+    
+    
+    CF$CF_Tag_Analysis_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
+                                                  from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+                                                  where pixel.cf_feature_name ='",input$searchText,"' and
+                                                      pixel.pixelset_id = PS.id 
+                                                      and ps.id_analysis = analysis.id 
+                                                      and Tag_Analysis.id_analysis = analysis.id 
+                                                      and tag.id = Tag_Analysis.id_tag
+                                                      group by tag.name;"))
+    
     
     Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
     
@@ -1371,16 +1573,57 @@ server <- function(input, output, session) {
     
   })
   
+  output$CF_title <- renderUI(
+    if(!is.null(CF$name) & length(CF$name) != 0){
+      h1(paste("Chromosomal feature - ",CF$name))
+    } else {
+      h1("Chromosomal feature")
+    }
+    
+    )
   
   output$CF_information <- renderUI(
     tagList(
-      div( class = "margeProfile",
-           h1(CF$name),
-           h2("Main information"),
-           HTML(CF$main_annotation),
-           h2("Supplementary information")
-      ))
+         h2(class="title-cf", "Main information"),
+         HTML(CF$main_annotation)
+      )
   )
+  
+  # CF_OUT_graph CF_OmicsArea_graph
+  # CF$CF_OmicsArea CF$CF_OmicsUnitType
+  output$CF_OUT_graph <- renderGvis({
+    if(!is.null(CF$CF_OmicsUnitType)){
+      gvisPieChart(CF$CF_OmicsUnitType,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+    
+  })
+  
+  output$CF_OmicsArea_graph <- renderGvis({
+    if(!is.null(CF$CF_OmicsArea)){
+      gvisPieChart(CF$CF_OmicsArea,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+  })
+  
+  output$CF_Tag_Analysis_graph <- renderGvis({
+    if(!is.null(CF$CF_Tag_Analysis_graph)){
+      gvisPieChart(CF$CF_Tag_Analysis_graph,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+    
+  })
+  
+  output$CF_Tag_Exp_graph <- renderGvis({
+    if(!is.null(CF$CF_Tag_Exp_graph)){
+      gvisPieChart(CF$CF_Tag_Exp_graph,options=list(tooltip = "{text:'percentage'}"))
+    } else {
+      NULL
+    }
+  })
   
   output$CF_PixelSET <- renderDT(CF$PIXELSET, 
                                  selection = 'single', 
@@ -1415,7 +1658,7 @@ server <- function(input, output, session) {
   PIXELSET_RV = reactiveValues()
   
   observeEvent(input$CF_PixelSET_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Pixel_sets")
+    updateTabItems (session, "tabs", selected = "PixelSet")
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
@@ -1468,7 +1711,7 @@ server <- function(input, output, session) {
                                                    and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                                    and tag.id = Tag_experiment.id_tag;"))
     
-    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
+    PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',",CF.gene_name as ",'"',"Gene name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
     PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
     dbDisconnect(con)
     proxy = dataTableProxy('CF_PixelSET')
@@ -1487,7 +1730,10 @@ server <- function(input, output, session) {
                                            selection = 'single', 
                                            editable = F,
                                            extensions = 'Buttons',
-                                           options = list(scrollX = TRUE, extensions = 'Buttons', searchHighlight = TRUE,
+                                           options = list(scrollX = TRUE, 
+                                                          pageLength = 50, 
+                                                          extensions = 'Buttons', 
+                                                          searchHighlight = TRUE,
                                                           dom = 'Bfrtip',
                                                           buttons = c('csv', 'excel','print') ))
   
@@ -1834,10 +2080,12 @@ server <- function(input, output, session) {
                    host=ipDB, port=5432)
   on.exit(dbDisconnect(con))
   AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
+  
   AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
   AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
   AddRV$Species = dbGetQuery(con,"SELECT * from species;")
   AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
+  AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
   
   #.............................................................................
   # Add OUT
@@ -1901,7 +2149,12 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This OmicsUnitType is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This OmicsUnitType is already in the database.",
+        type = "error"
+      )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO omicsunittype (name, description) VALUES (
                             '",input$Name_OUT, "',
@@ -1909,8 +2162,13 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new OmicsUnitType is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !!",
+        text = "A new OmicsUnitType is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM OmicsUnitType;"
       pg <- dbDriver("PostgreSQL")
@@ -1983,15 +2241,26 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This datasource is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO datasource (name, description, published, url) VALUES (
                             '",input$Name_DataSource, "','",input$Description_DataSource, "','",input$Published_DataSource, "','",input$URL_DataSource, "');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new datasource is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new datasource is in the database",
+        type = "success"
+      ) 
       
       REQUEST = "SELECT * FROM datasource;"
       pg <- dbDriver("PostgreSQL")
@@ -2034,7 +2303,12 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This datasource is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "This datasource is already in the database",
+        type = "error"
+      )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', input$Add_OmicsArea_name),"',
                             '",input$Add_OmicsArea_name, "','",input$Add_OmicsArea_description, "','",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.'),"');")
@@ -2042,8 +2316,12 @@ server <- function(input, output, session) {
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
       
-      shinyalert("Nice!", "A new datasource is in the database"
-                 , type = "success")
+      sendSweetAlert(
+        session = session,
+        title = "Nice !!",
+        text = "A new datasource is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
       pg <- dbDriver("PostgreSQL")
@@ -2118,8 +2396,12 @@ server <- function(input, output, session) {
                 where path <@ '",SOURCE_PATH,"';"))
     }
     
-    shinyalert("Nice!", "Data modified !"
-               , type = "success")
+    sendSweetAlert(
+      session = session,
+      title = "Nice !!",
+      text = "Data modified !",
+      type = "success"
+    )
     
     REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
     AddRV$OmicsArea = dbGetQuery(con, REQUEST)
@@ -2186,8 +2468,12 @@ server <- function(input, output, session) {
         textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
         
       } else {
-        shinyalert("Cancellation", "Deletion cancelled !"
-                   , type = "warning")
+        sendSweetAlert(
+          session = session,
+          title = "Cancellation...",
+          text = "Deletion cancelled !",
+          type = "warning"
+        )
       }
       
     })
@@ -2203,10 +2489,9 @@ server <- function(input, output, session) {
     for(p in AddRV$OmicsArea[,'path']){
       inter = unlist(strsplit(p,"\\."))
       if(length(inter) == 1){
-        
         firstAncestor = c(firstAncestor, NA)
       }else{
-        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == inter[length(inter)-1]),'name'] )
+        firstAncestor = c(firstAncestor,AddRV$OmicsArea[which(AddRV$OmicsArea[,'id'] == inter[length(inter)-1]),'name'] )
       }
     }
     
@@ -2216,10 +2501,7 @@ server <- function(input, output, session) {
     gvisOrgChart(dataplot, 
                  options=list(size='large', color = "#ffb3b3"))
     
-    
-    
   })
-  
   
   
   #.............................................................................
@@ -2284,7 +2566,13 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This species is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This species is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
                             '",input$Name_Species, "',
@@ -2293,8 +2581,13 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new species is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new species is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM species;"
       pg <- dbDriver("PostgreSQL")
@@ -2317,7 +2610,6 @@ server <- function(input, output, session) {
   output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
                                   editable = TRUE,
                                   options = list(scrollX = TRUE))
-  
   
   # Edit OUT
   
@@ -2374,7 +2666,13 @@ server <- function(input, output, session) {
     species_ID = dbGetQuery(con, paste0("SELECT id from species where name ='",input$Species_Strain_SI,"';"))[1,1] 
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This strain is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops !",
+        text = "This strain is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO strain (name, description, ref, species_id) VALUES (
                             '",input$Name_Strain, "',
@@ -2384,14 +2682,20 @@ server <- function(input, output, session) {
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new strain is in the database"
-                 , type = "success")
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new strain is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM strain;"
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       AddRV$Strain = dbGetQuery(con, REQUEST)
+      AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
       dbDisconnect(con)
     }
   })
@@ -2405,6 +2709,7 @@ server <- function(input, output, session) {
   #=============================================================================
   
   submissionRV = reactiveValues()
+  submissionRV$Read = F
   
   #-----------------------------------------------------------------------------
   # Experiment
@@ -2427,10 +2732,25 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  observeEvent(input$Submission_Exp_Species_SI,{
+    updateSelectInput(session,"Submission_Exp_Strain_SI", choices = unique(AddRV$StrainSpecies[which(AddRV$StrainSpecies[,"species"] == input$Submission_Exp_Species_SI),'strain'] ))
+  })
+  
+  output$Submission_Exp_Species = renderUI({
+    
+    if(nrow(AddRV$StrainSpecies) !=0){
+      div(class="italic",selectInput('Submission_Exp_Species_SI', label = NULL, choices =  unique(AddRV$StrainSpecies[,'species'])))
+    } else {
+      p(class="warning","No saved link between species and strain.")
+    }
+    
+  })
+  
   output$Submission_Exp_Strain = renderUI({
     
     if(nrow(AddRV$Strain) !=0){
-      selectInput('Submission_Exp_Strain_SI', NULL, AddRV$Strain[,'name'])
+      selectInput('Submission_Exp_Strain_SI', NULL, AddRV$StrainSpecies[which(AddRV$StrainSpecies[,"species"] == input$Submission_Exp_Species_SI),'strain'])
     } else {
       p(class="warning","No saved strain")
     }
@@ -2441,7 +2761,7 @@ server <- function(input, output, session) {
   pg <- dbDriver("PostgreSQL")
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
-  REQUEST = paste0("select * from tag;")
+  REQUEST = paste0("SELECT * FROM tag ORDER BY name;")
   TAG$table = dbGetQuery(con, REQUEST)
   dbDisconnect(con)
   
@@ -2470,25 +2790,35 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                                 FROM tag
-                              WHERE name = '",input$Submission_tags_NewName,"';")
+                              WHERE name = '",tolower(input$Submission_tags_NewName),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This user is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This tag is already in the database",
+        type = "error"
+      )
+      
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",input$Submission_tags_NewName, "',
+                            '",tolower(input$Submission_tags_NewName), "',
                             '",input$Submission_tags_NewDescription, "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
-      shinyalert("Nice!", "A new pixeler is in the database"
-                 , type = "success")
       
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new tag is in the database",
+        type = "success"
+      )
       
-      REQUEST = paste0("select * from tag;")
+      REQUEST = paste0("select * from tag ORDER BY name;")
       TAG$table = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
     }
@@ -2498,7 +2828,64 @@ server <- function(input, output, session) {
     dbDisconnect(con)
   })
   
-  # submission_Exp_description submission_Exp_completionDate Submission_Exp_omicsArea Submission_Exp_dataSource Submission_Exp_Strain Submission_Exp_tags
+  observeEvent(input$Submission_Exp_tags_Newbtn_analysis,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM tag
+                              WHERE name = '",tolower(input$Submission_tags_NewName_analysis),"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This user is already in the database",
+        type = "error"
+      )
+      
+    } else {
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",tolower(input$Submission_tags_NewName_analysis), "',
+                            '",input$Submission_tags_NewDescription_analysis, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new pixeler is in the database",
+        type = "success"
+      )
+      
+      REQUEST = paste0("select * from tag ORDER BY name;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"Submission_tags_NewName_analysis",value = "")
+    updateTextInput(session,"Submission_tags_NewDescription_analysis",value = "")
+    dbDisconnect(con)
+  })
+  
+  
+  
+  observeEvent(input$SubmissionClear,{
+    reset('submission_Analysis_notebook')
+    reset('submission_Analysis_secondary_data')
+    updateTextAreaInput(session, "submission_Exp_description", value = "")
+    updateTextAreaInput(session, "submission_Analysis_description", value = "")
+    updateCheckboxGroupInput(session,"Submission_Exp_tags_CBG", selected = character(0))
+    updateCheckboxGroupInput(session,"Submission_Analysis_tags_CBG", selected = character(0))
+    updateSelectInput(session, "submission_pixelSet_nbr", selected = 2)
+    updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
+    submissionRV$Read = F
+    
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  
   observeEvent(input$Submission,{
     
     pg <- dbDriver("PostgreSQL")
@@ -2510,7 +2897,6 @@ server <- function(input, output, session) {
     #---------------------------------------------------------------------------
     
     CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
-    
     
     
     warning_sub = NULL
@@ -2599,6 +2985,7 @@ server <- function(input, output, session) {
       withProgress(message = 'PixelSet imported', value = 0, {
         m = as.numeric(input$submission_pixelSet_nbr)
         for( i in 1:input$submission_pixelSet_nbr){
+          incProgress(1/m, detail = paste0("Imported :", floor(i/m*100),"%"))
           
           id_PixelSets = paste0("PixelSet_",time,"_",i)
           adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
@@ -2623,18 +3010,48 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",eval(parse(text = paste0("input$submission_pixelSet_OUT",i))),"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })
-          
-          incProgress(1/m, detail = paste0("Imported :", floor(i/m*100))) 
         }
       })
+      
+      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+      
+      # Clear after submission
+      reset('submission_Analysis_notebook')
+      reset('submission_Analysis_secondary_data')
+      updateTextAreaInput(session, "submission_Exp_description", value = "")
+      updateTextAreaInput(session, "submission_Analysis_description", value = "")
+      updateCheckboxGroupInput(session,"Submission_Exp_tags_CBG", selected = character(0))
+      updateCheckboxGroupInput(session,"Submission_Analysis_tags_CBG", selected = character(0))
+      updateSelectInput(session, "submission_pixelSet_nbr", selected = 2)
+      updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
+      submissionRV$Read = F
+      
+      updateTabItems (session, "tabs", selected = "Dashboard")
+      sendSweetAlert(
+        session = session,
+        title = "Successfully imported!",
+        text = "The pixels have been successfully imported.",
+        type = "success"
+      )
+      
       dbDisconnect(con)
+      shinyjs::runjs("window.scrollTo(0, 0)")
     } else {
-      shinyalert("Cancellation", "Submission is cancelled", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation !",
+        text = "Submission is cancelled",
+        type = "warning"
+      )
     }
+  })
+  
+  observeEvent(input$col, {
+    js$pageCol(input$col)
   })
   
   observeEvent(input$submission_pixelSet_nbr,{
@@ -2660,10 +3077,8 @@ server <- function(input, output, session) {
                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
                                                       buttonLabel = "Browse...",
-                                                      placeholder = "No file selected"),
-                                            h4("Omics unit type"),
-                                            selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
-                                                        choices)
+                                                      placeholder = "No file selected")
+                                            
         ),select = T)
         
       }else{
@@ -2674,10 +3089,7 @@ server <- function(input, output, session) {
                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                              fileInput(paste0("submission_pixelSet_file",i),label = NULL,
                                                        buttonLabel = "Browse...",
-                                                       placeholder = "No file selected"),
-                                             h4("Omics unit type"),
-                                             selectInput(paste0("submission_pixelSet_OUT",i),label = NULL,
-                                                         choices)
+                                                       placeholder = "No file selected")
         ),select = F)
         
       }
@@ -2686,16 +3098,37 @@ server <- function(input, output, session) {
     
   })
   
+  output$submission_pixelSet_OUT_UI <- renderUI({
+    choices = AddRV$OUT[,1]
+    names(choices) = AddRV$OUT[,2]
+    selectInput("submission_pixelSet_OUT",label = NULL,
+                choices)
+    
+  })
+  
+  observeEvent(input$submission_pixelSet_file1,{
+    if(input$submission_pixelSet_file1$datapath != ""){
+      submissionRV$Read = T
+    } else {
+      submissionRV$Read = F
+    }
+  })
+  
   output$contents_PS <-  renderDataTable({
     
     req(input$submission_pixelSet_file1)
     
-    df <- read.csv2(input$submission_pixelSet_file1$datapath,
-                    header = as.logical(input$header_PS),
-                    sep = input$sep_PS,
-                    quote = input$quote_PS,
-                    nrows=5
-    )
+    if(submissionRV$Read){
+      df <- read.csv2(input$submission_pixelSet_file1$datapath,
+                      header = as.logical(input$header_PS),
+                      sep = input$sep_PS,
+                      quote = input$quote_PS,
+                      nrows=5
+      ) 
+    } else {
+      NULL
+    }
+    
     
   },  options = list(scrollX = TRUE , dom = 't'))
   

@@ -10,7 +10,7 @@ General
   text-align: center;
 }
 
-div.center{
+div.center {
   display: inline-block;
   margin: 0 auto;
   text-align: center;
@@ -34,17 +34,15 @@ p.warning {
   text-align: right;
 }
 
-
-div.table_style{
+div.table_style {
   margin-left: 20px;
   margin-right: 20px;
 }
 
-div.margeProfile{
+div.margeProfile {
   margin-left: 20px;
   margin-right: 20px;
 }
-
 
 button.myBtn {
   color: white;
@@ -61,13 +59,12 @@ button.myBtn {
   width: 200px;
 }
 
-
 /*******************************************************************************
 Header
 *******************************************************************************/
 
-.content-wrapper{
-    background-color: white;
+.content-wrapper {
+  background-color: white;
 }
 
 /* main sidebar */
@@ -95,12 +92,11 @@ Header
   background-color: #595959;
 }
 
-
 /*******************************************************************************
 Authenfication
 *******************************************************************************/
 
-div.authenfication{
+div.authenfication {
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   padding: 20px;
   width: 400px;
@@ -121,98 +117,118 @@ div.authenfication{
   background-size: 30px 30px;
 }
 
-.center_input{
+.center_input {
   display: inline-block;
   margin: 0 auto;
 }
 
-.inputNew{
+.inputNew {
   width: 100%;
   margin: 0 auto;
   display: inline-block;
-
 }
 
-.tableTitle{
+.tableTitle {
   font-weight: bold;
   text-align: center;
 }
-.tableTitle-left{
+
+.tableTitle-left {
   font-weight: bold;
 }
 
-
-.border-between > [class*='col-']:before {
-   background: #e3e3e3;
-   bottom: 0;
-   content: " ";
-   left: 0;
-   position: absolute;
-   width: 1px;
-   top: 0;
+.border-between>[class*='col-']:before {
+  background: #e3e3e3;
+  bottom: 0;
+  content: " ";
+  left: 0;
+  position: absolute;
+  width: 1px;
+  top: 0;
 }
 
-.border-between > [class*='col-']:first-child:before {
-   display: none;
+.border-between>[class*='col-']:first-child:before {
+  display: none;
 }
 
-
-div.tree{
-
+div.tree {
   width: auto;
   margin: auto;
   text-align: center;
 }
 
-
 #treeOmicsArea td {
-  border-color: rgba(255,255,255,0);
+  border-color: rgba(255, 255, 255, 0);
 }
 
 .google-visualization-orgchart-linenode {
   border-color: black !important;
 }
 
-
-p.warning{
-  color:red;
+p.warning {
+  color: red;
   font-weight: bold;
 }
 
-
-div.search{
+div.search {
   width: 100%;
   padding-left: 20px;
   padding-right: 20px;
 }
 
-div.search textarea{
+div.search textarea {
   display: block;
-   width: 100%;
-   -webkit-box-sizing: border-box;
-      -moz-box-sizing: border-box;
-           box-sizing: border-box;
+  width: 100%;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 textarea {
-	-webkit-box-sizing: border-box;
-	-moz-box-sizing: border-box;
-	box-sizing: border-box;
-
-	width: 100%;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 100%;
   resize: vertical;
 }
 
-.PixelSet
-{
+.PixelSet {
   margin-left: 20px;
   margin-right: 20px;
 }
 
-.PixelSet h3{
-  background-color: #ffe6e6;
+.PixelSet h3 {
   margin-left: -10px;
-  padding-left: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
+}
+
+.box-submission div div.box {
+  border: solid 0px white !important;
+  box-shadow: 0 0px 0px !important;
+}
+
+p.info {
+  font-style: italic;
+}
+
+div.inline { float:left; }
+.clearBoth { clear:both; }
+.tag-inline{
+  margin-left: 5px;
+  width: 100px;
+}
+
+.italic {
+  font-style: italic;
+}
+
+
+.title-cf {
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
 }
