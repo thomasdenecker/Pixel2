@@ -160,7 +160,7 @@ server <- function(input, output, session) {
                                startExpanded = F,
                                menuSubItem("A PixelSet", tabName = "PixelSet"),
                                menuSubItem("PixelSet list", tabName = "PixelSetList"),
-                               menuSubItem("PixelSet exploration", tabName = "PixelSetExplo")
+                               menuSubItem("Exploration of Multi PixelSets", tabName = "PixelSetExplo")
                       ),
                       menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
                                startExpanded = F,
@@ -495,10 +495,13 @@ server <- function(input, output, session) {
         ########################################################################
         tabItem(
           tabName = "PixelSetExplo", 
-          h2("PixelSet exploration"),
+          h2("Exploration of Multi PixelSets"),
           fluidRow(
             column(12,
                    uiOutput("PSExploUI")
+            ),
+            column(12,
+                   DTOutput("PSExploTab")
             )
           )
           
@@ -1738,53 +1741,61 @@ server <- function(input, output, session) {
   dbDisconnect(con)
   
   observeEvent(PIXELSETLIST_RV$info,{
-    PIXELSETLIST_RV$info[, 'Omics Unit Type' ] = as.factor(PIXELSETLIST_RV$info[, 'Omics Unit Type' ] )
-    PIXELSETLIST_RV$info[, 'Omics Area' ] = as.factor(PIXELSETLIST_RV$info[, 'Omics Area' ] )
-    PIXELSETLIST_RV$info[, 'Species' ] = as.factor(PIXELSETLIST_RV$info[, 'Species' ] )
-    PIXELSETLIST_RV$info[, 'Pixeler' ] = as.factor(PIXELSETLIST_RV$info[, 'Pixeler' ] )
-    PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$info)
-    
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
-    
-    PIXELSETLIST_RV$tags = rbind(dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Analysis, tag 
+    if(nrow(PIXELSETLIST_RV$info)!=0){
+      PIXELSETLIST_RV$info[, 'Omics Unit Type' ] = as.factor(PIXELSETLIST_RV$info[, 'Omics Unit Type' ] )
+      PIXELSETLIST_RV$info[, 'Omics Area' ] = as.factor(PIXELSETLIST_RV$info[, 'Omics Area' ] )
+      PIXELSETLIST_RV$info[, 'Species' ] = as.factor(PIXELSETLIST_RV$info[, 'Species' ] )
+      PIXELSETLIST_RV$info[, 'Pixeler' ] = as.factor(PIXELSETLIST_RV$info[, 'Pixeler' ] )
+      PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$info)
+      
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      PIXELSETLIST_RV$tags = rbind(dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Analysis, tag 
                                     where  ps.id_analysis = analysis.id 
                                               and Tag_Analysis.id_analysis = analysis.id 
                                               and tag.id = Tag_Analysis.id_tag;
                                               "),
-                                 dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                   dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
                                               where ps.id_analysis = analysis.id
                                               and Analysis_Experiment.id_analysis = analysis.id
                                               and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                               and tag.id = Tag_experiment.id_tag;
                                               ")
-    )
-    
-    interList = list()
-    for(i in 1:nrow(PIXELSETLIST_RV$tags)){
-      interList[[PIXELSETLIST_RV$tags[i,"id"] ]] = c(interList[[PIXELSETLIST_RV$tags[i,"id"]]], PIXELSETLIST_RV$tags[i,"name"])
+      )
+      
+      interList = list()
+      for(i in 1:nrow(PIXELSETLIST_RV$tags)){
+        interList[[PIXELSETLIST_RV$tags[i,"id"] ]] = c(interList[[PIXELSETLIST_RV$tags[i,"id"]]], PIXELSETLIST_RV$tags[i,"name"])
+      }
+      
+      interList = lapply(interList, unique)
+      interList = lapply(interList, sort)
+      PIXELSETLIST_RV$tagsList = interList
+      
+      dbDisconnect(con)
     }
-    
-    interList = lapply(interList, unique)
-    interList = lapply(interList, sort)
-    PIXELSETLIST_RV$tagsList = interList
-    
-    dbDisconnect(con)
   })
   
   output$PIXELSETLIST_tab <- renderDT(PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,],
-                                      selection = 'multiple',
+                                      selection = 'multiple',server = FALSE,
                                       editable = F, filter = 'top',
-                                      options = list(scrollX = TRUE,autoWidth =F, searchHighlight = TRUE))
-  
+                                      extensions = 'Buttons', options = list(
+                                        scrollX = TRUE,searchHighlight = TRUE,
+                                        dom = 'Bfrtip',
+                                        buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                                      )
+                                      )
+
   output$PixelSetTags = renderUI({
     if(nrow(TAG$table) !=0){
       checkboxGroupButtons("PixelSetTags_CBG", NULL,
-                         choices = PIXELSETLIST_RV$tags[!duplicated(PIXELSETLIST_RV$tags[,"name"]),"name"],
-                          status = "default",
-                         checkIcon = list(yes = icon("check-circle"), no = icon("times")))
+                           choices = PIXELSETLIST_RV$tags[!duplicated(PIXELSETLIST_RV$tags[,"name"]),"name"],
+                           status = "default",
+                           checkIcon = list(yes = icon("check-circle"), no = icon("times")))
     } else {
       p(class="warning","No saved tag")
     }
@@ -1819,14 +1830,9 @@ server <- function(input, output, session) {
   observeEvent(is.null(input$PixelSetTags_CBG),{
     if(!is.null(input$PixelSetTags_CBG)){
       
-      #inter1 = names(PIXELSETLIST_RV$tagsList)[PIXELSETLIST_RV$tagsList %in% list(sort(input$PixelSetTags_CBG))]
       inter1 = names(PIXELSETLIST_RV$tagsList)[unlist(lapply(PIXELSETLIST_RV$tagsList, function(x, vec){sum(x%in%vec)==length(vec)}, vec = sort(input$PixelSetTags_CBG)))]
-      
-      
       inter2 = PIXELSETLIST_RV$info[,1] %in% inter1
-      
       pos = which(inter2)
-      
       PIXELSETLIST_RV$Selected = pos
       
     }else{
@@ -1839,41 +1845,62 @@ server <- function(input, output, session) {
   #=============================================================================
   PixelSetExploRV = reactiveValues()
   observeEvent(input$PixelSetExploreBtn,{
-    updateTabItems (session, "tabs", selected = "PixelSetExplo")
     PixelSetExploRV$PixelSetID = PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,1]
-    cat(length(PixelSetExploRV$PixelSetID), file = stderr())
+    if(length(PixelSetExploRV$PixelSetID) !=0){
+      updateTabItems (session, "tabs", selected = "PixelSetExplo")
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      PixelSetExploRV$TAB = NULL
+      colnamesinter = NULL
+      for(i in 1:length(PixelSetExploRV$PixelSetID)){
+        inter = dbGetQuery(con,paste0("select cf_feature_name, value, quality_score from pixel where pixelset_id = '",PixelSetExploRV$PixelSetID[i],"'; "))
+        if(is.null(PixelSetExploRV$TAB)){
+          PixelSetExploRV$TAB = inter
+        }else{
+          PixelSetExploRV$TAB = merge(PixelSetExploRV$TAB, inter ,by = "cf_feature_name", all = T)
+        }
+        colnamesinter = c(colnamesinter, paste("PS",i, "Value",sep ="_" ), paste("PS",i, "QS",sep ="_" ))
+      }
+      
+      colnames(PixelSetExploRV$TAB) = c("feature_name", 
+                                        colnamesinter)
+      
+      PixelSetExploRV$InfoCF = dbGetQuery(con,paste0("select feature_name, gene_name,description from ChromosomalFeature where feature_name IN (",paste0("'",PixelSetExploRV$TAB[,1],"'", collapse = ","),")") )
+      
+      PixelSetExploRV$TAB = merge(PixelSetExploRV$InfoCF, PixelSetExploRV$TAB,by = "feature_name", all = T)
+      
+      colnames(PixelSetExploRV$TAB) = c("Feature name", "Gene name", "Description",
+                                        colnamesinter)
+      dbDisconnect(con)
+    }
   })
   
   
   output$PSExploUI <- renderUI({
     lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       
-      fluidRow(h1( PixelSetExploRV$PixelSetID[i]), 
-               column(6,uiOutput(paste0('PSExploValue', i))),
-               column(6,uiOutput(paste0('PSExploQS', i)))
+      file = dbGetQuery(con,paste0("select pixelset_file from pixelset where id = '",PixelSetExploRV$PixelSetID[i],"'; "))
+      filename = as.character(unlist(strsplit(file[1,1], "/"))[length(unlist(strsplit(file[1,1], "/")))])
+      
+      dbDisconnect(con)
+      div(fluidRow(column(12, h1( paste("> PS",i,":",PixelSetExploRV$PixelSetID[i])))),
+          fluidRow(column(12,p("Original file :",a(filename, href=file, target="_blank")))), 
+          fluidRow(column(6,uiOutput(paste0('PSExploValue', i))),
+                    column(6,uiOutput(paste0('PSExploQS', i))))
       )
-
+      
     })
     
   })
   
   observeEvent(PixelSetExploRV$PixelSetID,{
-    
-    # lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
-    #   output[[paste0('PSExploValue', i)]] <- renderGvis({
-    #     pg <- dbDriver("PostgreSQL")
-    #     con <- dbConnect(pg, user="docker", password="docker",
-    #                       host=ipDB, port=5432)
-    #     on.exit(dbDisconnect(con))
-    #     
-    #     inter = dbGetQuery(con,paste0("select value from pixel where pixelset_id = '",PixelSetExploRV$PixelSetID[i],"'; "))
-    #     dbDisconnect(con)
-    #     
-    #     gvisHistogram(data.frame(Value = inter[,1]), paste0('PSExploValue', i))
-    #     
-    #     })
-    # })
-    
     
     lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
       output[[paste0('PSExploValue', i)]] <- renderGvis({
@@ -1885,7 +1912,12 @@ server <- function(input, output, session) {
         inter = dbGetQuery(con,paste0("select value from pixel where pixelset_id = '",PixelSetExploRV$PixelSetID[i],"'; "))
         dbDisconnect(con)
         
-        gvisHistogram(data.frame(Value = inter[,1]), chartid = paste0('PSExploValue', i))
+        gvisHistogram(data.frame(Value = inter[,1]), chartid = paste0('PSExploValue', i),
+                      options=list(
+                        colors="['#ff0000']",
+                        legend="{ position: 'none'}",
+                        title="Values",
+                        width='100%', height=360))
         
       })
     })
@@ -1900,11 +1932,27 @@ server <- function(input, output, session) {
         inter = dbGetQuery(con,paste0("select quality_score from pixel where pixelset_id = '",PixelSetExploRV$PixelSetID[i],"'; "))
         dbDisconnect(con)
         
-        gvisHistogram(data.frame(QS = inter[,1]), chartid = paste0('PSExploQS', i))
+        gvisHistogram(data.frame(QS = inter[,1]), chartid = paste0('PSExploQS', i),
+                      options=list(
+                        colors="['#3366ff']",
+                        legend="{ position: 'none'}",
+                        title="Values",
+                        width='100%', height=360)
+                      )
         
       })
     })
   })
+  
+  output$PSExploTab <- renderDT(PixelSetExploRV$TAB,
+                                      selection = 'none',server = FALSE,
+                                      editable = F, filter = 'top',
+                                extensions = 'Buttons', options = list(
+                                  scrollX = TRUE,searchHighlight = TRUE,
+                                  dom = 'Bfrtip',
+                                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                                ) )
+
   
   
   #=============================================================================
