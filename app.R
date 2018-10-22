@@ -138,7 +138,12 @@ server <- function(input, output, session) {
           }
         } else {
           USER$Logged <- F
-          shinyalert("Oops!", "Something went wrong (Username or old password).", type = "error")
+          sendSweetAlert(
+            session = session,
+            title = "Oops!",
+            text = "Something went wrong (Username or old password).",
+            type = "error"
+          )
         }
       }
       dbDisconnect(con)
@@ -1079,18 +1084,40 @@ server <- function(input, output, session) {
         updateTextInput(session, "NewPW1", value="")
         updateTextInput(session, "NewPW2", value="")
         
-        shinyalert("Congratulation", "Your password has been successfully changed!", type = "success")
+        sendSweetAlert(
+          session = session,
+          title = "Congratulation",
+          text = "Your password has been successfully changed!",
+          type = "success"
+        )
         
       } else {
-        shinyalert("Oops!", "Your old password is not the right one!", type = "error")
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "Your old password is not the right one!",
+          type = "error"
+        )
       }
       
       dbDisconnect(con)
     } else {
       if(input$NewPW1 != input$NewPW2){
-        shinyalert("Oops!", "The two new passwords are not the same!", type = "error")
+        
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "The two new passwords are not the same!",
+          type = "error"
+        )
+      
       } else {
-        shinyalert("Oops!", "A field has not been entered!", type = "error")
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "A field has not been entered!",
+          type = "error"
+        )
       }
     }
     
@@ -1199,7 +1226,12 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
-      shinyalert("Oops!", "This user is already in the database", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This user is already in the database",
+        type = "error"
+      )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, lab_country, password) VALUES (
                             '",input$FN_NU, "',
@@ -1213,8 +1245,13 @@ server <- function(input, output, session) {
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-      shinyalert("Nice!", "A new pixeler is in the database"
-                 , type = "success")
+
+      sendSweetAlert(
+        session = session,
+        title = "Nice!",
+        text = "A new pixeler is in the database",
+        type = "success"
+      )
       
       REQUEST = "SELECT * FROM pixeler;"
       pg <- dbDriver("PostgreSQL")
@@ -1265,16 +1302,20 @@ server <- function(input, output, session) {
     
     tryCatch(dbSendQuery(con, REQUEST_ANNOT)
              , error = function(c) {
-               shinyalert("Error when importing", 
-                          paste0(c,"\n The chevron shows you where the error is."), 
-                          className="alert",
-                          type = "error")
+               sendSweetAlert(
+                 session = session,
+                 title = "Error : Table creation",
+                 text = paste0(c,"\n The chevron shows you where the error is."),
+                 type = "error"
+               )
                rv$ERROR = T
              },warning = function(c) {
-               shinyalert("Error when importing", 
-                          paste0(c,"\n The chevron shows you where the error is."), 
-                          className="alert",
-                          type = "error")
+               sendSweetAlert(
+                 session = session,
+                 title = "Error : Table creation",
+                 text = paste0(c,"\n The chevron shows you where the error is."),
+                 type = "warning"
+               )
                rv$ERROR = T
              }
     )
@@ -1296,10 +1337,14 @@ server <- function(input, output, session) {
       dbDisconnect(con)
       
       updateSelectInput(session, "selectSource", choices = rv$Source[,2], selected = input$CFSourceName)
-      
-      shinyalert("Congratulations!", 
-                 "The import was successful!",
-                 type = "success")
+ 
+      sendSweetAlert(
+        session = session,
+        title = "Congratulations!",
+        text = "The import was successful!",
+        type = "success"
+      )
+    
     }
     
   })
@@ -1344,16 +1389,21 @@ server <- function(input, output, session) {
             
             tryCatch(dbSendQuery(con, REQUEST_ANNOT)
                      , error = function(c) {
-                       shinyalert("Error when importing", 
-                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
-                                  className="alert",
-                                  type = "error")
+                       
+                       sendSweetAlert(
+                         session = session,
+                         title = "Error : Table creation",
+                         text = paste0(c,"\n The chevron shows you where the error is."),
+                         type = "error"
+                       )
                        rv$ERROR = T
                      },warning = function(c) {
-                       shinyalert("Error when importing", 
-                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."), 
-                                  className="alert",
-                                  type = "error")
+                       sendSweetAlert(
+                         session = session,
+                         title = "Error : Table creation",
+                         text = paste0(c,"\n The chevron shows you where the error is."),
+                         type = "warning"
+                       )
                        rv$ERROR = T
                      }
             )
@@ -1365,14 +1415,22 @@ server <- function(input, output, session) {
           }
           
           if(rv$ERROR == F){
-            shinyalert("Congratulations!", 
-                       "The import was successful!",
-                       type = "success")
+            sendSweetAlert(
+              session = session,
+              title = "Congratulations!",
+              text = "The import was successful!",
+              type = "success"
+            )
           }
           
           
         } else {
-          shinyalert(paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 9."), type = "error")
+          sendSweetAlert(
+            session = session,
+            title = "Error!",
+            text = paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 9."),
+            type = "error"
+          )
         }
       } else {
         
@@ -1388,21 +1446,28 @@ server <- function(input, output, session) {
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
                         ,", cfsource_id INTEGER, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_id) REFERENCES CFSource (id), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
         
-        # cat(REQUEST, file = stderr())
+        
         
         tryCatch(dbSendQuery(con, REQUEST)
                  , error = function(c) {
-                   shinyalert("Error : Table creation", 
-                              paste0(c,"\n The chevron shows you where the error is."), 
-                              className="alert",
-                              type = "error")
+
+                   sendSweetAlert(
+                     session = session,
+                     title = "Error : Table creation",
+                     text = paste0(c,"\n The chevron shows you where the error is."),
+                     type = "error"
+                   )
+                   
                    rv$ERROR = T
                    
                  },warning = function(c) {
-                   shinyalert("Error : Table creation", 
-                              paste0(c,"\n The chevron shows you where the error is."), 
-                              className="alert",
-                              type = "error")
+                   sendSweetAlert(
+                     session = session,
+                     title = "Error : Table creation",
+                     text = paste0(c,"\n The chevron shows you where the error is."),
+                     type = "warning"
+                   )
+                   
                    rv$ERROR = T
                    
                  }
@@ -1421,23 +1486,28 @@ server <- function(input, output, session) {
             
             tryCatch(dbSendQuery(con, REQUEST_ANNOT)
                      , error = function(c) {
-                       shinyalert("Error when importing",
-                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."),
-                                  className="alert",
-                                  type = "error")
+                       sendSweetAlert(
+                         session = session,
+                         title = "Error : Table creation",
+                         text = paste0(c,"\n The chevron shows you where the error is."),
+                         type = "error"
+                       )
+                       
+                       
                        rv$ERROR = T
                        rv$ERROR_ALL = T
                        rv$linesNotSaved = c(rv$linesNotSaved , i)
-                       # cat(REQUEST_ANNOT, file= stderr())
                      },warning = function(c) {
-                       shinyalert("Error when importing",
-                                  paste0(c,"\n The error occurred on line ",i," of the table.The chevron shows you where the error is."),
-                                  className="alert",
-                                  type = "error")
+                       sendSweetAlert(
+                         session = session,
+                         title = "Error : Table creation",
+                         text = paste0(c,"\n The chevron shows you where the error is."),
+                         type = "warning"
+                       )
+                       
                        rv$ERROR = T
                        rv$ERROR_ALL = T
                        rv$linesNotSaved = c(rv$linesNotSaved , i)
-                       # cat(REQUEST_ANNOT, file= stderr())
                      }
             )
             
@@ -1448,17 +1518,18 @@ server <- function(input, output, session) {
           }
         }
         
-        
         if(rv$ERROR == F){
-          shinyalert("Congratulations!",
-                     "The import was successful!",
-                     type = "success")
+          sendSweetAlert(
+            session = session,
+            title = "Congratulations!",
+            text = "The import was successful!",
+            type = "success"
+          )
         }
       }  
     })
     
   })
-  
   
   output$helpImportTypeCF <- renderText({ 
     if(input$importTypeCF == "main"){
@@ -2133,7 +2204,12 @@ server <- function(input, output, session) {
     
     if( length(PixelSetExploRV$SEARCH) == 0){
       PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
-      shinyalert("Oops!", "None of the genes were found in the Pixel table.", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "None of the genes were found in the Pixel table.",
+        type = "error"
+      )
     }
   })
   
@@ -2306,7 +2382,13 @@ server <- function(input, output, session) {
     
     if( length(PIXELSET_RV$SEARCH) == 0){
       PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
-      shinyalert("Oops!", "None of the genes were found in the Pixel table.", type = "error")
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "None of the genes were found in the Pixel table.",
+        type = "error"
+      )
+      
     }
     
   })
@@ -2433,13 +2515,10 @@ server <- function(input, output, session) {
   #=============================================================================
   # END TAG
   #=============================================================================
-  
-  
 
-  
-  #-----------------------------------------------------------------------------
+  #=============================================================================
   # Add information
-  #-----------------------------------------------------------------------------
+  #=============================================================================
   
   AddRV = reactiveValues()
   pg <- dbDriver("PostgreSQL")
@@ -2454,9 +2533,9 @@ server <- function(input, output, session) {
   AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
   AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
   
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   # Add OUT
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   
   output$DT_AddOUT <- renderDT(AddRV$OUT, selection = 'none', 
                                editable = TRUE,
@@ -2503,6 +2582,7 @@ server <- function(input, output, session) {
         replaceData(proxyOUT, AddRV$OUT, resetPaging = F)  # important
       }
     }, ignoreNULL = TRUE)
+
   })
   
   
@@ -2543,13 +2623,14 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       AddRV$OUT = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
+      updateTextInput(session, "Name_OUT", value = "")
+      updateTextInput(session, "Description_OUT", value = "")
     }
   })
-  
-  
-  #.............................................................................
+
+  #-----------------------------------------------------------------------------
   # Add Datasource
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   
   output$DT_AddDataSource <- renderDT(AddRV$DataSource, selection = 'none', 
                                       editable = TRUE,
@@ -2635,14 +2716,17 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       AddRV$DataSource = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
+      
+      updateTextInput(session, "Name_DataSource", value = "")
+      updateTextInput(session, "Description_DataSource", value = "")
+      updateTextInput(session, "URL_DataSource", value = "")
     }
   })
   
   
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   # Add OmicsArea
-  #.............................................................................
-  
+  #-----------------------------------------------------------------------------
   
   output$Add_OmicsArea_path = renderUI({
     choices = AddRV$OmicsArea[,'path']
@@ -2711,6 +2795,8 @@ server <- function(input, output, session) {
       updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
       updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
       updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+      updateTextInput(session, "Add_OmicsArea_name", value = "")
+      updateTextInput(session, "Add_OmicsArea_description", value = "")
       textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
       
       dbDisconnect(con)
@@ -2871,9 +2957,9 @@ server <- function(input, output, session) {
   })
   
   
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   # Add Species
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   
   output$DT_AddSpecies <- renderDT(AddRV$Species, selection = 'none',
                                    editable = TRUE,
@@ -2963,16 +3049,18 @@ server <- function(input, output, session) {
       AddRV$Species = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
       
-      
+      updateTextInput(session, "Name_Species", value = "")
+      updateTextInput(session, "Description_Species", value = "")
+      updateTextInput(session, "URL_Species", value = "")
       updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
     }
   })
   
   
   
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   # Add Strain
-  #.............................................................................
+  #-----------------------------------------------------------------------------
   
   output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
                                   editable = TRUE,
@@ -3064,6 +3152,10 @@ server <- function(input, output, session) {
       AddRV$Strain = dbGetQuery(con, REQUEST)
       AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
       dbDisconnect(con)
+      
+      updateTextInput(session, "Name_Strain", value = "")
+      updateTextInput(session, "Description_Strain", value = "")
+      updateTextInput(session, "Ref_Strain", value = "")
     }
   })
   
