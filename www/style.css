@@ -232,3 +232,19 @@ div.inline { float:left; }
   padding: 10px;
   font-size: 18px;
 }
+
+.title-pixelset {
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
+}
+
+
+.PS-btn{
+  margin-left: 5px;
+}
+
+marg-left {
+  margin-left: 10px;
+}
