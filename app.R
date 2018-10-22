@@ -931,6 +931,8 @@ server <- function(input, output, session) {
   DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
   DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
   DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+  DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+  DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
   dbDisconnect(con)
   
   
@@ -979,17 +981,15 @@ server <- function(input, output, session) {
   })
   
   output$PixelsByOmicsUnitType <- renderGvis({
-    data<-data.frame(c('mRNA','Protein'),c(15,85))
-    gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
+    gvisPieChart(DASHBOARD_RV$OUT,options=list(tooltip = "{text:'percentage'}"))
   })
   
   output$PixelsBySpecies <- renderGvis({
-    data<-data.frame(c('C. glabrata','S. cerevisiae'),c(25,75))
-    gvisPieChart(data,options=list(tooltip = "{text:'percentage'}"))
+    gvisPieChart(DASHBOARD_RV$Species,options=list(tooltip = "{text:'percentage'}"))
   })
   
   output$UsersMap <- renderGvis({
-    REQUEST_MAP = paste0("SELECT lab_country, count(*) FROM pixeler GROUP BY lab_country ;")
+    REQUEST_MAP = "SELECT lab_country, count(*) FROM pixeler GROUP BY lab_country ;"
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -1867,9 +1867,7 @@ server <- function(input, output, session) {
       
       PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
       dbDisconnect(con)
-      
-      
-      cat(names(PixelSetExploRV$UpsetR), file=stderr())
+  
     }
   })
   
@@ -1929,8 +1927,6 @@ server <- function(input, output, session) {
     })
   })
   
-  
-  # UpsetR
   
   output$UpsetR <- renderPlot({
     upset(fromList(PixelSetExploRV$UpsetR), text.scale= 1.8)
