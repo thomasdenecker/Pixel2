@@ -1575,6 +1575,32 @@ server <- function(input, output, session) {
     }
   })
   
+  #-----------------------------------------------------------------------------
+  # Tag
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$searchButtonPS,{
+    if(input$searchPS != ""){
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      testPS = dbGetQuery(con,paste0("select id from pixelset where lower(id) = '",tolower(input$searchPS),"';"))
+      
+      dbDisconnect(con)
+      if(nrow(testPS) != 0){
+        SEARCH_RV$PIXELSET =  testPS[1,1]
+        updateTextInput(session, "testPS", value = "")
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = input$testPS,
+          text = "This pixelSet isn't in Pixel...",
+          type = "error"
+        )
+      } 
+    }
+  })
   
   #=============================================================================
   # End Quick search
