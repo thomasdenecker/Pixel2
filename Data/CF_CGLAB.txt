@@ -1,4 +1,4 @@
-Feature name (mandatory)	Gene name (locus name)	Chromosome	Start Coordinate	Stop Coordinate	Strand	Description	rep("Candida glabrata", nrow(inter))	paste0("http://www.candidagenome.org/cgi-bin/locus.pl?dbid=", 
+Feature name (mandatory)	Gene name (locus name)	Chromosome	Start Coordinate	Stop Coordinate	Strand	Description	rep("Candida glabrata", nrow(inter))	paste0("http://www.candidagenome.org/cgi-bin/locus.pl?dbid=",
 CAGL0A00105g		ChrA_C_glabrata_CBS138	2636	1608	C	Protein of unknown function	Candida glabrata	http://www.candidagenome.org/cgi-bin/locus.pl?dbid=CAL0000210339
 CAGL0A00110g	EPA19	ChrA_C_glabrata_CBS138	4809	1608	C	Putative adhesin-like protein; belongs to adhesin cluster I; appears artificially broken into fragments due to sequencing errors; predicted GPI anchor	Candida glabrata	http://www.candidagenome.org/cgi-bin/locus.pl?dbid=CAL0126645
 CAGL0A00116g		ChrA_C_glabrata_CBS138	4809	2671	C	Protein of unknown function	Candida glabrata	http://www.candidagenome.org/cgi-bin/locus.pl?dbid=CAL0000209742
