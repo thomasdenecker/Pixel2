@@ -187,7 +187,12 @@ server <- function(input, output, session) {
                                menuSubItem("Pixel", tabName = "Pixel"), 
                                menuSubItem("Submissions", tabName = "SubmissionsAdmin")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
-                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
+                      h4(class ='sideBar',"Quick search"),
+                      tags$hr(class= "sideBar"),
+                      h5(class= "sideBar", "Chromosomal feature"),
+                      sidebarSearchForm(textId = "searchCF", buttonId = "searchButtonCF",label = "CAGL0A01243g..."),
+                      h5(class= "sideBar", "Chromosomal feature"),
+                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "CAGL0A01243g...")
           )
         )
       } else {
@@ -1491,13 +1496,58 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  #=============================================================================
+  # Chromosomal Feature
+  #=============================================================================
   
   CF = reactiveValues()
   CF$sup_id = NULL 
   
+  observeEvent(input$searchButtonCF,{
+    if(input$searchCF != ""){
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      testCF = dbGetQuery(con,paste0("select feature_name, species.name from chromosomalfeature, species where lower(feature_name) ='",tolower(input$searchCF),"' or lower(gene_name) = '",tolower(input$searchCF),"' and species.id = species_id;"))
+      dbDisconnect(con)
+      if(nrow(testCF) == 1){
+        CF$name = testCF[1,1]
+        updateTextInput(session, "searchCF", value = "")
+      } else if(nrow(testCF) == 0){
+        sendSweetAlert(
+          session = session,
+          title = input$searchCF,
+          text = "This chromosomal feature isn't in Pixel...",
+          type = "error"
+        )
+      } else {
+        inter = testCF[,1] 
+        names(inter) = paste0(testCF[,1], " (", testCF[,2], ")") 
+        confirmSweetAlert(
+          session = session,
+          inputId = "ConfSearch",
+          type = "warning",
+          text =  div(p("Pixel finds several entries for your search:"),
+                      radioButtons("searchRefine", NULL,
+                                   inter,inline = T),
+                      p("Use one of the proposed feature names to refine your search.")),
+          title = "Want to confirm ?",
+          danger_mode = TRUE
+        )
+        
+        observeEvent(input$ConfSearch, {
+            if (isTRUE(input$ConfSearch)) {
+              CF$name = input$searchRefine
+            }
+          updateTextInput(session, "searchCF", value = "")
+        })
+      }
+    }
+  })
   
-  observeEvent(input$searchButton,{
+  
+  observeEvent(CF$name,{
     
     if(!is.null(CF$sup_id)){
       for(i in CF$sup_id){
@@ -1514,29 +1564,29 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
-    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",input$searchText,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
+    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",CF$name,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
     CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
     CF$main_annotation[1, 'species_name'] = paste0("<i>",CF$main_annotation[1, 'species_name'], "</i>")
     CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)),"</b> : ", CF$main_annotation[1,])
     CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
     
-    CF$name = input$searchText
-    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",input$searchText,"' and pixel.pixelset_id = pixelset.id;"))
+    
+    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",CF$name,"' and pixel.pixelset_id = pixelset.id;"))
     CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
                                        from pixel,OmicsUnitType 
-                                       where cf_feature_name = '",input$searchText,"'
+                                       where cf_feature_name = '",CF$name,"'
                                        and omicsunittype_id = OmicsUnitType.id;"))
     
     
     CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                  where pixel.cf_feature_name ='",input$searchText,"' and
+                                                  where pixel.cf_feature_name ='",CF$name,"' and
                                                   pixel.pixelset_id = PS.id 
                                                   and ps.id_analysis = analysis.id 
                                                   and Tag_Analysis.id_analysis = analysis.id 
                                                   and tag.id = Tag_Analysis.id_tag;"))
     
     CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                  where pixel.cf_feature_name ='",input$searchText,"'
+                                                  where pixel.cf_feature_name ='",CF$name,"'
                                                 and pixel.pixelset_id = PS.id 
                                                 and ps.id_analysis = analysis.id
                                                 and Analysis_Experiment.id_analysis = analysis.id
@@ -1545,7 +1595,7 @@ server <- function(input, output, session) {
     
     CF$CF_OmicsArea =  dbGetQuery(con, paste0("select omicsarea.name, count(*)
     from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
-    where pixel.cf_feature_name ='",input$searchText,"'
+    where pixel.cf_feature_name ='",CF$name,"'
     and pixel.pixelset_id = PS.id 
     and ps.id_analysis = analysis.id
     and Analysis_Experiment.id_analysis = analysis.id
@@ -1556,13 +1606,13 @@ server <- function(input, output, session) {
     
     CF$CF_OmicsUnitType =  dbGetQuery(con, paste0("SELECT OmicsUnitType.name, count(*)
     from pixel, OmicsUnitType
-    where pixel.cf_feature_name ='",input$searchText,"'
+    where pixel.cf_feature_name ='",CF$name,"'
     and OmicsUnitType_id = OmicsUnitType.id
     group by OmicsUnitType.name;"))
     
     CF$CF_Tag_Exp_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
                                                   from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                  where pixel.cf_feature_name ='",input$searchText,"'
+                                                  where pixel.cf_feature_name ='",CF$name,"'
                                                       and pixel.pixelset_id = PS.id 
                                                       and ps.id_analysis = analysis.id
                                                       and Analysis_Experiment.id_analysis = analysis.id
@@ -1573,7 +1623,7 @@ server <- function(input, output, session) {
     
     CF$CF_Tag_Analysis_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
                                                   from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                  where pixel.cf_feature_name ='",input$searchText,"' and
+                                                  where pixel.cf_feature_name ='",CF$name,"' and
                                                       pixel.pixelset_id = PS.id 
                                                       and ps.id_analysis = analysis.id 
                                                       and Tag_Analysis.id_analysis = analysis.id 
@@ -1581,12 +1631,12 @@ server <- function(input, output, session) {
                                                       group by tag.name;"))
     
     
-    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",input$searchText,"';"))
+    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",CF$name,"';"))
     
     if(nrow(Sup_tab) != 0){
       for(i in 1:nrow(Sup_tab)){
         
-        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",input$searchText,"';"))
+        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",CF$name,"';"))
         result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
         result = paste(result, collapse = "<br>")
         
@@ -1618,10 +1668,8 @@ server <- function(input, output, session) {
     )
   )
   
-  # CF_OUT_graph CF_OmicsArea_graph
-  # CF$CF_OmicsArea CF$CF_OmicsUnitType
   output$CF_OUT_graph <- renderGvis({
-    if(!is.null(CF$CF_OmicsUnitType)){
+    if(!is.null(CF$CF_OmicsUnitType) & nrow(CF$CF_OmicsUnitType) != 0){
       gvisPieChart(CF$CF_OmicsUnitType,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1630,7 +1678,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_OmicsArea_graph <- renderGvis({
-    if(!is.null(CF$CF_OmicsArea)){
+    if(!is.null(CF$CF_OmicsArea) & nrow(CF$CF_OmicsArea) != 0){
       gvisPieChart(CF$CF_OmicsArea,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1638,7 +1686,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_Tag_Analysis_graph <- renderGvis({
-    if(!is.null(CF$CF_Tag_Analysis_graph)){
+    if(!is.null(CF$CF_Tag_Analysis_graph) & nrow(CF$CF_Tag_Analysis_graph) != 0){
       gvisPieChart(CF$CF_Tag_Analysis_graph,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1647,7 +1695,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_Tag_Exp_graph <- renderGvis({
-    if(!is.null(CF$CF_Tag_Exp_graph)){
+    if(!is.null(CF$CF_Tag_Exp_graph) & nrow(CF$CF_Tag_Exp_graph) != 0){
       gvisPieChart(CF$CF_Tag_Exp_graph,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -2104,68 +2152,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$PixelSet_explo_Pixel_rows_selected,{
     updateTabItems (session, "tabs", selected = "CF_item")
-    
-    if(!is.null(CF$sup_id)){
-      for(i in CF$sup_id){
-        removeTab("tab_sup_annot", i)
-      }
-      CF$sup_id = NULL 
-    }
-    
-    updateTabItems (session, "tabs", selected = "CF_item")
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
-    
+    shinyjs::runjs("window.scrollTo(0, 0)")
     CF$name = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_selected,"Feature name"]
-    
-    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",CF$name,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
-    CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
-    CF$main_annotation[1, 'species_name'] = paste0("<i>",CF$main_annotation[1, 'species_name'], "</i>")
-    CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)),"</b> : ", CF$main_annotation[1,])
-    CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
-    
-    
-    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",CF$name,"' and pixel.pixelset_id = pixelset.id;"))
-    CF$PIXEL =  dbGetQuery(con, paste0("select * from pixel where cf_feature_name = '",CF$name,"';"))
-    
-    
-    CF$CF_Tag_analysis = dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                where pixel.cf_feature_name ='",CF$name,"' and
-                                                pixel.pixelset_id = PS.id 
-                                                and ps.id_analysis = analysis.id 
-                                                and Tag_Analysis.id_analysis = analysis.id 
-                                                and tag.id = Tag_Analysis.id_tag;"))
-    
-    CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                   where pixel.cf_feature_name ='",CF$name,"'
-                                                   and pixel.pixelset_id = PS.id 
-                                                   and ps.id_analysis = analysis.id
-                                                   and Analysis_Experiment.id_analysis = analysis.id
-                                                   and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                                   and tag.id = Tag_experiment.id_tag;"))
-    
-    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",CF$name,"';"))
-    
-    if(nrow(Sup_tab) != 0){
-      for(i in 1:nrow(Sup_tab)){
-        
-        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",CF$name,"';"))
-        result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
-        result = paste(result, collapse = "<br>")
-        
-        if(i == 1){
-          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
-        } else {
-          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
-        }
-        
-        CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
-      }
-    }
-    
-    dbDisconnect(con)
     
     proxy = dataTableProxy('PixelSet_explo_Pixel')
     proxy %>% selectRows(NULL)

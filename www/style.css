@@ -248,3 +248,17 @@ div.inline { float:left; }
 marg-left {
   margin-left: 10px;
 }
+
+.sideBar{
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+#searchRefine{
+ float: left;
+ text-align: left;
+}
+
+#searchRefine label{
+  margin :0px;
+}
