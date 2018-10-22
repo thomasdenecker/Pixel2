@@ -1,4 +1,4 @@
-# Pixel Version 2
+# Pixel2
 
 
 ## Requirements
