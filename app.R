@@ -191,8 +191,10 @@ server <- function(input, output, session) {
                       tags$hr(class= "sideBar"),
                       h5(class= "sideBar", "Chromosomal feature"),
                       sidebarSearchForm(textId = "searchCF", buttonId = "searchButtonCF",label = "CAGL0A01243g..."),
-                      h5(class= "sideBar", "Chromosomal feature"),
-                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "CAGL0A01243g...")
+                      h5(class= "sideBar", "Tag"),
+                      sidebarSearchForm(textId = "searchTag", buttonId = "searchButtonTag",label = "Limma"),
+                      h5(class= "sideBar", "PixelSet"),
+                      sidebarSearchForm(textId = "searchPS", buttonId = "searchButtonPS",label = "PixelSet_2018-10-22_09-36-37_1...")
           )
         )
       } else {
@@ -1496,13 +1498,13 @@ server <- function(input, output, session) {
     }
   })
   
-  #=============================================================================
-  # Chromosomal Feature
-  #=============================================================================
   
-  CF = reactiveValues()
-  CF$sup_id = NULL 
-  
+  #=============================================================================
+  # Quick search
+  #=============================================================================
+  #-----------------------------------------------------------------------------
+  # Chromosomal feature
+  #-----------------------------------------------------------------------------
   observeEvent(input$searchButtonCF,{
     if(input$searchCF != ""){
       pg <- dbDriver("PostgreSQL")
@@ -1537,15 +1539,55 @@ server <- function(input, output, session) {
         )
         
         observeEvent(input$ConfSearch, {
-            if (isTRUE(input$ConfSearch)) {
-              CF$name = input$searchRefine
-            }
+          if (isTRUE(input$ConfSearch)) {
+            CF$name = input$searchRefine
+          }
           updateTextInput(session, "searchCF", value = "")
         })
       }
     }
   })
   
+  #-----------------------------------------------------------------------------
+  # Tag
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$searchButtonTag,{
+    if(input$searchTag != ""){
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      testTag = dbGetQuery(con,paste0("select name from tag where name = '",tolower(input$searchTag),"';"))
+      dbDisconnect(con)
+      if(nrow(testTag) != 0){
+        TAG$NAME = testTag[1,1]
+        updateTextInput(session, "searchTag", value = "")
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = input$searchTag,
+          text = "This tag isn't in Pixel...",
+          type = "error"
+        )
+      } 
+    }
+  })
+  
+  
+  #=============================================================================
+  # End Quick search
+  #=============================================================================
+  
+  #=============================================================================
+  # Chromosomal Feature
+  #=============================================================================
+  
+  CF = reactiveValues()
+  CF$sup_id = NULL 
+  
+
   
   observeEvent(CF$name,{
     
@@ -1667,9 +1709,9 @@ server <- function(input, output, session) {
       HTML(CF$main_annotation)
     )
   )
-  
+
   output$CF_OUT_graph <- renderGvis({
-    if(!is.null(CF$CF_OmicsUnitType) & nrow(CF$CF_OmicsUnitType) != 0){
+    if(!is.null(CF$CF_OmicsUnitType) && nrow(CF$CF_OmicsUnitType) != 0){
       gvisPieChart(CF$CF_OmicsUnitType,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1678,7 +1720,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_OmicsArea_graph <- renderGvis({
-    if(!is.null(CF$CF_OmicsArea) & nrow(CF$CF_OmicsArea) != 0){
+    if(!is.null(CF$CF_OmicsArea) && nrow(CF$CF_OmicsArea) != 0){
       gvisPieChart(CF$CF_OmicsArea,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1686,7 +1728,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_Tag_Analysis_graph <- renderGvis({
-    if(!is.null(CF$CF_Tag_Analysis_graph) & nrow(CF$CF_Tag_Analysis_graph) != 0){
+    if(!is.null(CF$CF_Tag_Analysis_graph) && nrow(CF$CF_Tag_Analysis_graph) != 0){
       gvisPieChart(CF$CF_Tag_Analysis_graph,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1695,7 +1737,7 @@ server <- function(input, output, session) {
   })
   
   output$CF_Tag_Exp_graph <- renderGvis({
-    if(!is.null(CF$CF_Tag_Exp_graph) & nrow(CF$CF_Tag_Exp_graph) != 0){
+    if(!is.null(CF$CF_Tag_Exp_graph) && nrow(CF$CF_Tag_Exp_graph) != 0){
       gvisPieChart(CF$CF_Tag_Exp_graph,options=list(tooltip = "{text:'percentage'}"))
     } else {
       NULL
@@ -1722,9 +1764,27 @@ server <- function(input, output, session) {
                                      editable = F,
                                      options = list(scrollX = TRUE, searchHighlight = TRUE))
   
-  output$tagName<- renderText({
-    TAG$NAME 
+
+  observeEvent(input$CF_Tag_experiment_rows_selected,{
+    
+    TAG$NAME = CF$CF_Tag_experiment[input$CF_Tag_experiment_rows_selected,"name"]
+    
+    proxy = dataTableProxy('CF_Tag_experiment')
+    proxy %>% selectRows(NULL)
   })
+  
+  observeEvent(input$CF_Tag_analysis_rows_selected,{
+    
+    TAG$NAME = CF$CF_Tag_analysis[input$CF_Tag_analysis_rows_selected,"name"]
+    
+    proxy = dataTableProxy('CF_Tag_analysis')
+    proxy %>% selectRows(NULL)
+  })
+  
+  #=============================================================================
+  # END Chromosomal Feature
+  #=============================================================================
+  
   
   #=============================================================================
   # PIXELSETLIST
@@ -1867,6 +1927,10 @@ server <- function(input, output, session) {
       PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$info)
     }
   })
+  
+  #=============================================================================
+  # END PIXELSET List
+  #=============================================================================
   
   #=============================================================================
   # PIXELSET EXPLORATION
@@ -2052,6 +2116,9 @@ server <- function(input, output, session) {
     PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
   })
   
+  #=============================================================================
+  # END PIXELSET Exploration
+  #=============================================================================
   
   
   #=============================================================================
@@ -2259,111 +2326,35 @@ server <- function(input, output, session) {
                                      editable = F,
                                      options = list(scrollX = TRUE, searchHighlight = TRUE))
   
-  
   observeEvent(input$PS_Tag_experiment_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Tags")
-    shinyjs::runjs("window.scrollTo(0, 0)")
-    
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
+
     TAG$NAME = PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"]
-    TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
-                                              FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                              WHERE tag.name ='",PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"],"' 
-                                              AND ps.id_analysis = analysis.id
-                                              AND Analysis_Experiment.id_analysis = analysis.id
-                                              AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                              AND tag.id = Tag_experiment.id_tag;"))
-    
-    TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
-                                                   FROM  pixelset PS, analysis, Tag_Analysis, tag 
-                                                   WHERE tag.name ='",PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"],"' 
-                                                   AND ps.id_analysis = analysis.id 
-                                                   AND Tag_Analysis.id_analysis = analysis.id 
-                                                   AND tag.id = Tag_Analysis.id_tag;"))
-    
-    dbDisconnect(con)
-    
     proxy = dataTableProxy('PS_Tag_experiment')
     proxy %>% selectRows(NULL)
   })
   
   observeEvent(input$PS_Tag_analysis_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Tags")
-    shinyjs::runjs("window.scrollTo(0, 0)")
-    
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
+
     
     TAG$NAME = PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"]
-    
-    TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
-                                              FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                              WHERE tag.name ='",PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"],"' 
-                                              AND ps.id_analysis = analysis.id
-                                              AND Analysis_Experiment.id_analysis = analysis.id
-                                              AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                              AND tag.id = Tag_experiment.id_tag;"))
-    
-    
-    
-    TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
-                                                   FROM  pixelset PS, analysis, Tag_Analysis, tag 
-                                                   WHERE tag.name ='",PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"],"' 
-                                                   AND ps.id_analysis = analysis.id 
-                                                   AND Tag_Analysis.id_analysis = analysis.id 
-                                                   AND tag.id = Tag_Analysis.id_tag;"))
-    
-    
-    dbDisconnect(con)
     
     proxy = dataTableProxy('PS_Tag_analysis')
     proxy %>% selectRows(NULL)
   })
-  
-  
-  
+
   #=============================================================================
   # END PIXELSET
   #=============================================================================
   
-  observeEvent(input$CF_Tag_experiment_rows_selected,{
-    updateTabItems (session, "tabs", selected = "Tags")
-    shinyjs::runjs("window.scrollTo(0, 0)")
-    
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
-    TAG$NAME = CF$CF_Tag_experiment[input$CF_Tag_experiment_rows_selected,"name"]
-    TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
-                                              FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                              WHERE tag.name ='",CF$CF_Tag_experiment[input$CF_Tag_experiment_rows_selected,"name"],"' 
-                                              AND ps.id_analysis = analysis.id
-                                              AND Analysis_Experiment.id_analysis = analysis.id
-                                              AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                              AND tag.id = Tag_experiment.id_tag;"))
-    
-    
-    TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
-                                                    FROM  pixelset PS, analysis, Tag_Analysis, tag 
-                                                    WHERE tag.name ='",CF$CF_Tag_experiment[input$CF_Tag_experiment_rows_selected,"name"],"' 
-                                                    AND ps.id_analysis = analysis.id 
-                                                    AND Tag_Analysis.id_analysis = analysis.id 
-                                                    AND tag.id = Tag_Analysis.id_tag;"))
-    
-    
-    dbDisconnect(con)
-    
-    proxy = dataTableProxy('CF_Tag_experiment')
-    proxy %>% selectRows(NULL)
+  #=============================================================================
+  # TAG
+  #=============================================================================
+  
+  output$tagName<- renderText({
+    TAG$NAME 
   })
   
-  observeEvent(input$CF_Tag_analysis_rows_selected,{
+  observeEvent(TAG$NAME,{
     updateTabItems (session, "tabs", selected = "Tags")
     shinyjs::runjs("window.scrollTo(0, 0)")
     
@@ -2371,31 +2362,22 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
-    
-    TAG$NAME = CF$CF_Tag_analysis[input$CF_Tag_analysis_rows_selected,"name"]
-    
     TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
                                               FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                              WHERE tag.name ='",CF$CF_Tag_analysis[input$CF_Tag_analysis_rows_selected,"name"],"' 
+                                              WHERE tag.name ='",TAG$NAME,"' 
                                               AND ps.id_analysis = analysis.id
                                               AND Analysis_Experiment.id_analysis = analysis.id
                                               AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
                                               AND tag.id = Tag_experiment.id_tag;"))
     
-    
-    
     TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
-                                                    FROM  pixelset PS, analysis, Tag_Analysis, tag 
-                                                    WHERE tag.name ='",CF$CF_Tag_analysis[input$CF_Tag_analysis_rows_selected,"name"],"' 
-                                                    AND ps.id_analysis = analysis.id 
-                                                    AND Tag_Analysis.id_analysis = analysis.id 
-                                                    AND tag.id = Tag_Analysis.id_tag;"))
-    
+                                                   FROM  pixelset PS, analysis, Tag_Analysis, tag 
+                                                   WHERE tag.name ='",TAG$NAME,"' 
+                                                   AND ps.id_analysis = analysis.id 
+                                                   AND Tag_Analysis.id_analysis = analysis.id 
+                                                   AND tag.id = Tag_Analysis.id_tag;"))
     
     dbDisconnect(con)
-    
-    proxy = dataTableProxy('CF_Tag_analysis')
-    proxy %>% selectRows(NULL)
   })
   
   output$Tag_analysis <- renderDT(TAG$PIXEL_SET_ANALYSIS, 
@@ -2408,24 +2390,26 @@ server <- function(input, output, session) {
                                     editable = F,
                                     options = list(scrollX = TRUE))
   
-  observe({
-    if(is.null(input$fileCF)){
-      disable("ImportCF")
-    } else if(input$importTypeCF =="sup"){
-      if(is.null(input$sup_name) ){
-        disable("ImportCF")
-      }else {
-        if(input$sup_name == ""){
-          disable("ImportCF")
-        } else {
-          enable("ImportCF")
-        }
-      }
-      
-    } else{
-      enable("ImportCF")
-    }
+  observeEvent(input$Tag_analysis_rows_selected,{
+    
+    SEARCH_RV$PIXELSET = TAG$PIXEL_SET_ANALYSIS[input$Tag_analysis_rows_selected,"id"]
+    proxy = dataTableProxy('Tag_analysis')
+    proxy %>% selectRows(NULL)
   })
+  
+  observeEvent(input$Tag_experiment_rows_selected,{
+    
+    SEARCH_RV$PIXELSET = TAG$PIXEL_SET_EXP[input$Tag_experiment_rows_selected,"id"]
+    proxy = dataTableProxy('Tag_experiment')
+    proxy %>% selectRows(NULL)
+  })
+  
+  #=============================================================================
+  # END TAG
+  #=============================================================================
+  
+  
+
   
   #-----------------------------------------------------------------------------
   # Add information
@@ -3067,6 +3051,25 @@ server <- function(input, output, session) {
   
   submissionRV = reactiveValues()
   submissionRV$Read = F
+
+  observe({
+    if(is.null(input$fileCF)){
+      disable("ImportCF")
+    } else if(input$importTypeCF =="sup"){
+      if(is.null(input$sup_name) ){
+        disable("ImportCF")
+      }else {
+        if(input$sup_name == ""){
+          disable("ImportCF")
+        } else {
+          enable("ImportCF")
+        }
+      }
+      
+    } else{
+      enable("ImportCF")
+    }
+  })
   
   #-----------------------------------------------------------------------------
   # Experiment
