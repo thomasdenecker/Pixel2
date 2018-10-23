@@ -3428,14 +3428,16 @@ server <- function(input, output, session) {
         dbGetQuery(con, REQUEST_Exp_tag)
       }
       
+      # Create a submission 
+      id_Submission = paste0("Submission_",time)
+      dir.create(paste0("www/Submissions/", id_Submission))
       
       # Add analysis
       id_analysis = paste0("Analysis_",time)
-      adresse_analysis = paste0("Files/Analysis/",id_analysis,"/")
+      adresse_analysis = paste0("Submissions/",id_Submission,"/")
       adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
       adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
       
-      dir.create(paste0("www/", adresse_analysis))
       file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
       file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
       
@@ -3454,7 +3456,7 @@ server <- function(input, output, session) {
       dbGetQuery(con, REQUEST_Analysis_Exp)
       
       # Add Submission
-      id_Submission = paste0("Submission_",time)
+
       pixeler_user_id = dbGetQuery(con, paste0("SELECT id from pixeler where user_name='",isolate(input$USER),"';"))[1,1]
       REQUEST_Submission = paste0("insert into Submission (id, submission_date, status, pixeler_user_id) values('",id_Submission,"', to_date('",Sys.Date(),"', 'YYYY-MM-DD'), FALSE, '",pixeler_user_id,"');")
       dbGetQuery(con, REQUEST_Submission)
@@ -3466,7 +3468,8 @@ server <- function(input, output, session) {
           incProgress(1/m, detail = paste0("Imported :", floor(i/m*100),"%"))
           
           id_PixelSets = paste0("PixelSet_",time,"_",i)
-          adresse_PixelSet = paste0("Files/PixelSets/",id_PixelSets,"/")
+          
+          adresse_PixelSet = paste0("Submissions/",id_Submission,"/",id_PixelSets,"/")
           dir.create(paste0("www/",adresse_PixelSet))
           
           adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
@@ -3494,7 +3497,11 @@ server <- function(input, output, session) {
           })
         }
       })
-      
+      setwd("www/Submissions/")
+      zip(id_Submission, id_Submission)
+      setwd("../..")
+      #system(paste0("zip -r ",paste0("www/Submissions/", id_Submission,".zip")," ", paste0("www/Submissions/", id_Submission)))
+      submissionRV$ZIP = paste0("www/Submissions/", id_Submission,".zip")
       
       DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
       DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
@@ -3518,7 +3525,9 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "Successfully imported!",
-        text = "The pixels have been successfully imported.",
+        text = div("The pixels have been successfully imported. Click on the button to download the zip folder of submission ",br(),
+        downloadButton("submissionZip", "Download")),
+        html = T,
         type = "success"
       )
       
@@ -3533,6 +3542,18 @@ server <- function(input, output, session) {
       )
     }
   })
+  
+  output$submissionZip <- downloadHandler(
+    filename <- function() {
+      submissionRV$ZIP 
+    },
+    
+    content <- function(file) {
+      file.copy(submissionRV$ZIP, file)
+    },
+    contentType = "application/zip"
+  )
+  
   
   observeEvent(input$col, {
     js$pageCol(input$col)
