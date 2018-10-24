@@ -190,7 +190,7 @@ server <- function(input, output, session) {
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
                                menuSubItem("Pixeler", tabName = "Pixeler"),
-                               menuSubItem("Pixel", tabName = "Pixel"), 
+                               menuSubItem("PixelSets", tabName = "PixelSetsAdmin"), 
                                menuSubItem("Submissions", tabName = "SubmissionsAdmin")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       h4(class ='sideBar',"Quick search"),
@@ -997,7 +997,24 @@ server <- function(input, output, session) {
             DTOutput('SubmissionsAdminTab'),
             br(),
             actionButton('removeSubmission', class = "pull-right",
-                         label = "Remove user (0)", 
+                         label = "Remove submission (0)", 
+                         icon = icon("minus-circle"))
+          )
+        ), 
+        
+        #=======================================================================
+        # Tab content : PixelSetsAdmin
+        #=======================================================================
+        
+        
+        tabItem(
+          tabName = "PixelSetsAdmin", 
+          h2("PixelSets"),
+          fluidRow(
+            DTOutput('PixelSetsAdminTab'), 
+            br(),
+            actionButton('removePixelSets', class = "pull-right",
+                         label = "Remove PixelSets (0)", 
                          icon = icon("minus-circle"))
           )
         ), 
@@ -1233,10 +1250,8 @@ server <- function(input, output, session) {
   # Admin Submission
   #-----------------------------------------------------------------------------
   
-  # SubmissionsAdminTab removeSubmission
-  
   output$SubmissionsAdminTab <- renderDT(SubFolder$Tab, selection = 'multiple', 
-                                         editable = TRUE,
+                                         editable = TRUE,escape = 3,
                                          options = list(scrollX = TRUE))
   
   #.............................................................................
@@ -1245,7 +1260,7 @@ server <- function(input, output, session) {
   observeEvent(is.null(input$SubmissionsAdminTab_rows_selected),{
     if(!is.null(input$SubmissionsAdminTab_rows_selected)){
       updateActionButton(session, "removeSubmission", 
-                         label = paste0('Remove removeSubmission (',length(input$SubmissionsAdminTab_rows_selected),')'),
+                         label = paste0('Remove Submission (',length(input$SubmissionsAdminTab_rows_selected),')'),
                          icon = icon("minus-circle"))
       enable("removeSubmission")
     }else{
@@ -1326,6 +1341,114 @@ server <- function(input, output, session) {
         session = session,
         title = "Done!",
         text = "Submission(s) deleted !",
+        type = "success"
+      )
+      
+      dbDisconnect(con)
+    }
+  })  
+  
+  #-----------------------------------------------------------------------------
+  # Admin PixelSet
+  #-----------------------------------------------------------------------------
+  
+  # PixelSetsAdminTab removePixelSets
+  
+  output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
+                                         editable = TRUE,
+                                         options = list(scrollX = TRUE))
+  
+  #.............................................................................
+  # Remove Pixelsets
+  #.............................................................................
+  observeEvent(is.null(input$PixelSetsAdminTab_rows_selected),{
+    if(!is.null(input$PixelSetsAdminTab_rows_selected)){
+      updateActionButton(session, "removePixelSets", 
+                         label = paste0('Remove PixelSets (',length(input$PixelSetsAdminTab_rows_selected),')'),
+                         icon = icon("minus-circle"))
+      enable("removePixelSets")
+    }else{
+      updateActionButton(session, "removePixelSets", 
+                         label = 'Remove PixelSets (0)', icon = icon("minus-circle"))
+      disable("removePixelSets")
+    }
+    
+  })
+  
+  observeEvent(input$removePixelSets,{
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_del_PixelSets",
+      type = "warning",
+      title = "Want to confirm the following PixelSet(s) ?",
+      text = paste(PIXELSETLIST_RV$info[input$PixelSetsAdminTab_rows_selected,1], collapse = ",") ,
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_del_PixelSets, {
+    if (isTRUE(input$confirm_del_PixelSets)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      
+      for(i in input$PixelSetsAdminTab_rows_selected){
+        idSubmission = dbGetQuery(con, paste0("select id_submission from pixelset where id ='",PIXELSETLIST_RV$info[i,1],"';"))
+        
+        nbPS = dbGetQuery(con, paste0("select count(*) from pixelset where id_submission = '",idSubmission,"';"))[1,1]
+        
+        idExperience = dbGetQuery(con, paste0("select DISTINCT Analysis_Experiment.id_experiment from pixelset,  Analysis_Experiment
+                                              where id_Submission = '",idSubmission,"'
+                                              and Analysis_Experiment.id_analysis = pixelset.id_analysis;"))
+        idAnalysis = dbGetQuery(con, paste0("select DISTINCT id_analysis from pixelset
+                                            where id_Submission = '",idSubmission,"'"))
+        
+        if(nbPS > 1){
+          dbGetQuery(con, paste0("delete from pixel where pixelSet_id  = '",PIXELSETLIST_RV$info[i,1] ,"';"))
+          dbGetQuery(con, paste0("delete from pixelset where id  = '",PIXELSETLIST_RV$info[i,1] ,"';"))
+        } else {
+          dbGetQuery(con, paste0("delete from Tag_Experiment where id_experiment = '",idExperience,"';"))
+          dbGetQuery(con, paste0("delete from Tag_Analysis where id_analysis = '",idAnalysis,"';"))
+          dbGetQuery(con, paste0("delete from Analysis_Experiment where id_analysis = '",idAnalysis,"' and id_experiment = '",idExperience,"' ;"))
+          dbGetQuery(con, paste0("delete from experiment where id  = '",idExperience,"';"))
+          dbGetQuery(con, paste0("delete from pixel where pixelSet_id IN (select id from pixelset where id_Submission = '",idSubmission ,"');"))
+          dbGetQuery(con, paste0("delete from pixelset where id IN (select id from pixelset where id_Submission = '",idSubmission ,"');"))
+          dbGetQuery(con, paste0("delete from analysis where id  = '",idAnalysis,"';"))
+          dbGetQuery(con, paste0("delete from submission where id = '",idSubmission ,"';"))
+        }
+        
+      }
+
+      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
+                            where PS.id_analysis = analysis.id
+                            and PS.id = pixel.pixelset_id
+                            and pixel.omicsunittype_id = OmicsUnitType.id
+                            and analysis.id = AE.id_analysis
+                            and AE.id_experiment = experiment.id
+                            and experiment.strainId = strain.id
+                            and strain.species_id = species.id
+                            and experiment.omicsAreaid = OmicsArea.id
+                            and PS.id_submission = Submission.id
+                            and Submission.pixeler_user_id = pixeler.id
+                            ;")
+      
+      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      
+      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+      
+      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "PixelSet(s) deleted !",
         type = "success"
       )
       
@@ -2162,12 +2285,15 @@ server <- function(input, output, session) {
       )
       
       interList = list()
-      for(i in 1:nrow(PIXELSETLIST_RV$tags)){
-        interList[[PIXELSETLIST_RV$tags[i,"id"] ]] = c(interList[[PIXELSETLIST_RV$tags[i,"id"]]], PIXELSETLIST_RV$tags[i,"name"])
+      if(nrow(PIXELSETLIST_RV$tags) != 0){
+        for(i in 1:nrow(PIXELSETLIST_RV$tags)){
+          interList[[PIXELSETLIST_RV$tags[i,"id"] ]] = c(interList[[PIXELSETLIST_RV$tags[i,"id"]]], PIXELSETLIST_RV$tags[i,"name"])
+        }
+        
+        interList = lapply(interList, unique)
+        interList = lapply(interList, sort)
       }
       
-      interList = lapply(interList, unique)
-      interList = lapply(interList, sort)
       PIXELSETLIST_RV$tagsList = interList
       
       dbDisconnect(con)
@@ -2291,27 +2417,30 @@ server <- function(input, output, session) {
   
   
   output$PSExploUI <- renderUI({
-    lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
-      pg <- dbDriver("PostgreSQL")
-      con <- dbConnect(pg, user="docker", password="docker",
-                       host=ipDB, port=5432)
-      on.exit(dbDisconnect(con))
-      
-      file = dbGetQuery(con,paste0("select pixelset_file from pixelset where id = '",PixelSetExploRV$PixelSetID[i],"'; "))
-      filename = as.character(unlist(strsplit(file[1,1], "/"))[length(unlist(strsplit(file[1,1], "/")))])
-      
-      dbDisconnect(con)
-      
-      box( 
-        title = paste("> PS",i,":",PixelSetExploRV$PixelSetID[i]), 
-        solidHeader = TRUE, collapsible = TRUE,collapsed = T,
-        fluidRow(column(12,p("Original file :",a(filename, href=file, target="_blank")))), 
-        fluidRow(column(6,uiOutput(paste0('PSExploValue', i))),
-                 column(6,uiOutput(paste0('PSExploQS', i))))
-      )
-      
-    })
-    
+    if(!is.null(PixelSetExploRV$PixelSetID) && length(PixelSetExploRV$PixelSetID) != 0){
+      lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
+        pg <- dbDriver("PostgreSQL")
+        con <- dbConnect(pg, user="docker", password="docker",
+                         host=ipDB, port=5432)
+        on.exit(dbDisconnect(con))
+        
+        file = dbGetQuery(con,paste0("select pixelset_file from pixelset where id = '",PixelSetExploRV$PixelSetID[i],"'; "))
+        filename = as.character(unlist(strsplit(file[1,1], "/"))[length(unlist(strsplit(file[1,1], "/")))])
+        
+        dbDisconnect(con)
+        
+        box( 
+          title = paste("> PS",i,":",PixelSetExploRV$PixelSetID[i]), 
+          solidHeader = TRUE, collapsible = TRUE,collapsed = T,
+          fluidRow(column(12,p("Original file :",a(filename, href=file, target="_blank")))), 
+          fluidRow(column(6,uiOutput(paste0('PSExploValue', i))),
+                   column(6,uiOutput(paste0('PSExploQS', i))))
+        )
+        
+      })
+    } else {
+      NULL
+    }
   })
   
   observeEvent(PixelSetExploRV$PixelSetID,{
@@ -2347,7 +2476,12 @@ server <- function(input, output, session) {
   
   
   output$UpsetR <- renderPlot({
-    upset(fromList(PixelSetExploRV$UpsetR), text.scale= 1.8)
+    if(!is.null(PixelSetExploRV$UpsetR) && length(PixelSetExploRV$UpsetR) > 1){
+      upset(fromList(PixelSetExploRV$UpsetR), text.scale= 1.8)
+    } else {
+      NULL
+    }
+    
   })
   
   output$MPS_export_csv <- downloadHandler(
@@ -3847,7 +3981,7 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "Successfully imported!",
-        text = div("The pixels have been successfully imported. Click on the button to download the zip folder of submission ",br(),
+        text = div("The pixels have been successfully imported. Click on the button to download the zip folder of submission ",br(),br(),
                    downloadButton("submissionZip", "Download")),
         html = T,
         type = "success"
