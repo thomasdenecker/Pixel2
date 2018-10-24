@@ -994,11 +994,15 @@ server <- function(input, output, session) {
           tabName = "SubmissionsAdmin", 
           h2("Submission"),
           fluidRow(
-            DTOutput('SubmissionsAdminTab'),
-            br(),
-            actionButton('removeSubmission', class = "pull-right",
-                         label = "Remove submission (0)", 
-                         icon = icon("minus-circle"))
+            column(12,
+                   h3("Delete submission(s)"),
+                   p(class="info", "Select one or more submissions from the table and click Remove."),
+                   DTOutput('SubmissionsAdminTab'),
+                   br(),
+                   actionButton('removeSubmission', class = "pull-right",
+                                label = "Remove submission (0)", 
+                                icon = icon("minus-circle"))
+            )
           )
         ), 
         
@@ -1011,11 +1015,15 @@ server <- function(input, output, session) {
           tabName = "PixelSetsAdmin", 
           h2("PixelSets"),
           fluidRow(
-            DTOutput('PixelSetsAdminTab'), 
-            br(),
-            actionButton('removePixelSets', class = "pull-right",
-                         label = "Remove PixelSets (0)", 
-                         icon = icon("minus-circle"))
+            column(12,
+                      h3("Delete PixelSet(s)"),
+                      p(class="info", "Select one or more PixelSets from the table and click Remove."),
+                      DTOutput('PixelSetsAdminTab'), 
+                      br(),
+                      actionButton('removePixelSets', class = "pull-right",
+                                   label = "Remove PixelSets (0)", 
+                                   icon = icon("minus-circle"))
+            )
           )
         ), 
         
@@ -1355,8 +1363,8 @@ server <- function(input, output, session) {
   # PixelSetsAdminTab removePixelSets
   
   output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
-                                         editable = TRUE,
-                                         options = list(scrollX = TRUE))
+                                       editable = TRUE,
+                                       options = list(scrollX = TRUE))
   
   #.............................................................................
   # Remove Pixelsets
@@ -1419,7 +1427,7 @@ server <- function(input, output, session) {
         }
         
       }
-
+      
       REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
                             from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
                             where PS.id_analysis = analysis.id
