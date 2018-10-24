@@ -985,16 +985,35 @@ server <- function(input, output, session) {
               
           )),
         
-        ########################################################################
+        #=======================================================================
+        # Tab content : SubmissionsAdmin
+        #=======================================================================
+        
+        
+        tabItem(
+          tabName = "SubmissionsAdmin", 
+          h2("Submission"),
+          fluidRow(
+            DTOutput('SubmissionsAdminTab'),
+            br(),
+            actionButton('removeSubmission', class = "pull-right",
+                         label = "Remove user (0)", 
+                         icon = icon("minus-circle"))
+          )
+        ), 
+        
+        #=======================================================================
         # Tab content : Profile
-        ########################################################################
+        #=======================================================================
         
         tabItem(
           tabName = "Profile", 
           h2("Profile"),
           fluidRow(
             uiOutput("Profile")
-          ))
+          )
+        )
+        
         
         ########################################################################
         # END ADMINISTRATION
@@ -1070,11 +1089,20 @@ server <- function(input, output, session) {
   })
   
   output$PixelsByOmicsUnitType <- renderGvis({
-    gvisPieChart(DASHBOARD_RV$OUT,options=list(tooltip = "{text:'percentage'}"))
+    if(!is.null(DASHBOARD_RV$OUT) && nrow(DASHBOARD_RV$OUT) != 0){
+      gvisPieChart(DASHBOARD_RV$OUT,options=list(tooltip = "{text:'percentage'}"))
+    }else {
+      NULL
+    }
+    
   })
   
   output$PixelsBySpecies <- renderGvis({
-    gvisPieChart(DASHBOARD_RV$Species,options=list(tooltip = "{text:'percentage'}"))
+    if(!is.null(DASHBOARD_RV$Species) && nrow(DASHBOARD_RV$Species) != 0){
+      gvisPieChart(DASHBOARD_RV$Species,options=list(tooltip = "{text:'percentage'}"))
+    }else {
+      NULL
+    }
   })
   
   output$UsersMap <- renderGvis({
@@ -1200,6 +1228,110 @@ server <- function(input, output, session) {
     
   })
   
+  
+  #-----------------------------------------------------------------------------
+  # Admin Submission
+  #-----------------------------------------------------------------------------
+  
+  # SubmissionsAdminTab removeSubmission
+  
+  output$SubmissionsAdminTab <- renderDT(SubFolder$Tab, selection = 'multiple', 
+                                         editable = TRUE,
+                                         options = list(scrollX = TRUE))
+  
+  #.............................................................................
+  # Remove submission
+  #.............................................................................
+  observeEvent(is.null(input$SubmissionsAdminTab_rows_selected),{
+    if(!is.null(input$SubmissionsAdminTab_rows_selected)){
+      updateActionButton(session, "removeSubmission", 
+                         label = paste0('Remove removeSubmission (',length(input$SubmissionsAdminTab_rows_selected),')'),
+                         icon = icon("minus-circle"))
+      enable("removeSubmission")
+    }else{
+      updateActionButton(session, "removeSubmission", 
+                         label = 'Remove submission (0)', icon = icon("minus-circle"))
+      disable("removeSubmission")
+    }
+    
+  })
+  
+  observeEvent(input$removeSubmission,{
+    
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_del_submission",
+      type = "warning",
+      title = "Want to confirm the following submission(s) ?",
+      text = paste(SubFolder$Tab[input$SubmissionsAdminTab_rows_selected,1], collapse = ",") ,
+      danger_mode = TRUE
+    )
+    
+  })
+  
+  observeEvent(input$confirm_del_submission, {
+    if (isTRUE(input$confirm_del_submission)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      
+      for(i in input$SubmissionsAdminTab_rows_selected){
+        idSubmission = SubFolder$Tab[i,1]
+        idExperience = dbGetQuery(con, paste0("select DISTINCT Analysis_Experiment.id_experiment from pixelset,  Analysis_Experiment
+                                              where id_Submission = '",idSubmission,"'
+                                              and Analysis_Experiment.id_analysis = pixelset.id_analysis;"))
+        idAnalysis = dbGetQuery(con, paste0("select DISTINCT id_analysis from pixelset
+                                            where id_Submission = '",idSubmission,"'"))
+        
+        cat(paste(idSubmission,idExperience, idAnalysis,"\n" ), file= stderr())
+        
+        
+        dbGetQuery(con, paste0("delete from Tag_Experiment where id_experiment = '",idExperience,"';"))
+        dbGetQuery(con, paste0("delete from Tag_Analysis where id_analysis = '",idAnalysis,"';"))
+        dbGetQuery(con, paste0("delete from Analysis_Experiment where id_analysis = '",idAnalysis,"' and id_experiment = '",idExperience,"' ;"))
+        dbGetQuery(con, paste0("delete from experiment where id  = '",idExperience,"';"))
+        dbGetQuery(con, paste0("delete from pixel where pixelSet_id IN (select id from pixelset where id_Submission = '",idSubmission ,"');"))
+        dbGetQuery(con, paste0("delete from pixelset where id IN (select id from pixelset where id_Submission = '",idSubmission ,"');"))
+        dbGetQuery(con, paste0("delete from analysis where id  = '",idAnalysis,"';"))
+        dbGetQuery(con, paste0("delete from submission where id = '",idSubmission ,"';"))
+      }
+      
+      
+      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
+                            where PS.id_analysis = analysis.id
+                            and PS.id = pixel.pixelset_id
+                            and pixel.omicsunittype_id = OmicsUnitType.id
+                            and analysis.id = AE.id_analysis
+                            and AE.id_experiment = experiment.id
+                            and experiment.strainId = strain.id
+                            and strain.species_id = species.id
+                            and experiment.omicsAreaid = OmicsArea.id
+                            and PS.id_submission = Submission.id
+                            and Submission.pixeler_user_id = pixeler.id
+                            ;")
+      
+      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      
+      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+      
+      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "Submission(s) deleted !",
+        type = "success"
+      )
+      
+      dbDisconnect(con)
+    }
+  })  
   
   
   #-----------------------------------------------------------------------------
@@ -2606,7 +2738,7 @@ server <- function(input, output, session) {
   SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
   
   dbDisconnect(con)
-
+  
   observeEvent(SubFolder$Tab, {
     if(ncol(SubFolder$Tab) == 2){
       SubFolder$Tab = cbind(SubFolder$Tab, paste0("<a href='Submissions/",SubFolder$Tab[,1],".zip' target='_blank'>Download</a>"))
@@ -2615,14 +2747,14 @@ server <- function(input, output, session) {
   })
   
   output$submissionFolderTab <- renderDT(SubFolder$Tab, 
-                                  selection = 'none', 
-                                  editable = F,escape = 3,
-                                  options = list(scrollX = TRUE))
+                                         selection = 'none', 
+                                         editable = F,escape = 3,
+                                         options = list(scrollX = TRUE))
   
   #=============================================================================
   # END SUBMISSION FOLDER
   #=============================================================================
-
+  
   
   #=============================================================================
   # Add information
@@ -3535,7 +3667,7 @@ server <- function(input, output, session) {
                                 c("Experiment_species", input$Submission_Exp_Species_SI),
                                 c("Experiment_strain", input$Submission_Exp_Strain_SI),
                                 c("Experiment_tags", paste(input$Submission_Exp_tags_CBG, collapse = "|" ))
-                                )
+      )
       
       
       
@@ -3557,7 +3689,7 @@ server <- function(input, output, session) {
         REQUEST_Exp_tag = paste0("INSERT INTO Tag_Experiment (id_tag, id_experiment) SELECT id, '",id_exp,"' from tag where name in (",paste0("'",input$Submission_Exp_tags_CBG,"'", collapse = ","),");")
         dbGetQuery(con, REQUEST_Exp_tag)
       }
-
+      
       #-------------------------------------------------------------------------
       # ANALYSIS
       #-------------------------------------------------------------------------
@@ -3594,11 +3726,11 @@ server <- function(input, output, session) {
       # add link analysis / experiment
       REQUEST_Analysis_Exp = paste0("insert into Analysis_Experiment (id_experiment, id_analysis) values('",id_exp,"','",id_analysis,"');")
       dbGetQuery(con, REQUEST_Analysis_Exp)
-
+      
       #-------------------------------------------------------------------------
       # SUBMISSION
       #-------------------------------------------------------------------------
-
+      
       pixeler_user_id = dbGetQuery(con, paste0("SELECT id from pixeler where user_name='",isolate(input$USER),"';"))[1,1]
       REQUEST_Submission = paste0("insert into Submission (id, submission_date, status, pixeler_user_id) values('",id_Submission,"', to_date('",Sys.Date(),"', 'YYYY-MM-DD'), FALSE, '",pixeler_user_id,"');")
       dbGetQuery(con, REQUEST_Submission)
@@ -3639,7 +3771,7 @@ server <- function(input, output, session) {
           #---------------------------------------------------------------------
           # PIXEL
           #---------------------------------------------------------------------
-
+          
           withProgress(message = 'Pixel', value = 0, {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
@@ -3672,6 +3804,26 @@ server <- function(input, output, session) {
       DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
       DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
       DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+      
+      #-------------------------------------------------------------------------
+      # UPDATE PIXELSET LIST
+      #-------------------------------------------------------------------------
+      
+      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                          from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
+                            where PS.id_analysis = analysis.id
+                            and PS.id = pixel.pixelset_id
+                            and pixel.omicsunittype_id = OmicsUnitType.id
+                            and analysis.id = AE.id_analysis
+                            and AE.id_experiment = experiment.id
+                            and experiment.strainId = strain.id
+                            and strain.species_id = species.id
+                            and experiment.omicsAreaid = OmicsArea.id
+                            and PS.id_submission = Submission.id
+                            and Submission.pixeler_user_id = pixeler.id
+                            ;")
+      
+      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
       
       #-------------------------------------------------------------------------
       # CLEAR AFTER SUBMISSION
