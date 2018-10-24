@@ -169,7 +169,8 @@ server <- function(input, output, session) {
                       menuItem("Explorer", tabName = "Explorer", icon = icon("search"),
                                startExpanded = F,
                                menuSubItem("Chromosomal feature", tabName = "CF_item"),
-                               menuSubItem("Tags", tabName = "Tags")
+                               menuSubItem("Tags", tabName = "Tags"),
+                               menuSubItem("Submission", tabName = "submissionFolder")
                       ),
                       menuItem("PixelSets", tabName = "PixelSets", icon = icon("folder"),
                                startExpanded = F,
@@ -229,9 +230,11 @@ server <- function(input, output, session) {
   output$body <- renderUI({
     if (USER$Logged == TRUE) {
       tabItems(
+        
         ########################################################################
-        # Tab content : Dashboard
+        # DASHBOARD
         ########################################################################
+        
         tabItem(
           tabName = "Dashboard", 
           h2("Dashboard"),
@@ -297,9 +300,15 @@ server <- function(input, output, session) {
           )
           
         ),
+        
         ########################################################################
-        # Tab content : Submissions
+        # END DASHBOARD
         ########################################################################
+        
+        ########################################################################
+        # SUBMISSION
+        ########################################################################
+        
         tabItem(
           tabName = "Submissions", 
           
@@ -439,9 +448,18 @@ server <- function(input, output, session) {
           )
           
         ),
+        
         ########################################################################
+        # END SUBMISSION
+        ########################################################################
+        
+        ########################################################################
+        # PIXELSET
+        ########################################################################
+        
+        #=======================================================================
         # Tab content : PixelSet
-        ########################################################################
+        #=======================================================================
         tabItem(
           tabName = "PixelSet", 
           h2("PixelSet"),
@@ -484,9 +502,11 @@ server <- function(input, output, session) {
                  h3("Pixels"),
                  DTOutput("PixelSet_explo_Pixel"))
           )),
-        ########################################################################
+        
+        #=======================================================================
         # Tab content : PixelSetList
-        ########################################################################
+        #=======================================================================
+        
         tabItem(
           tabName = "PixelSetList", 
           h2("PixelSet List"),
@@ -512,9 +532,11 @@ server <- function(input, output, session) {
             )
           )
         ),
-        ########################################################################
+        
+        #=======================================================================
         # Tab content : PixelSet Exploration
-        ########################################################################
+        #=======================================================================
+        
         tabItem(
           tabName = "PixelSetExplo", 
           h2("Exploration of Multi PixelSets"),
@@ -552,9 +574,31 @@ server <- function(input, output, session) {
           )
           
         ),
+        
         ########################################################################
+        # END PIXELSET
+        ########################################################################
+        
+        ########################################################################
+        # EXPLORE
+        ########################################################################
+        
+        #=======================================================================
+        # Tab content : Submission folder
+        #=======================================================================
+        tabItem(
+          tabName = "submissionFolder", 
+          h2("Submission"),
+          div( class = "margeProfile",
+               fluidRow(
+                 DTOutput("submissionFolderTab")
+               )
+          )
+        ),
+        
+        #=======================================================================
         # Tab content : Tags
-        ########################################################################
+        #=======================================================================
         tabItem(
           tabName = "Tags", 
           h2("Tags"),
@@ -567,9 +611,9 @@ server <- function(input, output, session) {
                  DTOutput("Tag_experiment")
                ))),
         
-        ########################################################################
+        #=======================================================================
         # Tab content : Chromosomal feature
-        ########################################################################
+        #=======================================================================
         tabItem(
           tabName = "CF_item", 
           uiOutput("CF_title"),
@@ -627,7 +671,18 @@ server <- function(input, output, session) {
             )
           )),
         
+        ########################################################################
+        # END EXPLORE
+        ########################################################################
+        
+        ########################################################################
+        # Add information
+        ########################################################################
+        
+        #=======================================================================
         # Tab content : Add omicsUnitType
+        #=======================================================================
+        
         tabItem(
           tabName = "AddOUT", 
           h2("Omics unit type"),
@@ -649,7 +704,10 @@ server <- function(input, output, session) {
             
           )),
         
+        #=======================================================================
         # Tab content : Add dataSource
+        #=======================================================================
+        
         tabItem(
           tabName = "AddDataSource", 
           h2("Data source"),
@@ -678,7 +736,10 @@ server <- function(input, output, session) {
             
           )),
         
+        #=======================================================================
         # Tab content : Add dataSource
+        #=======================================================================
+        
         tabItem(
           tabName = "AddOmicsArea", 
           h2("Omics area"),
@@ -739,10 +800,11 @@ server <- function(input, output, session) {
             )
           )),
         
-        # Delete_OmicsArea_btn
-        #   Delete_branch_OmicsArea
         
+        #=======================================================================
         # Tab content : Annotation
+        #=======================================================================
+        
         tabItem(
           tabName = "Annotation", 
           h2("Chromosomal feature"),
@@ -821,8 +883,10 @@ server <- function(input, output, session) {
           
         ),
         
-        
+        #=======================================================================
         # Tab content : Species & strains
+        #=======================================================================
+        
         tabItem(
           tabName = "AddSpecies",
           h2("Species"),
@@ -869,12 +933,20 @@ server <- function(input, output, session) {
             
           )
           
-          
-          
-          
         ),
         
+        ########################################################################
+        # END ADD INFORMATION
+        ########################################################################
+        
+        ########################################################################
+        # ADMINISTRATION
+        ########################################################################
+        
+        #=======================================================================
         # Tab content : Pixeler
+        #=======================================================================
+        
         tabItem(
           tabName = "Pixeler", 
           h2("Pixeler"),
@@ -916,12 +988,17 @@ server <- function(input, output, session) {
         ########################################################################
         # Tab content : Profile
         ########################################################################
+        
         tabItem(
           tabName = "Profile", 
           h2("Profile"),
           fluidRow(
             uiOutput("Profile")
           ))
+        
+        ########################################################################
+        # END ADMINISTRATION
+        ########################################################################
       )
       
     } else {
@@ -1110,7 +1187,7 @@ server <- function(input, output, session) {
           text = "The two new passwords are not the same!",
           type = "error"
         )
-      
+        
       } else {
         sendSweetAlert(
           session = session,
@@ -1245,7 +1322,7 @@ server <- function(input, output, session) {
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
-
+      
       sendSweetAlert(
         session = session,
         title = "Nice!",
@@ -1337,14 +1414,14 @@ server <- function(input, output, session) {
       dbDisconnect(con)
       
       updateSelectInput(session, "selectSource", choices = rv$Source[,2], selected = input$CFSourceName)
- 
+      
       sendSweetAlert(
         session = session,
         title = "Congratulations!",
         text = "The import was successful!",
         type = "success"
       )
-    
+      
     }
     
   })
@@ -1450,7 +1527,7 @@ server <- function(input, output, session) {
         
         tryCatch(dbSendQuery(con, REQUEST)
                  , error = function(c) {
-
+                   
                    sendSweetAlert(
                      session = session,
                      title = "Error : Table creation",
@@ -1684,7 +1761,7 @@ server <- function(input, output, session) {
   CF = reactiveValues()
   CF$sup_id = NULL 
   
-
+  
   
   observeEvent(CF$name,{
     
@@ -1806,7 +1883,7 @@ server <- function(input, output, session) {
       HTML(CF$main_annotation)
     )
   )
-
+  
   output$CF_OUT_graph <- renderGvis({
     if(!is.null(CF$CF_OmicsUnitType) && nrow(CF$CF_OmicsUnitType) != 0){
       gvisPieChart(CF$CF_OmicsUnitType,options=list(tooltip = "{text:'percentage'}"))
@@ -1861,7 +1938,7 @@ server <- function(input, output, session) {
                                      editable = F,
                                      options = list(scrollX = TRUE, searchHighlight = TRUE))
   
-
+  
   observeEvent(input$CF_Tag_experiment_rows_selected,{
     
     TAG$NAME = CF$CF_Tag_experiment[input$CF_Tag_experiment_rows_selected,"name"]
@@ -2076,7 +2153,7 @@ server <- function(input, output, session) {
       
       PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
       dbDisconnect(con)
-  
+      
     }
   })
   
@@ -2122,7 +2199,7 @@ server <- function(input, output, session) {
     
     lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
       output[[paste0('PSExploQS', i)]] <- renderGvis({
-
+        
         gvisHistogram(data.frame(QS = PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,paste("PS",i, "QS",sep ="_" )] ), 
                       chartid = paste0('PSExploQS', i),
                       options=list(
@@ -2142,13 +2219,13 @@ server <- function(input, output, session) {
   })
   
   output$MPS_export_csv <- downloadHandler(
-      filename = function() {
-        paste('Multi_PixelSet-', Sys.Date(), '.csv', sep='')
-      },
-      content = function(con) {
-        write.csv(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,], con,
-                  row.names= F)
-      }
+    filename = function() {
+      paste('Multi_PixelSet-', Sys.Date(), '.csv', sep='')
+    },
+    content = function(con) {
+      write.csv(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,], con,
+                row.names= F)
+    }
   )
   
   output$MPS_export_tsv <- downloadHandler(
@@ -2157,7 +2234,7 @@ server <- function(input, output, session) {
     },
     content = function(con) {
       write.table(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,], con,
-                row.names= F, sep = "\t", quote = F)
+                  row.names= F, sep = "\t", quote = F)
     }
   )
   
@@ -2168,7 +2245,7 @@ server <- function(input, output, session) {
     content = function(con) {
       write.xlsx(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,], con,
                  row.names= F)
- 
+      
     }
   )
   
@@ -2435,21 +2512,21 @@ server <- function(input, output, session) {
                                      options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   observeEvent(input$PS_Tag_experiment_rows_selected,{
-
+    
     TAG$NAME = PIXELSET_RV$PS_Tag_experiment[input$PS_Tag_experiment_rows_selected,"name"]
     proxy = dataTableProxy('PS_Tag_experiment')
     proxy %>% selectRows(NULL)
   })
   
   observeEvent(input$PS_Tag_analysis_rows_selected,{
-
+    
     
     TAG$NAME = PIXELSET_RV$PS_Tag_analysis[input$PS_Tag_analysis_rows_selected,"name"]
     
     proxy = dataTableProxy('PS_Tag_analysis')
     proxy %>% selectRows(NULL)
   })
-
+  
   #=============================================================================
   # END PIXELSET
   #=============================================================================
@@ -2515,7 +2592,38 @@ server <- function(input, output, session) {
   #=============================================================================
   # END TAG
   #=============================================================================
+  #=============================================================================
+  # SUBMISSION FOLDER
+  #=============================================================================
+  
+  SubFolder = reactiveValues()
+  
+  pg <- dbDriver("PostgreSQL")
+  con <- dbConnect(pg, user="docker", password="docker",
+                   host=ipDB, port=5432)
+  on.exit(dbDisconnect(con))
+  
+  SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+  
+  dbDisconnect(con)
 
+  observeEvent(SubFolder$Tab, {
+    if(ncol(SubFolder$Tab) == 2){
+      SubFolder$Tab = cbind(SubFolder$Tab, paste0("<a href='Submissions/",SubFolder$Tab[,1],".zip' target='_blank'>Download</a>"))
+      colnames( SubFolder$Tab) = c("ID", "Pixeler", "File")
+    }
+  })
+  
+  output$submissionFolderTab <- renderDT(SubFolder$Tab, 
+                                  selection = 'none', 
+                                  editable = F,escape = 3,
+                                  options = list(scrollX = TRUE))
+  
+  #=============================================================================
+  # END SUBMISSION FOLDER
+  #=============================================================================
+
+  
   #=============================================================================
   # Add information
   #=============================================================================
@@ -2582,7 +2690,7 @@ server <- function(input, output, session) {
         replaceData(proxyOUT, AddRV$OUT, resetPaging = F)  # important
       }
     }, ignoreNULL = TRUE)
-
+    
   })
   
   
@@ -2627,7 +2735,7 @@ server <- function(input, output, session) {
       updateTextInput(session, "Description_OUT", value = "")
     }
   })
-
+  
   #-----------------------------------------------------------------------------
   # Add Datasource
   #-----------------------------------------------------------------------------
@@ -3169,7 +3277,7 @@ server <- function(input, output, session) {
   
   submissionRV = reactiveValues()
   submissionRV$Read = F
-
+  
   observe({
     if(is.null(input$fileCF)){
       disable("ImportCF")
@@ -3389,7 +3497,6 @@ server <- function(input, output, session) {
       
       warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
     }
-    # cat(warning_sub, file = stderr())
     
     dbDisconnect(con)
     
@@ -3407,11 +3514,34 @@ server <- function(input, output, session) {
   observeEvent(input$confirm_submission_warning, {
     
     if (isTRUE(input$confirm_submission_warning)) {
+      
+      # Create a submission forlder
+      time = format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
+      id_Submission = paste0("Submission_",time)
+      dir.create(paste0("www/Submissions/", id_Submission))
+      
+      #-------------------------------------------------------------------------
+      # EXPERIMENT
+      #-------------------------------------------------------------------------
+      submissionRV$META = NULL
+      # Add experiment in META
+      submissionRV$META = rbind(submissionRV$META,
+                                c("Experiment_description", input$submission_Exp_description),
+                                c("Experiment_completionDate", input$submission_Exp_completionDate),
+                                c("Experiment_omicsArea", input$Submission_Exp_omicsArea_SI),
+                                c("Experiment_omicsUnitType", input$submission_Exp_completionDate),
+                                
+                                c("Experiment_dataSource", input$Submission_Exp_dataSource_SI),
+                                c("Experiment_species", input$Submission_Exp_Species_SI),
+                                c("Experiment_strain", input$Submission_Exp_Strain_SI),
+                                c("Experiment_tags", paste(input$Submission_Exp_tags_CBG, collapse = "|" ))
+                                )
+      
+      
+      
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
-      
-      time = format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
       
       omicsAreaid = dbGetQuery(con, paste0("SELECT id from omicsarea where name = '",input$Submission_Exp_omicsArea_SI,"';"))[1,1]
       strainId = dbGetQuery(con, paste0("SELECT id from strain where name = '",input$Submission_Exp_Strain_SI,"';"))[1,1]
@@ -3427,10 +3557,20 @@ server <- function(input, output, session) {
         REQUEST_Exp_tag = paste0("INSERT INTO Tag_Experiment (id_tag, id_experiment) SELECT id, '",id_exp,"' from tag where name in (",paste0("'",input$Submission_Exp_tags_CBG,"'", collapse = ","),");")
         dbGetQuery(con, REQUEST_Exp_tag)
       }
+
+      #-------------------------------------------------------------------------
+      # ANALYSIS
+      #-------------------------------------------------------------------------
       
-      # Create a submission 
-      id_Submission = paste0("Submission_",time)
-      dir.create(paste0("www/Submissions/", id_Submission))
+      # Add analysis in META
+      submissionRV$META = rbind(submissionRV$META,
+                                c("Analysis_description",input$submission_Analysis_description),
+                                c("Analysis_completionDate",input$submission_Exp_completionDate),
+                                c("Analysis_notebookFile",input$submission_Analysis_notebook$name),
+                                c("Analysis_secondaryDataFile",input$submission_Analysis_secondary_data$name),
+                                c("Analysis_tags",paste(input$Submission_Analysis_tags_CBG, collapse = "|" ))
+                                
+      )
       
       # Add analysis
       id_analysis = paste0("Analysis_",time)
@@ -3454,14 +3594,19 @@ server <- function(input, output, session) {
       # add link analysis / experiment
       REQUEST_Analysis_Exp = paste0("insert into Analysis_Experiment (id_experiment, id_analysis) values('",id_exp,"','",id_analysis,"');")
       dbGetQuery(con, REQUEST_Analysis_Exp)
-      
-      # Add Submission
+
+      #-------------------------------------------------------------------------
+      # SUBMISSION
+      #-------------------------------------------------------------------------
 
       pixeler_user_id = dbGetQuery(con, paste0("SELECT id from pixeler where user_name='",isolate(input$USER),"';"))[1,1]
       REQUEST_Submission = paste0("insert into Submission (id, submission_date, status, pixeler_user_id) values('",id_Submission,"', to_date('",Sys.Date(),"', 'YYYY-MM-DD'), FALSE, '",pixeler_user_id,"');")
       dbGetQuery(con, REQUEST_Submission)
       
-      # Add PixelSet
+      #-------------------------------------------------------------------------
+      # PIXELSET
+      #-------------------------------------------------------------------------
+      
       withProgress(message = 'PixelSet imported', value = 0, {
         m = as.numeric(input$submission_pixelSet_nbr)
         for( i in 1:input$submission_pixelSet_nbr){
@@ -3469,8 +3614,7 @@ server <- function(input, output, session) {
           
           id_PixelSets = paste0("PixelSet_",time,"_",i)
           
-          adresse_PixelSet = paste0("Submissions/",id_Submission,"/",id_PixelSets,"/")
-          dir.create(paste0("www/",adresse_PixelSet))
+          adresse_PixelSet = paste0("Submissions/",id_Submission,"/")
           
           adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
           
@@ -3485,8 +3629,17 @@ server <- function(input, output, session) {
                              quote = input$quote_PS
           )
           
-          # Add pixel
+          submissionRV$META = rbind(submissionRV$META,
+                                    c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
+                                    c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
+                                    c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
+                                    
+          )
           
+          #---------------------------------------------------------------------
+          # PIXEL
+          #---------------------------------------------------------------------
+
           withProgress(message = 'Pixel', value = 0, {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
@@ -3497,11 +3650,21 @@ server <- function(input, output, session) {
           })
         }
       })
+      
+      write.table(submissionRV$META, paste0("www/Submissions/", id_Submission,"/meta.txt") ,
+                  sep = "\t", row.names = F, col.names= F,quote = F)
+      
       setwd("www/Submissions/")
       zip(id_Submission, id_Submission)
       setwd("../..")
-      #system(paste0("zip -r ",paste0("www/Submissions/", id_Submission,".zip")," ", paste0("www/Submissions/", id_Submission)))
+      
+      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      
       submissionRV$ZIP = paste0("www/Submissions/", id_Submission,".zip")
+      
+      #-------------------------------------------------------------------------
+      # UPDATE DASHBOARD
+      #-------------------------------------------------------------------------
       
       DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
       DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
@@ -3510,7 +3673,10 @@ server <- function(input, output, session) {
       DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
       DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
       
-      # Clear after submission
+      #-------------------------------------------------------------------------
+      # CLEAR AFTER SUBMISSION
+      #-------------------------------------------------------------------------
+      
       reset('submission_Analysis_notebook')
       reset('submission_Analysis_secondary_data')
       updateTextAreaInput(session, "submission_Exp_description", value = "")
@@ -3521,12 +3687,16 @@ server <- function(input, output, session) {
       updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
       submissionRV$Read = F
       
+      #-------------------------------------------------------------------------
+      # MESSAGE
+      #-------------------------------------------------------------------------
+      
       updateTabItems (session, "tabs", selected = "Dashboard")
       sendSweetAlert(
         session = session,
         title = "Successfully imported!",
         text = div("The pixels have been successfully imported. Click on the button to download the zip folder of submission ",br(),
-        downloadButton("submissionZip", "Download")),
+                   downloadButton("submissionZip", "Download")),
         html = T,
         type = "success"
       )

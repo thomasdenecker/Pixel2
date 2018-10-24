@@ -8,5 +8,5 @@ log/
 www/Files/
 Files/Analysis/
 Files/PixelSets/
-Files/Submissions/*
+Files/Submissions/**
 !Files/Submissions/.gitkeep 
