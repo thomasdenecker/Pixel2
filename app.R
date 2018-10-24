@@ -1003,6 +1003,24 @@ server <- function(input, output, session) {
                                 label = "Remove submission (0)", 
                                 icon = icon("minus-circle"))
             )
+          ),
+          
+          
+          
+          fluidRow(
+            column(12,
+                   h3("Modify submission"),
+                   sidebarLayout(
+                     sidebarPanel(
+                       uiOutput("SubmissionsAdminTab_modify_ID"),
+                       uiOutput("SubmissionsAdminTab_modify_STATUS"),
+                       actionButton("SubmissionsAdminTab_modify_CHANGE", "Modify")
+                     ),
+                     mainPanel(
+                       DTOutput('SubmissionsAdminTab_modify')
+                     )
+                   )
+            )
           )
         ), 
         
@@ -1259,8 +1277,47 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   output$SubmissionsAdminTab <- renderDT(SubFolder$Tab, selection = 'multiple', 
-                                         editable = TRUE,escape = 3,
+                                         editable = F ,escape = 3,
                                          options = list(scrollX = TRUE))
+  
+  
+  output$SubmissionsAdminTab_modify <- renderDT(SubFolder$TabModif, selection = 'none', 
+                                               editable = TRUE,escape = 3, filter = 'top',
+                                               options = list(scrollX = TRUE))
+
+  
+  output$SubmissionsAdminTab_modify_ID<-renderUI({
+    selectInput("SubmissionsAdminTab_modify_ID_SI", "Submission id", SubFolder$Tab[,1])
+  })
+  
+  output$SubmissionsAdminTab_modify_STATUS<-renderUI({
+    selectInput("SubmissionsAdminTab_modify_STATUS_SI", "Submission id", c("on","off"))
+  })
+  
+  observeEvent(input$SubmissionsAdminTab_modify_CHANGE,{
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modif_submission",
+      type = "warning",
+      title = "Want to modify this submission ?",
+      text = input$SubmissionsAdminTab_modify_ID_SI ,
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_modif_submission, {
+    if (isTRUE(input$confirm_modif_submission)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      
+      dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",input$SubmissionsAdminTab_modify_ID_SI, "';"))
+      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      SubFolder$TabModif = dbGetQuery(con,paste0("SELECT submission.id, status, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      dbDisconnect(con)
+    }
+    }
+  )
   
   #.............................................................................
   # Remove submission
@@ -1363,7 +1420,7 @@ server <- function(input, output, session) {
   # PixelSetsAdminTab removePixelSets
   
   output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
-                                       editable = TRUE,
+                                       editable = F,
                                        options = list(scrollX = TRUE))
   
   #.............................................................................
@@ -2885,6 +2942,15 @@ server <- function(input, output, session) {
     if(ncol(SubFolder$Tab) == 2){
       SubFolder$Tab = cbind(SubFolder$Tab, paste0("<a href='Submissions/",SubFolder$Tab[,1],".zip' target='_blank'>Download</a>"))
       colnames( SubFolder$Tab) = c("ID", "Pixeler", "File")
+      
+      SubFolder$Tab[,2] = as.factor(SubFolder$Tab[,2])
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      SubFolder$TabModif = dbGetQuery(con,paste0("SELECT submission.id, status, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      dbDisconnect(con)
     }
   })
   
