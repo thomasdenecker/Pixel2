@@ -109,30 +109,30 @@ server <- function(input, output, session) {
                           and PS.id_submission = Submission.id
                           and Submission.pixeler_user_id = pixeler.id
                           ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
+    
+    PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+    
+    DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+    DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+    DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+    DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+    DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+    DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+    
+    SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
                                  from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
                                  where pixelset.id_submission = submission.id 
                                  and submission.pixeler_user_id = pixeler.id
                                  and pixelset.id_analysis = analysis.id
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
-      
-      # Reinit search values
-      CF$name = NULL
-      TAG$NAME = NULL
-      SEARCH_RV$PIXELSET = NULL
     
-      dbDisconnect(con)
+    # Reinit search values
+    CF$name = NULL
+    TAG$NAME = NULL
+    SEARCH_RV$PIXELSET = NULL
+    
+    dbDisconnect(con)
   })
   
   #=============================================================================
@@ -1101,16 +1101,16 @@ server <- function(input, output, session) {
           h2("PixelSets"),
           fluidRow(
             column(12,
-                      h3("Delete PixelSet(s)"),
-                      p(class="info", "Select one or more PixelSets from the table and click Remove."),
-                      DTOutput('PixelSetsAdminTab'), 
-                      br(),
-                      actionButton('removePixelSets', class = "pull-right",
-                                   label = "Remove PixelSets (0)", 
-                                   icon = icon("minus-circle"))
+                   h3("Delete PixelSet(s)"),
+                   p(class="info", "Select one or more PixelSets from the table and click Remove."),
+                   DTOutput('PixelSetsAdminTab'), 
+                   br(),
+                   actionButton('removePixelSets', class = "pull-right",
+                                label = "Remove PixelSets (0)", 
+                                icon = icon("minus-circle"))
             )
           ),
-
+          
           fluidRow(
             column(12,
                    h3("Modify PixelSet"),
@@ -1124,7 +1124,7 @@ server <- function(input, output, session) {
                        h5("Description"),
                        uiOutput("PixelSetAdminTab_modify_Description"),
                        div(class="all-size",actionButton("PixelSetAdminTab_modify_CHANGE", "Modify", class="right"))
-
+                       
                      ),
                      mainPanel(
                        DTOutput('PixelSetsAdminTab_Modify')
@@ -1456,23 +1456,23 @@ server <- function(input, output, session) {
   })
   
   output$SubmissionsAdminTab_modify_Strain<-renderUI({
-
-      if(nrow(submissionModify$strainChoices) != 0){
-        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = submissionModify$strainChoices[,"name"] )
-      } else {
-        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = "" )
-      }
+    
+    if(nrow(submissionModify$strainChoices) != 0){
+      selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = submissionModify$strainChoices[,"name"] )
+    } else {
+      selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = "" )
+    }
     
   })
   
   output$SubmissionsAdminTab_modify_OmicsUnitType<-renderUI({
-      selectInput("SubmissionsAdminTab_modify_OmicsUnitType_SI",NULL, choices = submissionModify$OUT[,"name"] )
+    selectInput("SubmissionsAdminTab_modify_OmicsUnitType_SI",NULL, choices = submissionModify$OUT[,"name"] )
   })
   
   output$SubmissionsAdminTab_modify_OmicsArea<-renderUI({
-      selectInput("SubmissionsAdminTab_modify_OmicsArea_SI",NULL, choices = submissionModify$Omicsarea[,"name"] )
+    selectInput("SubmissionsAdminTab_modify_OmicsArea_SI",NULL, choices = submissionModify$Omicsarea[,"name"] )
   })
-
+  
   # SubmissionsAdminTab_modify_Strain SubmissionsAdminTab_modify_OmicsUnitType SubmissionsAdminTab_modify_OmicsArea
   
   #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  
@@ -1649,7 +1649,7 @@ server <- function(input, output, session) {
     
     dbDisconnect(con)
   })
-
+  
   
   output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
                                        editable = F,
@@ -1662,8 +1662,8 @@ server <- function(input, output, session) {
   pixelsetModify = reactiveValues()
   
   output$PixelSetsAdminTab_Modify <- renderDT(PIXELSETLIST_RV$infoMin, selection = 'single', 
-                                       editable = F,
-                                       options = list(scrollX = TRUE))
+                                              editable = F,
+                                              options = list(scrollX = TRUE))
   
   output$PixelSetAdminTab_modify_ID<-renderUI({
     verbatimTextOutput("PixelSetAdminTab_modify_ID_VTO", placeholder = TRUE)
@@ -1682,7 +1682,7 @@ server <- function(input, output, session) {
       disable("PixelSetAdminTab_modify_CHANGE")
     }
   })
-
+  
   observeEvent(pixelsetModify$id,{
     updateTextAreaInput(session,"PixelSetAdminTab_modify_name_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2] )  
     updateTextAreaInput(session,"PixelSetAdminTab_modify_Description_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3] )  
@@ -2019,13 +2019,13 @@ server <- function(input, output, session) {
     )
     
     if(rv$ERROR == F){
-
+      
       updateTextAreaInput(session,"CFSourceDescription", value = "")
       updateTextInput(session,"CFSourceName", value = "" )
       updateTextInput(session,"CFSourceURL", value = "" )
       
       rv$Source = dbGetQuery(con, "select * from CFSource;")
-
+      
       updateSelectInput(session, "selectSource", choices = rv$Source[,2], selected = input$CFSourceName)
       
       sendSweetAlert(
@@ -2318,7 +2318,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$searchButtonTag,{
-
+    
     if(input$searchTag != ""){
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -3259,7 +3259,7 @@ server <- function(input, output, session) {
                                        and experiment.omicsAreaid = omicsarea.id;")
       
       colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
-
+      
       dbDisconnect(con)
     }
   })
@@ -3650,59 +3650,77 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$Delete_branch_OmicsArea_btn,{
-
-    confirmSweetAlert(
-      session = session,
-      inputId = "confirm_delete_OA",
-      type = "warning",
-      title = "Want to confirm ?",
-      text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
-      danger_mode = TRUE
-    )
     
-    observeEvent(input$confirm_delete_OA, {
-      if (isTRUE(input$confirm_delete_OA)) {
-        pg <- dbDriver("PostgreSQL")
-        con <- dbConnect(pg, user="docker", password="docker",
-                         host=ipDB, port=5432)
-        on.exit(dbDisconnect(con))
-        
-        dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
-        
-        REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
-        AddRV$OmicsArea = dbGetQuery(con, REQUEST)
-        
-        choices = AddRV$OmicsArea[,'path']
-        namesChoices = NULL
-        for(c in choices){
-          inter = unlist(strsplit(c, "\\."))
-          if(length(inter) != 1){
-            inter[1:(length(inter)-1)] = " - "
-          }
-          namesChoices = c(namesChoices, paste(inter, collapse = ""))
-        }
-        names(choices) = namesChoices
-        
-        updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
-        updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
-        updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
-        updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
-        textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
-        dbDisconnect(con)
-        
-      } else {
-        sendSweetAlert(
-          session = session,
-          title = "Cancellation...",
-          text = "Deletion cancelled !",
-          type = "warning"
-        )
-      }
-      
-    })
     
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    Used = dbGetQuery(con,paste0("select experiment.id from experiment, OmicsArea where experiment.omicsareaid = omicsarea.id and omicsarea.name ='",input$Delete_branch_OmicsArea_SI,"';"))
+    dbDisconnect(con)
+    
+    if(nrow(Used) != 0){
+      sendSweetAlert(
+        session = session,
+        title = "OmicArea used",
+        text = paste("This OmicsArea is used (", paste(Used, collapse = ",",")")),
+        type = "error"
+      )
+    }else {
+      confirmSweetAlert(
+        session = session,
+        inputId = "confirm_delete_OA",
+        type = "warning",
+        title = "Want to confirm ?",
+        text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
+        danger_mode = TRUE
+      )
+    }
   }
   )
+  
+  observeEvent(input$confirm_delete_OA, {
+    if (isTRUE(input$confirm_delete_OA)) {
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
+      
+      REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+      AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+      
+      choices = AddRV$OmicsArea[,'path']
+      namesChoices = NULL
+      for(c in choices){
+        inter = unlist(strsplit(c, "\\."))
+        if(length(inter) != 1){
+          inter[1:(length(inter)-1)] = " - "
+        }
+        namesChoices = c(namesChoices, paste(inter, collapse = ""))
+      }
+      names(choices) = namesChoices
+      
+      updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+      updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+      textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+      dbDisconnect(con)
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "Deletion cancelled !",
+        type = "warning"
+      )
+    }
+  })
+  
+  
   output$Delete_branch_OmicsArea = renderUI({
     selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
   })
