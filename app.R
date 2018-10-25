@@ -126,6 +126,11 @@ server <- function(input, output, session) {
                                  and pixelset.id_analysis = analysis.id
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
+      
+      # Reinit search values
+      CF$name = NULL
+      TAG$NAME = NULL
+      SEARCH_RV$PIXELSET = NULL
     
       dbDisconnect(con)
   })
@@ -1523,6 +1528,7 @@ server <- function(input, output, session) {
         and pixelset.id_submission = '",submissionModify$id,"'
       );"))
       
+      # Update All
       MAJ$value = MAJ$value + 1
       
       SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
@@ -1710,6 +1716,9 @@ server <- function(input, output, session) {
       
       dbGetQuery(con,paste0("update pixelset set description ='",input$PixelSetAdminTab_modify_Description_TA,"' where id = '",pixelsetModify$id, "';"))
       dbGetQuery(con,paste0("update pixelset set name ='",input$PixelSetAdminTab_modify_name_TA,"' where id = '",pixelsetModify$id, "';"))
+      
+      # Update All
+      MAJ$value = MAJ$value + 1
       
       REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
                             from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
@@ -2268,6 +2277,8 @@ server <- function(input, output, session) {
       if(nrow(testCF) == 1){
         CF$name = testCF[1,1]
         updateTextInput(session, "searchCF", value = "")
+        updateTabItems (session, "tabs", selected = "CF_item")
+        shinyjs::runjs("window.scrollTo(0, 0)")
       } else if(nrow(testCF) == 0){
         sendSweetAlert(
           session = session,
@@ -2292,6 +2303,8 @@ server <- function(input, output, session) {
         
         observeEvent(input$ConfSearch, {
           if (isTRUE(input$ConfSearch)) {
+            updateTabItems (session, "tabs", selected = "CF_item")
+            shinyjs::runjs("window.scrollTo(0, 0)")
             CF$name = input$searchRefine
           }
           updateTextInput(session, "searchCF", value = "")
@@ -2305,6 +2318,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$searchButtonTag,{
+
     if(input$searchTag != ""){
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -2316,6 +2330,10 @@ server <- function(input, output, session) {
       dbDisconnect(con)
       if(nrow(testTag) != 0){
         TAG$NAME = testTag[1,1]
+        
+        updateTabItems (session, "tabs", selected = "Tags")
+        shinyjs::runjs("window.scrollTo(0, 0)")
+        
         updateTextInput(session, "searchTag", value = "")
       } else {
         sendSweetAlert(
@@ -2334,6 +2352,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$searchButtonPS,{
+    
     if(input$searchPS != ""){
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -2345,6 +2364,8 @@ server <- function(input, output, session) {
       if(nrow(testPS) != 0){
         SEARCH_RV$PIXELSET =  testPS[1,1]
         updateTextInput(session, "testPS", value = "")
+        updateTabItems (session, "tabs", selected = "PixelSet")
+        shinyjs::runjs("window.scrollTo(0, 0)")
       } else {
         sendSweetAlert(
           session = session,
