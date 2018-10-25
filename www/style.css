@@ -262,3 +262,12 @@ marg-left {
 #searchRefine label{
   margin :0px;
 }
+
+.right{
+  float: right;
+}
+
+.all-size{
+  width: 100%;
+  height: 25px;
+}

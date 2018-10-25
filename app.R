@@ -1006,15 +1006,23 @@ server <- function(input, output, session) {
           ),
           
           
-          
+          h3("Modify submission"),
           fluidRow(
             column(12,
-                   h3("Modify submission"),
+                   h4("Status"),
+                   p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
+                       h5("Submission id"),
                        uiOutput("SubmissionsAdminTab_modify_ID"),
+                       h5("Analysis description"),
+                       uiOutput("SubmissionsAdminTab_modify_DescriptionAnalysis"),
+                       h5("Experiment description"),
+                       uiOutput("SubmissionsAdminTab_modify_DescriptionExperiment"),
+                       h5("Status"),
                        uiOutput("SubmissionsAdminTab_modify_STATUS"),
-                       actionButton("SubmissionsAdminTab_modify_CHANGE", "Modify")
+                       div(class="all-size",actionButton("SubmissionsAdminTab_modify_CHANGE", "Modify", class="right"))
+                       
                      ),
                      mainPanel(
                        DTOutput('SubmissionsAdminTab_modify')
@@ -1022,6 +1030,7 @@ server <- function(input, output, session) {
                    )
             )
           )
+          
         ), 
         
         #=======================================================================
@@ -1276,52 +1285,110 @@ server <- function(input, output, session) {
   # Admin Submission
   #-----------------------------------------------------------------------------
   
+  #.............................................................................
+  # Modify
+  #.............................................................................
+  submissionModify =reactiveValues()
+  
+  output$SubmissionsAdminTab_modify <- renderDT(SubFolder$TabModif, selection = 'single',
+                                                options = list(scrollX = TRUE))
+  
+  output$SubmissionsAdminTab_modify_ID<-renderUI({
+    verbatimTextOutput("SubmissionsAdminTab_modify_ID_VTO", placeholder = TRUE)
+  })
+  
+  output$SubmissionsAdminTab_modify_ID_VTO <- renderText(
+    submissionModify$id
+  )
+  
+  observeEvent(is.null(input$SubmissionsAdminTab_modify_rows_selected),{
+    if(!is.null(input$SubmissionsAdminTab_modify_rows_selected)){
+      submissionModify$id = SubFolder$TabModif[input$SubmissionsAdminTab_modify_rows_selected,1]
+      enable("SubmissionsAdminTab_modify_CHANGE")
+    } else {
+      submissionModify$id = ""
+      disable("SubmissionsAdminTab_modify_CHANGE")
+    }
+  })
+
+  output$SubmissionsAdminTab_modify_STATUS<-renderUI({
+    selectInput("SubmissionsAdminTab_modify_STATUS_SI", NULL,choices = "" )
+  })
+  
+  observeEvent(submissionModify$id,{
+    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
+    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
+    if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
+      if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+        status = "true"
+      } else if( ! SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+        status = "false"
+      }
+      updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", choices = c(Validated = "true","Not valideted" ="false"))
+    } else {
+      status = ""
+    }
+    updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
+    
+    
+  })
+  
+  output$SubmissionsAdminTab_modify_DescriptionAnalysis<-renderUI({
+    textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
+  })
+  
+  output$SubmissionsAdminTab_modify_DescriptionExperiment<-renderUI({
+    textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
+  })
+
+  observeEvent(input$SubmissionsAdminTab_modify_CHANGE,{
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modify_submission",
+      type = "warning",
+      title = "Want to modify this submission ?",
+      text = submissionModify$id ,
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_modify_submission, {
+    if (isTRUE(input$confirm_modify_submission)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      
+      dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",submissionModify$id, "';"))
+      
+      dbGetQuery(con,paste0("update analysis set description  = '",input$SubmissionsAdminTab_modify_DescriptionAnalysis_TA,"' 
+                            where id IN (select DISTINCT id_analysis from pixelset where id_submission = '",submissionModify$id,"')"))
+      dbGetQuery(con,paste0("update experiment set description  = '",input$SubmissionsAdminTab_modify_DescriptionExperiment_TA,"' 
+                            where id IN (select DISTINCT id_experiment from pixelset , analysis_experiment, experiment 
+                            where id_submission = '",submissionModify$id,"' 
+                            and pixelset.id_analysis = analysis_experiment.id_analysis 
+                            and analysis_experiment.id_experiment = experiment.id );"))
+      
+
+      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description,submission.status from submission, pixelset, experiment, analysis_experiment, analysis 
+                                                              where pixelset.id_submission = submission.id 
+                                       and pixelset.id_analysis = analysis.id
+                                       and analysis_experiment.id_analysis = analysis.id
+                                       and analysis_experiment.id_experiment = experiment.id ;")
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?")
+      dbDisconnect(con)
+    }
+  })
+  
+  #.............................................................................
+  # Remove submission
+  #.............................................................................
+  
   output$SubmissionsAdminTab <- renderDT(SubFolder$Tab, selection = 'multiple', 
                                          editable = F ,escape = 3,
                                          options = list(scrollX = TRUE))
   
   
-  output$SubmissionsAdminTab_modify <- renderDT(SubFolder$TabModif, selection = 'none', 
-                                               editable = TRUE,escape = 3, filter = 'top',
-                                               options = list(scrollX = TRUE))
-
-  
-  output$SubmissionsAdminTab_modify_ID<-renderUI({
-    selectInput("SubmissionsAdminTab_modify_ID_SI", "Submission id", SubFolder$Tab[,1])
-  })
-  
-  output$SubmissionsAdminTab_modify_STATUS<-renderUI({
-    selectInput("SubmissionsAdminTab_modify_STATUS_SI", "Submission id", c("on","off"))
-  })
-  
-  observeEvent(input$SubmissionsAdminTab_modify_CHANGE,{
-    confirmSweetAlert(
-      session = session,
-      inputId = "confirm_modif_submission",
-      type = "warning",
-      title = "Want to modify this submission ?",
-      text = input$SubmissionsAdminTab_modify_ID_SI ,
-      danger_mode = TRUE
-    )
-  })
-  
-  observeEvent(input$confirm_modif_submission, {
-    if (isTRUE(input$confirm_modif_submission)) {
-      pg <- dbDriver("PostgreSQL")
-      con <- dbConnect(pg, user="docker", password="docker",
-                       host=ipDB, port=5432)
-      
-      dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",input$SubmissionsAdminTab_modify_ID_SI, "';"))
-      SubFolder$Tab = dbGetQuery(con,paste0("SELECT submission.id, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
-      SubFolder$TabModif = dbGetQuery(con,paste0("SELECT submission.id, status, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
-      dbDisconnect(con)
-    }
-    }
-  )
-  
-  #.............................................................................
-  # Remove submission
-  #.............................................................................
   observeEvent(is.null(input$SubmissionsAdminTab_rows_selected),{
     if(!is.null(input$SubmissionsAdminTab_rows_selected)){
       updateActionButton(session, "removeSubmission", 
@@ -2949,7 +3016,12 @@ server <- function(input, output, session) {
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
-      SubFolder$TabModif = dbGetQuery(con,paste0("SELECT submission.id, status, pixeler.user_name FROM submission, pixeler where pixeler_user_id = pixeler.id;"))
+      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description,submission.status from submission, pixelset, experiment, analysis_experiment, analysis 
+                                                              where pixelset.id_submission = submission.id 
+                                       and pixelset.id_analysis = analysis.id
+                                       and analysis_experiment.id_analysis = analysis.id
+                                       and analysis_experiment.id_experiment = experiment.id ;")
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?")
       dbDisconnect(con)
     }
   })
