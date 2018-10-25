@@ -1,7 +1,7 @@
 ################################################################################
-# Pixel version 2
+# Pixel2
 # Thomas DENECKER
-# 09/2018
+# 09 & 10 /2018
 #
 # GitHub :
 # https://github.com/thomasdenecker/Pixel_V2
@@ -109,17 +109,17 @@ server <- function(input, output, session) {
                           and PS.id_submission = Submission.id
                           and Submission.pixeler_user_id = pixeler.id
                           ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
+    
+    PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+    
+    DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+    DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+    DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+    DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+    DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+    DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+    
+    SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
                                  from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
                                  where pixelset.id_submission = submission.id 
                                  and submission.pixeler_user_id = pixeler.id
@@ -127,7 +127,12 @@ server <- function(input, output, session) {
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
     
-      dbDisconnect(con)
+    # Reinit search values
+    CF$name = NULL
+    TAG$NAME = NULL
+    SEARCH_RV$PIXELSET = NULL
+    
+    dbDisconnect(con)
   })
   
   #=============================================================================
@@ -167,6 +172,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       
       if(input$USER != "" & input$PW != ""){
         RESULT_REQUEST = dbGetQuery(con, REQUEST)
@@ -180,6 +186,8 @@ server <- function(input, output, session) {
             pg <- dbDriver("PostgreSQL")
             con <- dbConnect(pg, user="docker", password="docker",
                              host=ipDB, port=5432)
+            on.exit(dbDisconnect(con))
+            
             USERS$infos = dbGetQuery(con, REQUEST)
             dbDisconnect(con)
           }
@@ -1093,16 +1101,16 @@ server <- function(input, output, session) {
           h2("PixelSets"),
           fluidRow(
             column(12,
-                      h3("Delete PixelSet(s)"),
-                      p(class="info", "Select one or more PixelSets from the table and click Remove."),
-                      DTOutput('PixelSetsAdminTab'), 
-                      br(),
-                      actionButton('removePixelSets', class = "pull-right",
-                                   label = "Remove PixelSets (0)", 
-                                   icon = icon("minus-circle"))
+                   h3("Delete PixelSet(s)"),
+                   p(class="info", "Select one or more PixelSets from the table and click Remove."),
+                   DTOutput('PixelSetsAdminTab'), 
+                   br(),
+                   actionButton('removePixelSets', class = "pull-right",
+                                label = "Remove PixelSets (0)", 
+                                icon = icon("minus-circle"))
             )
           ),
-
+          
           fluidRow(
             column(12,
                    h3("Modify PixelSet"),
@@ -1116,7 +1124,7 @@ server <- function(input, output, session) {
                        h5("Description"),
                        uiOutput("PixelSetAdminTab_modify_Description"),
                        div(class="all-size",actionButton("PixelSetAdminTab_modify_CHANGE", "Modify", class="right"))
-
+                       
                      ),
                      mainPanel(
                        DTOutput('PixelSetsAdminTab_Modify')
@@ -1238,11 +1246,12 @@ server <- function(input, output, session) {
     on.exit(dbDisconnect(con))
     
     MapTable = dbGetQuery(con, REQUEST_MAP)
-    
+    dbDisconnect(con)
     gvisGeoChart(MapTable, locationvar="lab_country", 
                  colorvar="count",
                  options=list(projection="kavrayskiy-vii",height= 350,
                               colorAxis="{colors:['#ffe6e6','#b30000'], minValue:1}"))
+    
     
   })
   
@@ -1293,7 +1302,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
-      
+      on.exit(dbDisconnect(con))
       Password <- isolate(input$OldPW)
       
       REQUEST = paste0("SELECT * 
@@ -1382,6 +1391,7 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
+    
     submissionModify$strainChoices = dbGetQuery(con,paste0("select name 
                                         from strain 
                                         where species_id = (
@@ -1446,23 +1456,23 @@ server <- function(input, output, session) {
   })
   
   output$SubmissionsAdminTab_modify_Strain<-renderUI({
-
-      if(nrow(submissionModify$strainChoices) != 0){
-        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = submissionModify$strainChoices[,"name"] )
-      } else {
-        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = "" )
-      }
+    
+    if(nrow(submissionModify$strainChoices) != 0){
+      selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = submissionModify$strainChoices[,"name"] )
+    } else {
+      selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = "" )
+    }
     
   })
   
   output$SubmissionsAdminTab_modify_OmicsUnitType<-renderUI({
-      selectInput("SubmissionsAdminTab_modify_OmicsUnitType_SI",NULL, choices = submissionModify$OUT[,"name"] )
+    selectInput("SubmissionsAdminTab_modify_OmicsUnitType_SI",NULL, choices = submissionModify$OUT[,"name"] )
   })
   
   output$SubmissionsAdminTab_modify_OmicsArea<-renderUI({
-      selectInput("SubmissionsAdminTab_modify_OmicsArea_SI",NULL, choices = submissionModify$Omicsarea[,"name"] )
+    selectInput("SubmissionsAdminTab_modify_OmicsArea_SI",NULL, choices = submissionModify$Omicsarea[,"name"] )
   })
-
+  
   # SubmissionsAdminTab_modify_Strain SubmissionsAdminTab_modify_OmicsUnitType SubmissionsAdminTab_modify_OmicsArea
   
   #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  
@@ -1481,10 +1491,12 @@ server <- function(input, output, session) {
   
   observeEvent(input$confirm_modify_submission, {
     if (isTRUE(input$confirm_modify_submission)) {
+      
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
+      
       dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",submissionModify$id, "';"))
       
       dbGetQuery(con,paste0("update analysis set description  = '",input$SubmissionsAdminTab_modify_DescriptionAnalysis_TA,"' 
@@ -1516,6 +1528,7 @@ server <- function(input, output, session) {
         and pixelset.id_submission = '",submissionModify$id,"'
       );"))
       
+      # Update All
       MAJ$value = MAJ$value + 1
       
       SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
@@ -1587,6 +1600,7 @@ server <- function(input, output, session) {
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
+      
       for(i in input$SubmissionsAdminTab_rows_selected){
         idSubmission = SubFolder$Tab[i,1]
         idExperience = dbGetQuery(con, paste0("select DISTINCT Analysis_Experiment.id_experiment from pixelset,  Analysis_Experiment
@@ -1630,10 +1644,12 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432) 
     on.exit(dbDisconnect(con))
+    
     PIXELSETLIST_RV$infoMin = dbGetQuery(con,"Select id, name, description from pixelset;")
+    
     dbDisconnect(con)
   })
-
+  
   
   output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
                                        editable = F,
@@ -1646,12 +1662,8 @@ server <- function(input, output, session) {
   pixelsetModify = reactiveValues()
   
   output$PixelSetsAdminTab_Modify <- renderDT(PIXELSETLIST_RV$infoMin, selection = 'single', 
-                                       editable = F,
-                                       options = list(scrollX = TRUE))
-  
-  
-  # PixelSetAdminTab_modify_ID PixelSetAdminTab_modify_name PixelSetAdminTab_modify_Description
-  # PixelSetAdminTab_modify_CHANGE PixelSetsAdminTab_Modify
+                                              editable = F,
+                                              options = list(scrollX = TRUE))
   
   output$PixelSetAdminTab_modify_ID<-renderUI({
     verbatimTextOutput("PixelSetAdminTab_modify_ID_VTO", placeholder = TRUE)
@@ -1670,7 +1682,7 @@ server <- function(input, output, session) {
       disable("PixelSetAdminTab_modify_CHANGE")
     }
   })
-
+  
   observeEvent(pixelsetModify$id,{
     updateTextAreaInput(session,"PixelSetAdminTab_modify_name_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2] )  
     updateTextAreaInput(session,"PixelSetAdminTab_modify_Description_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3] )  
@@ -1701,8 +1713,12 @@ server <- function(input, output, session) {
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
+      
       dbGetQuery(con,paste0("update pixelset set description ='",input$PixelSetAdminTab_modify_Description_TA,"' where id = '",pixelsetModify$id, "';"))
       dbGetQuery(con,paste0("update pixelset set name ='",input$PixelSetAdminTab_modify_name_TA,"' where id = '",pixelsetModify$id, "';"))
+      
+      # Update All
+      MAJ$value = MAJ$value + 1
       
       REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
                             from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
@@ -1834,6 +1850,7 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
+    
     for(line in input$adminUsers_rows_selected){
       REQUEST = paste0("DELETE FROM pixeler
       WHERE id=",USERS$infos[line, 1],";")
@@ -1904,6 +1921,7 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
+    
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
         session = session,
@@ -1999,22 +2017,14 @@ server <- function(input, output, session) {
                rv$ERROR = T
              }
     )
+    
     if(rv$ERROR == F){
-      
       
       updateTextAreaInput(session,"CFSourceDescription", value = "")
       updateTextInput(session,"CFSourceName", value = "" )
       updateTextInput(session,"CFSourceURL", value = "" )
       
-      
-      pg <- dbDriver("PostgreSQL")
-      con <- dbConnect(pg, user="docker", password="docker",
-                       host=ipDB, port=5432)
-      on.exit(dbDisconnect(con))
-      
       rv$Source = dbGetQuery(con, "select * from CFSource;")
-      
-      dbDisconnect(con)
       
       updateSelectInput(session, "selectSource", choices = rv$Source[,2], selected = input$CFSourceName)
       
@@ -2026,7 +2036,7 @@ server <- function(input, output, session) {
       )
       
     }
-    
+    dbDisconnect(con)
   })
   
   observeEvent(input$ImportCF,{
@@ -2208,7 +2218,7 @@ server <- function(input, output, session) {
         }
       }  
     })
-    
+    dbDisconnect(con)
   })
   
   output$helpImportTypeCF <- renderText({ 
@@ -2267,6 +2277,8 @@ server <- function(input, output, session) {
       if(nrow(testCF) == 1){
         CF$name = testCF[1,1]
         updateTextInput(session, "searchCF", value = "")
+        updateTabItems (session, "tabs", selected = "CF_item")
+        shinyjs::runjs("window.scrollTo(0, 0)")
       } else if(nrow(testCF) == 0){
         sendSweetAlert(
           session = session,
@@ -2291,6 +2303,8 @@ server <- function(input, output, session) {
         
         observeEvent(input$ConfSearch, {
           if (isTRUE(input$ConfSearch)) {
+            updateTabItems (session, "tabs", selected = "CF_item")
+            shinyjs::runjs("window.scrollTo(0, 0)")
             CF$name = input$searchRefine
           }
           updateTextInput(session, "searchCF", value = "")
@@ -2304,6 +2318,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$searchButtonTag,{
+    
     if(input$searchTag != ""){
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -2315,6 +2330,10 @@ server <- function(input, output, session) {
       dbDisconnect(con)
       if(nrow(testTag) != 0){
         TAG$NAME = testTag[1,1]
+        
+        updateTabItems (session, "tabs", selected = "Tags")
+        shinyjs::runjs("window.scrollTo(0, 0)")
+        
         updateTextInput(session, "searchTag", value = "")
       } else {
         sendSweetAlert(
@@ -2333,6 +2352,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$searchButtonPS,{
+    
     if(input$searchPS != ""){
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
@@ -2344,6 +2364,8 @@ server <- function(input, output, session) {
       if(nrow(testPS) != 0){
         SEARCH_RV$PIXELSET =  testPS[1,1]
         updateTextInput(session, "testPS", value = "")
+        updateTabItems (session, "tabs", selected = "PixelSet")
+        shinyjs::runjs("window.scrollTo(0, 0)")
       } else {
         sendSweetAlert(
           session = session,
@@ -2367,8 +2389,6 @@ server <- function(input, output, session) {
   
   CF = reactiveValues()
   CF$sup_id = NULL 
-  
-  
   
   observeEvent(CF$name,{
     
@@ -2472,7 +2492,7 @@ server <- function(input, output, session) {
         CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
       }
     }
-    
+    dbDisconnect(con)
   })
   
   output$CF_title <- renderUI(
@@ -2591,21 +2611,6 @@ server <- function(input, output, session) {
                           ;")
   
   PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-  
-  # PIXELSETLIST_RV$tagAnalysis=dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Analysis, tag 
-  #                                 where  ps.id_analysis = analysis.id 
-  #                                 and Tag_Analysis.id_analysis = analysis.id 
-  #                                 and tag.id = Tag_Analysis.id_tag;
-  #                                 ")
-  # 
-  # PIXELSETLIST_RV$tagExp=dbGetQuery(con,"select tag.name, PS.id from pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-  #                                   where ps.id_analysis = analysis.id
-  #                                   and Analysis_Experiment.id_analysis = analysis.id
-  #                                   and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-  #                                   and tag.id = Tag_experiment.id_tag;
-  #                                 ")
-  
-  
   
   dbDisconnect(con)
   
@@ -3254,7 +3259,7 @@ server <- function(input, output, session) {
                                        and experiment.omicsAreaid = omicsarea.id;")
       
       colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
-
+      
       dbDisconnect(con)
     }
   })
@@ -3285,6 +3290,8 @@ server <- function(input, output, session) {
   AddRV$Species = dbGetQuery(con,"SELECT * from species;")
   AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
   AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
+  
+  dbDisconnect(con)
   
   #-----------------------------------------------------------------------------
   # Add OUT
@@ -3327,6 +3334,7 @@ server <- function(input, output, session) {
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
                            host=ipDB, port=5432)
+          on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
         } 
@@ -3347,7 +3355,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
-    
+    on.exit(dbDisconnect(con))
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
         session = session,
@@ -3374,6 +3382,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       AddRV$OUT = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
       updateTextInput(session, "Name_OUT", value = "")
@@ -3422,6 +3431,7 @@ server <- function(input, output, session) {
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
                            host=ipDB, port=5432)
+          on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
         } 
@@ -3440,6 +3450,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
@@ -3467,6 +3478,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       AddRV$DataSource = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
       
@@ -3505,6 +3517,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
@@ -3531,6 +3544,8 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
       AddRV$OmicsArea = dbGetQuery(con, REQUEST)
       
       choices = AddRV$OmicsArea[,'path']
@@ -3591,6 +3606,8 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
     if( input$Modify_OmicsArea_description_TI != AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] ){
       dbGetQuery(con, paste0("update OmicsArea set description = '",input$Modify_OmicsArea_description_TI,"' where name = '",input$Modify_OmicsArea_name_SI,"';"))
     }
@@ -3629,63 +3646,81 @@ server <- function(input, output, session) {
     updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
     updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
     textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
-    
+    dbDisconnect(con)
   })
   
   observeEvent(input$Delete_branch_OmicsArea_btn,{
     
+    
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
+    Used = dbGetQuery(con,paste0("select experiment.id from experiment, OmicsArea where experiment.omicsareaid = omicsarea.id and omicsarea.name ='",input$Delete_branch_OmicsArea_SI,"';"))
+    dbDisconnect(con)
     
-    confirmSweetAlert(
-      session = session,
-      inputId = "confirm_delete_OA",
-      type = "warning",
-      title = "Want to confirm ?",
-      text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
-      danger_mode = TRUE
-    )
-    
-    observeEvent(input$confirm_delete_OA, {
-      if (isTRUE(input$confirm_delete_OA)) {
-        dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
-        
-        REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
-        AddRV$OmicsArea = dbGetQuery(con, REQUEST)
-        
-        choices = AddRV$OmicsArea[,'path']
-        namesChoices = NULL
-        for(c in choices){
-          inter = unlist(strsplit(c, "\\."))
-          if(length(inter) != 1){
-            inter[1:(length(inter)-1)] = " - "
-            
-          }
-          namesChoices = c(namesChoices, paste(inter, collapse = ""))
-        }
-        names(choices) = namesChoices
-        
-        updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
-        updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
-        updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
-        updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
-        textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
-        
-      } else {
-        sendSweetAlert(
-          session = session,
-          title = "Cancellation...",
-          text = "Deletion cancelled !",
-          type = "warning"
-        )
-      }
-      
-    })
-    
+    if(nrow(Used) != 0){
+      sendSweetAlert(
+        session = session,
+        title = "OmicArea used",
+        text = paste("This OmicsArea is used (", paste(Used, collapse = ",",")")),
+        type = "error"
+      )
+    }else {
+      confirmSweetAlert(
+        session = session,
+        inputId = "confirm_delete_OA",
+        type = "warning",
+        title = "Want to confirm ?",
+        text = paste("Delete branch :",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'] , "?" ),
+        danger_mode = TRUE
+      )
+    }
   }
   )
+  
+  observeEvent(input$confirm_delete_OA, {
+    if (isTRUE(input$confirm_delete_OA)) {
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("delete from OmicsArea where '",AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Delete_branch_OmicsArea_SI),'path'],"' @> path;"))
+      
+      REQUEST = "SELECT * FROM OmicsArea ORDER BY path;"
+      AddRV$OmicsArea = dbGetQuery(con, REQUEST)
+      
+      choices = AddRV$OmicsArea[,'path']
+      namesChoices = NULL
+      for(c in choices){
+        inter = unlist(strsplit(c, "\\."))
+        if(length(inter) != 1){
+          inter[1:(length(inter)-1)] = " - "
+        }
+        namesChoices = c(namesChoices, paste(inter, collapse = ""))
+      }
+      names(choices) = namesChoices
+      
+      updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
+      updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
+      textInput('Modify_OmicsArea_description_TI', NULL, value = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] )
+      dbDisconnect(con)
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "Deletion cancelled !",
+        type = "warning"
+      )
+    }
+  })
+  
+  
   output$Delete_branch_OmicsArea = renderUI({
     selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
   })
@@ -3751,6 +3786,7 @@ server <- function(input, output, session) {
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
                            host=ipDB, port=5432)
+          on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
         }
@@ -3770,7 +3806,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
-    
+    on.exit(dbDisconnect(con))
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
         session = session,
@@ -3799,6 +3835,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       AddRV$Species = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
       
@@ -3851,6 +3888,7 @@ server <- function(input, output, session) {
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
                            host=ipDB, port=5432)
+          on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
         }
@@ -3870,7 +3908,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
-    
+    on.exit(dbDisconnect(con))
     species_ID = dbGetQuery(con, paste0("SELECT id from species where name ='",input$Species_Strain_SI,"';"))[1,1] 
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
@@ -3902,6 +3940,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       AddRV$Strain = dbGetQuery(con, REQUEST)
       AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
       dbDisconnect(con)
@@ -3992,6 +4031,7 @@ server <- function(input, output, session) {
   pg <- dbDriver("PostgreSQL")
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
+  on.exit(dbDisconnect(con))
   REQUEST = paste0("SELECT * FROM tag ORDER BY name;")
   TAG$table = dbGetQuery(con, REQUEST)
   dbDisconnect(con)
@@ -4026,6 +4066,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
@@ -4068,6 +4109,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
@@ -4122,6 +4164,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     
     #---------------------------------------------------------------------------
     # Check
@@ -4187,6 +4230,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       
       omicsAreaid = dbGetQuery(con, paste0("SELECT id from omicsarea where name = '",input$Submission_Exp_omicsArea_SI,"';"))[1,1]
       strainId = dbGetQuery(con, paste0("SELECT id from strain where name = '",input$Submission_Exp_Strain_SI,"';"))[1,1]
@@ -4314,35 +4358,9 @@ server <- function(input, output, session) {
       submissionRV$ZIP = paste0("www/Submissions/", id_Submission,".zip")
       
       #-------------------------------------------------------------------------
-      # UPDATE DASHBOARD
+      # UPDATE 
       #-------------------------------------------------------------------------
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      #-------------------------------------------------------------------------
-      # UPDATE PIXELSET LIST
-      #-------------------------------------------------------------------------
-      
-      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
-                          from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
-                            where PS.id_analysis = analysis.id
-                            and PS.id = pixel.pixelset_id
-                            and pixel.omicsunittype_id = OmicsUnitType.id
-                            and analysis.id = AE.id_analysis
-                            and AE.id_experiment = experiment.id
-                            and experiment.strainId = strain.id
-                            and strain.species_id = species.id
-                            and experiment.omicsAreaid = OmicsArea.id
-                            and PS.id_submission = Submission.id
-                            and Submission.pixeler_user_id = pixeler.id
-                            ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      MAJ$value = MAJ$value + 1
       
       #-------------------------------------------------------------------------
       # CLEAR AFTER SUBMISSION
