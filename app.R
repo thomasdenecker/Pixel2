@@ -82,6 +82,53 @@ server <- function(input, output, session) {
   USERS <- reactiveValues()
   rv <- reactiveValues()
   SEARCH_RV = reactiveValues()
+  MAJ <- reactiveValues()
+  
+  MAJ$value = 0
+  
+  #=============================================================================
+  # MAJ Values
+  #=============================================================================
+  
+  observeEvent(MAJ$value, {
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
+                          where PS.id_analysis = analysis.id
+                          and PS.id = pixel.pixelset_id
+                          and pixel.omicsunittype_id = OmicsUnitType.id
+                          and analysis.id = AE.id_analysis
+                          and AE.id_experiment = experiment.id
+                          and experiment.strainId = strain.id
+                          and strain.species_id = species.id
+                          and experiment.omicsAreaid = OmicsArea.id
+                          and PS.id_submission = Submission.id
+                          and Submission.pixeler_user_id = pixeler.id
+                          ;")
+      
+      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      
+      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
+      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
+      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
+      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
+      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
+      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
+      
+      SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
+                                 from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
+                                 where pixelset.id_submission = submission.id 
+                                 and submission.pixeler_user_id = pixeler.id
+                                 and pixelset.id_analysis = analysis.id
+                                 and analysis_experiment.id_analysis = analysis.id
+                                 and analysis_experiment.id_experiment = experiment.id ;")
+    
+      dbDisconnect(con)
+  })
   
   #=============================================================================
   # END Reactive values 
@@ -1019,6 +1066,12 @@ server <- function(input, output, session) {
                        uiOutput("SubmissionsAdminTab_modify_DescriptionExperiment"),
                        h5("Status"),
                        uiOutput("SubmissionsAdminTab_modify_STATUS"),
+                       h5("Strain"),
+                       uiOutput("SubmissionsAdminTab_modify_Strain"), 
+                       h5("OmicsUnitType"),
+                       uiOutput("SubmissionsAdminTab_modify_OmicsUnitType"),
+                       h5("OmicsArea"),
+                       uiOutput("SubmissionsAdminTab_modify_OmicsArea"),
                        div(class="all-size",actionButton("SubmissionsAdminTab_modify_CHANGE", "Modify", class="right"))
                        
                      ),
@@ -1309,16 +1362,12 @@ server <- function(input, output, session) {
   #.............................................................................
   submissionModify = reactiveValues()
   
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  
+  # Get Submission ID
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+  
   output$SubmissionsAdminTab_modify <- renderDT(SubFolder$TabModif, selection = 'single',
                                                 options = list(scrollX = TRUE))
-  
-  output$SubmissionsAdminTab_modify_ID<-renderUI({
-    verbatimTextOutput("SubmissionsAdminTab_modify_ID_VTO", placeholder = TRUE)
-  })
-  
-  output$SubmissionsAdminTab_modify_ID_VTO <- renderText(
-    submissionModify$id
-  )
   
   observeEvent(is.null(input$SubmissionsAdminTab_modify_rows_selected),{
     if(!is.null(input$SubmissionsAdminTab_modify_rows_selected)){
@@ -1328,15 +1377,36 @@ server <- function(input, output, session) {
       submissionModify$id = ""
       disable("SubmissionsAdminTab_modify_CHANGE")
     }
-  })
-
-  output$SubmissionsAdminTab_modify_STATUS<-renderUI({
-    selectInput("SubmissionsAdminTab_modify_STATUS_SI", NULL,choices = "" )
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    submissionModify$strainChoices = dbGetQuery(con,paste0("select name 
+                                        from strain 
+                                        where species_id = (
+                                        select DISTINCT species.id
+                                        from pixelset PS , analysis_experiment AE , experiment E, strain S, species
+                                        where PS.id_submission = '",submissionModify$id,"'
+                                        and PS.id_analysis = AE.id_analysis
+                                        and AE.id_experiment = E.id
+                                        and E.strainId = S.id
+                                        and species.id = S.species_id
+                                        );"))
+    
+    submissionModify$Omicsarea = dbGetQuery(con,"Select name from omicsArea;")
+    submissionModify$OUT = dbGetQuery(con,"Select name from omicsunittype;")
+    dbDisconnect(con)
+    
   })
   
   observeEvent(submissionModify$id,{
     updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
     updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
+    updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
+    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
+    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
+    
     if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
       if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
         status = "true"
@@ -1350,6 +1420,23 @@ server <- function(input, output, session) {
     updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
   })
   
+  
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  
+  # Elements to be modified 
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+  
+  output$SubmissionsAdminTab_modify_ID<-renderUI({
+    verbatimTextOutput("SubmissionsAdminTab_modify_ID_VTO", placeholder = TRUE)
+  })
+  
+  output$SubmissionsAdminTab_modify_ID_VTO <- renderText(
+    submissionModify$id
+  )
+  
+  output$SubmissionsAdminTab_modify_STATUS<-renderUI({
+    selectInput("SubmissionsAdminTab_modify_STATUS_SI", NULL,choices = "" )
+  })
+  
   output$SubmissionsAdminTab_modify_DescriptionAnalysis<-renderUI({
     textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
   })
@@ -1357,7 +1444,30 @@ server <- function(input, output, session) {
   output$SubmissionsAdminTab_modify_DescriptionExperiment<-renderUI({
     textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
   })
+  
+  output$SubmissionsAdminTab_modify_Strain<-renderUI({
 
+      if(nrow(submissionModify$strainChoices) != 0){
+        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = submissionModify$strainChoices[,"name"] )
+      } else {
+        selectInput("SubmissionsAdminTab_modify_Strain_SI",NULL, choices = "" )
+      }
+    
+  })
+  
+  output$SubmissionsAdminTab_modify_OmicsUnitType<-renderUI({
+      selectInput("SubmissionsAdminTab_modify_OmicsUnitType_SI",NULL, choices = submissionModify$OUT[,"name"] )
+  })
+  
+  output$SubmissionsAdminTab_modify_OmicsArea<-renderUI({
+      selectInput("SubmissionsAdminTab_modify_OmicsArea_SI",NULL, choices = submissionModify$Omicsarea[,"name"] )
+  })
+
+  # SubmissionsAdminTab_modify_Strain SubmissionsAdminTab_modify_OmicsUnitType SubmissionsAdminTab_modify_OmicsArea
+  
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  
+  # Run modification
+  #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
   observeEvent(input$SubmissionsAdminTab_modify_CHANGE,{
     confirmSweetAlert(
       session = session,
@@ -1374,7 +1484,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
-      
+      on.exit(dbDisconnect(con))
       dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",submissionModify$id, "';"))
       
       dbGetQuery(con,paste0("update analysis set description  = '",input$SubmissionsAdminTab_modify_DescriptionAnalysis_TA,"' 
@@ -1385,7 +1495,29 @@ server <- function(input, output, session) {
                             and pixelset.id_analysis = analysis_experiment.id_analysis 
                             and analysis_experiment.id_experiment = experiment.id );"))
       
-
+      idStrain = dbGetQuery(con,paste0("Select id from strain where name ='",input$SubmissionsAdminTab_modify_Strain_SI,"';"))
+      
+      dbGetQuery(con,paste0("update experiment set strainId = ",idStrain[1,1]," where id = (select DISTINCT analysis_experiment.id_experiment
+                              from pixelset, analysis_experiment
+                              where pixelset.id_submission='",submissionModify$id,"'
+                              and pixelset.id_analysis = analysis_experiment.id_analysis);"))
+      
+      idOmicsArea = dbGetQuery(con,paste0("Select id from omicsarea where name ='",input$SubmissionsAdminTab_modify_OmicsArea_SI,"';"))
+      
+      dbGetQuery(con,paste0("update experiment set omicsAreaid = '",idOmicsArea[1,1],"' where id = (select DISTINCT analysis_experiment.id_experiment
+                              from pixelset, analysis_experiment
+                              where pixelset.id_submission='",submissionModify$id,"'
+                              and pixelset.id_analysis = analysis_experiment.id_analysis);"))
+      
+      idOmicsUnitType = dbGetQuery(con,paste0("Select id from omicsunittype where name ='",input$SubmissionsAdminTab_modify_OmicsUnitType_SI,"';"))
+      dbGetQuery(con,paste0("update pixel set OmicsUnitType_id = ",idOmicsUnitType," where id in (
+        select pixel.id from pixel, pixelSet
+        where pixel.pixelSet_id = pixelset.id
+        and pixelset.id_submission = '",submissionModify$id,"'
+      );"))
+      
+      MAJ$value = MAJ$value + 1
+      
       SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
                                   from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
                                  where pixelset.id_submission = submission.id 
@@ -1394,12 +1526,20 @@ server <- function(input, output, session) {
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
       
-      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description,submission.status from submission, pixelset, experiment, analysis_experiment, analysis 
+      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
+                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
+                                            from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
                                             where pixelset.id_submission = submission.id 
                                              and pixelset.id_analysis = analysis.id
                                              and analysis_experiment.id_analysis = analysis.id
-                                             and analysis_experiment.id_experiment = experiment.id ;")
-      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?")
+                                             and analysis_experiment.id_experiment = experiment.id
+                                       and experiment.strainId = strain.id
+                                       and pixel.pixelSet_id = pixelset.id
+                                       and omicsunittype.id = pixel.OmicsUnitType_id
+                                       and experiment.omicsAreaid = omicsarea.id;")
+      
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
+      
       
       dbDisconnect(con)
     }
@@ -1446,7 +1586,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
-      
+      on.exit(dbDisconnect(con))
       for(i in input$SubmissionsAdminTab_rows_selected){
         idSubmission = SubFolder$Tab[i,1]
         idExperience = dbGetQuery(con, paste0("select DISTINCT Analysis_Experiment.id_experiment from pixelset,  Analysis_Experiment
@@ -1468,37 +1608,8 @@ server <- function(input, output, session) {
         dbGetQuery(con, paste0("delete from submission where id = '",idSubmission ,"';"))
       }
       
+      MAJ$value = MAJ$value + 1
       
-      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
-                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
-                            where PS.id_analysis = analysis.id
-                            and PS.id = pixel.pixelset_id
-                            and pixel.omicsunittype_id = OmicsUnitType.id
-                            and analysis.id = AE.id_analysis
-                            and AE.id_experiment = experiment.id
-                            and experiment.strainId = strain.id
-                            and strain.species_id = species.id
-                            and experiment.omicsAreaid = OmicsArea.id
-                            and PS.id_submission = Submission.id
-                            and Submission.pixeler_user_id = pixeler.id
-                            ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
-                                  from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
-                                 where pixelset.id_submission = submission.id 
-                                 and submission.pixeler_user_id = pixeler.id
-                                 and pixelset.id_analysis = analysis.id
-                                 and analysis_experiment.id_analysis = analysis.id
-                                 and analysis_experiment.id_experiment = experiment.id ;")
       sendSweetAlert(
         session = session,
         title = "Done!",
@@ -1518,7 +1629,9 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432) 
+    on.exit(dbDisconnect(con))
     PIXELSETLIST_RV$infoMin = dbGetQuery(con,"Select id, name, description from pixelset;")
+    dbDisconnect(con)
   })
 
   
@@ -1587,7 +1700,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
-      
+      on.exit(dbDisconnect(con))
       dbGetQuery(con,paste0("update pixelset set description ='",input$PixelSetAdminTab_modify_Description_TA,"' where id = '",pixelsetModify$id, "';"))
       dbGetQuery(con,paste0("update pixelset set name ='",input$PixelSetAdminTab_modify_name_TA,"' where id = '",pixelsetModify$id, "';"))
       
@@ -1645,6 +1758,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       
       for(i in input$PixelSetsAdminTab_rows_selected){
         idSubmission = dbGetQuery(con, paste0("select id_submission from pixelset where id ='",PIXELSETLIST_RV$info[i,1],"';"))
@@ -1673,36 +1787,8 @@ server <- function(input, output, session) {
         
       }
       
-      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
-                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
-                            where PS.id_analysis = analysis.id
-                            and PS.id = pixel.pixelset_id
-                            and pixel.omicsunittype_id = OmicsUnitType.id
-                            and analysis.id = AE.id_analysis
-                            and AE.id_experiment = experiment.id
-                            and experiment.strainId = strain.id
-                            and strain.species_id = species.id
-                            and experiment.omicsAreaid = OmicsArea.id
-                            and PS.id_submission = Submission.id
-                            and Submission.pixeler_user_id = pixeler.id
-                            ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      SubFolder$Tab = dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description, pixeler.user_name 
-                                  from submission, pixelset, experiment, analysis_experiment, analysis, pixeler 
-                                  where pixelset.id_submission = submission.id 
-                                  and submission.pixeler_user_id = pixeler.id
-                                  and pixelset.id_analysis = analysis.id
-                                  and analysis_experiment.id_analysis = analysis.id
-                                  and analysis_experiment.id_experiment = experiment.id ;")
+      # Update all
+      MAJ$value = MAJ$value + 1
       
       sendSweetAlert(
         session = session,
@@ -1747,6 +1833,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
     for(line in input$adminUsers_rows_selected){
       REQUEST = paste0("DELETE FROM pixeler
       WHERE id=",USERS$infos[line, 1],";")
@@ -1793,6 +1880,7 @@ server <- function(input, output, session) {
         pg <- dbDriver("PostgreSQL")
         con <- dbConnect(pg, user="docker", password="docker",
                          host=ipDB, port=5432)
+        on.exit(dbDisconnect(con))
         dbGetQuery(con, REQUEST)
         dbDisconnect(con)
         
@@ -1815,7 +1903,7 @@ server <- function(input, output, session) {
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
-    
+    on.exit(dbDisconnect(con))
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
         session = session,
@@ -1848,6 +1936,7 @@ server <- function(input, output, session) {
       pg <- dbDriver("PostgreSQL")
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
       USERS$infos = dbGetQuery(con, REQUEST)
       dbDisconnect(con)
     }
@@ -3152,12 +3241,19 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, experiment.description,submission.status from submission, pixelset, experiment, analysis_experiment, analysis 
+      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
+                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
+                                            from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
                                             where pixelset.id_submission = submission.id 
-                                           and pixelset.id_analysis = analysis.id
-                                           and analysis_experiment.id_analysis = analysis.id
-                                           and analysis_experiment.id_experiment = experiment.id ;")
-      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?")
+                                             and pixelset.id_analysis = analysis.id
+                                             and analysis_experiment.id_analysis = analysis.id
+                                             and analysis_experiment.id_experiment = experiment.id
+                                       and experiment.strainId = strain.id
+                                       and pixel.pixelSet_id = pixelset.id
+                                       and omicsunittype.id = pixel.OmicsUnitType_id
+                                       and experiment.omicsAreaid = omicsarea.id;")
+      
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
 
       dbDisconnect(con)
     }
