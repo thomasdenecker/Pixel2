@@ -1659,10 +1659,6 @@ server <- function(input, output, session) {
                                        editable = F,
                                        options = list(scrollX = TRUE))
   
-  
-  # PixelSetAdminTab_modify_ID PixelSetAdminTab_modify_name PixelSetAdminTab_modify_Description
-  # PixelSetAdminTab_modify_CHANGE PixelSetsAdminTab_Modify
-  
   output$PixelSetAdminTab_modify_ID<-renderUI({
     verbatimTextOutput("PixelSetAdminTab_modify_ID_VTO", placeholder = TRUE)
   })
@@ -4323,35 +4319,9 @@ server <- function(input, output, session) {
       submissionRV$ZIP = paste0("www/Submissions/", id_Submission,".zip")
       
       #-------------------------------------------------------------------------
-      # UPDATE DASHBOARD
+      # UPDATE 
       #-------------------------------------------------------------------------
-      
-      DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
-      DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
-      DASHBOARD_RV$CF = dbGetQuery(con,"SELECT count(*) from chromosomalfeature;")[1,1]
-      DASHBOARD_RV$PixelSetTABLE = dbGetQuery(con,"SELECT * FROM pixelset order by id DESC LIMIT 10;")
-      DASHBOARD_RV$OUT = dbGetQuery(con, "SELECT OUT.name, count(*) FROM Pixel, omicsunittype OUT WHERE out.id = omicsunittype_id group by OUT.name;")
-      DASHBOARD_RV$Species = dbGetQuery(con, "SELECT species.name, count(*) FROM pixel, chromosomalfeature CF, species WHERE cf_feature_name = feature_name and CF.species_id = species.id group by species.name;")
-      
-      #-------------------------------------------------------------------------
-      # UPDATE PIXELSET LIST
-      #-------------------------------------------------------------------------
-      
-      REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
-                          from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
-                            where PS.id_analysis = analysis.id
-                            and PS.id = pixel.pixelset_id
-                            and pixel.omicsunittype_id = OmicsUnitType.id
-                            and analysis.id = AE.id_analysis
-                            and AE.id_experiment = experiment.id
-                            and experiment.strainId = strain.id
-                            and strain.species_id = species.id
-                            and experiment.omicsAreaid = OmicsArea.id
-                            and PS.id_submission = Submission.id
-                            and Submission.pixeler_user_id = pixeler.id
-                            ;")
-      
-      PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      MAJ$value = MAJ$value + 1
       
       #-------------------------------------------------------------------------
       # CLEAR AFTER SUBMISSION
