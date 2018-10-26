@@ -82,6 +82,7 @@ server <- function(input, output, session) {
   USERS <- reactiveValues()
   rv <- reactiveValues()
   SEARCH_RV = reactiveValues()
+  TAG = reactiveValues()
   MAJ <- reactiveValues()
   
   MAJ$value = 0
@@ -647,6 +648,12 @@ server <- function(input, output, session) {
           div( class = "margeProfile",
                fluidRow(
                  DTOutput("submissionFolderTab")
+               )
+          ),
+          div( class = "margeProfile",
+               fluidRow(
+                 uiOutput("submissionFolderInfo"),
+                 tabsetPanel(id = "tab_sub_PS")
                )
           )
         ),
@@ -3265,9 +3272,86 @@ server <- function(input, output, session) {
   })
   
   output$submissionFolderTab <- renderDT(SubFolder$Tab, 
-                                         selection = 'none', 
+                                         selection = 'single', 
                                          editable = F,escape = 3,
                                          options = list(scrollX = TRUE))
+  
+  SubFolder$TabID = NULL
+  
+  observeEvent(input$submissionFolderTab_rows_selected, {
+    if(!is.null(input$submissionFolderTab_rows_selected)){
+      
+      if(!is.null(SubFolder$TabID)){
+        for(i in SubFolder$TabID){
+          removeTab("tab_sub_PS", i)
+        }
+        SubFolder$TabID = NULL
+      }
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      SubFolder$subID = SubFolder$Tab[input$submissionFolderTab_rows_selected,1]
+      
+      
+      SubFolder$infoG = dbGetQuery(con,paste0("SELECT a.description, E.description, PS.id, PS.name, PS.description, strain.name, species.name
+                                              FROM pixelset PS , submission, analysis A, experiment E, analysis_experiment AE, strain, species
+                                              WHERE submission.id = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
+                                              AND PS.id_submission = submission.id
+                                              AND PS.id_analysis = A.id
+                                              AND A.id = AE.id_analysis
+                                              AND AE.id_experiment = E.id
+                                              AND E.strainId = strain.id
+                                              AND strain.species_id = species.id;")) 
+      
+      SubFolder$infoAnalysis = SubFolder$infoG[1,1]
+      SubFolder$infoExperiment = SubFolder$infoG[1,2]
+      
+      SubFolder$infoStrain = SubFolder$infoG[1,6]
+      SubFolder$infoSpecies = SubFolder$infoG[1,7]
+      
+      
+      # tab_sub_PS SubFolder$TabID
+      
+      if(nrow(SubFolder$infoG) != 0){
+        for(i in 1:nrow(SubFolder$infoG)){
+          
+          result = paste("<h4>",SubFolder$infoG[i,3],"</h4>",
+                         "<p><b>Name</b>",SubFolder$infoG[i,4],"</p>",
+                         "<p><b>Description</b>",SubFolder$infoG[i,5],"</p>")
+          
+          if(i == 1){
+            appendTab("tab_sub_PS", tabPanel(paste0("PS",i), HTML(result)),select = T)
+          } else {
+            appendTab("tab_sub_PS", tabPanel(paste0("PS",i), HTML(result)),select = F)
+          }
+          
+          SubFolder$TabID = c(SubFolder$TabID, paste0("PS",i))
+        }
+      }
+      
+      SubFolder$infoPixel = dbGetQuery(con,paste0("select count(*)
+                            from pixel, pixelSet 
+                            where pixelset.id_submission ='", SubFolder$subID ,"'
+                            and pixel.pixelSet_id = pixelset.id;"))[1,1]
+      
+    }
+  })
+  sel <- reactive({!is.null(input$submissionFolderTab_rows_selected)}) 
+  
+  output$submissionFolderInfo <- renderUI(
+    div(
+      h2("Supplementary information"),
+      p(class="info", "Click on a line to have more information about submission."),
+      h3(SubFolder$subID),
+      p(paste("Description analysis :",SubFolder$infoStrain)),
+      p(paste("Description experiment :",SubFolder$infoStrain)),
+      p(paste("Strain :",SubFolder$infoStrain)),
+      p(paste("Species :",SubFolder$infoSpecies)),
+      p(paste("Pixel number :",SubFolder$infoPixel))
+    )
+  )
   
   #=============================================================================
   # END SUBMISSION FOLDER
@@ -4027,7 +4111,6 @@ server <- function(input, output, session) {
     
   })
   
-  TAG = reactiveValues()
   pg <- dbDriver("PostgreSQL")
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
