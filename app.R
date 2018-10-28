@@ -3393,7 +3393,31 @@ server <- function(input, output, session) {
       SubFolder$infoSpecies = SubFolder$infoG[1,7]
       
       
-      # tab_sub_PS SubFolder$TabID
+      
+      SubFolder$TagA = dbGetQuery(con,paste0("select tag.name 
+      from pixelset,  tag_Analysis, tag 
+      where pixelSet.id_submission = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
+      and pixelset.id_analysis = tag_analysis.id_analysis
+      and tag.id = tag_analysis.id_tag; "))
+      
+      SubFolder$TagE = dbGetQuery(con,paste0("select tag.name 
+      from pixelset,  analysis_experiment, Tag_Experiment, tag
+      where pixelSet.id_submission = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
+      and pixelset.id_analysis = analysis_experiment.id_analysis
+      and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
+      and tag.id = Tag_Experiment.id_tag;"))
+      
+      if(nrow(SubFolder$TagA) != 0){
+        SubFolder$TagA = paste(SubFolder$TagA[,1], collapse = " | ")
+      } else {
+        SubFolder$TagA = ""
+      }
+      
+      if(nrow(SubFolder$TagE) != 0){
+        SubFolder$TagE = paste(SubFolder$TagE[,1], collapse = " | ")
+      } else {
+        SubFolder$TagE = ""
+      }
       
       if(nrow(SubFolder$infoG) != 0){
         for(i in 1:nrow(SubFolder$infoG)){
@@ -3426,11 +3450,13 @@ server <- function(input, output, session) {
       h2("Supplementary information"),
       p(class="info", "Click on a line to have more information about submission."),
       h3(SubFolder$subID),
-      p(paste("Description analysis :",SubFolder$infoStrain)),
-      p(paste("Description experiment :",SubFolder$infoStrain)),
-      p(paste("Strain :",SubFolder$infoStrain)),
-      p(paste("Species :",SubFolder$infoSpecies)),
-      p(paste("Pixel number :",SubFolder$infoPixel))
+      p(tags$span(class="bold","Description analysis")," :",SubFolder$infoAnalysis),
+      p(tags$span(class="bold","Description experiment")," :",SubFolder$infoExperiment),
+      p(tags$span(class="bold","Strain")," :",SubFolder$infoStrain),
+      p(tags$span(class="bold","Species")," :",SubFolder$infoSpecies),
+      p(tags$span(class="bold","Pixel number")," :",SubFolder$infoPixel),
+      p(tags$span(class="bold","Tag Analysis")," :", SubFolder$TagA ),
+      p(tags$span(class="bold","Tag Experiment")," : ", SubFolder$TagE)
     )
   )
   
