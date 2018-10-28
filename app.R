@@ -645,6 +645,7 @@ server <- function(input, output, session) {
         tabItem(
           tabName = "submissionFolder", 
           h2("Submission"),
+          h3(class = "h3-style","Submission overview"), 
           div( class = "margeProfile",
                fluidRow(
                  DTOutput("submissionFolderTab")
@@ -754,7 +755,7 @@ server <- function(input, output, session) {
           h2("Omics unit type"),
           fluidRow(
             div(class = "table_style",
-                h3("Add Omics unit type"),
+                h3(class ="h3-style","Add Omics unit type"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"), 
                          column(2, "Description"), 
@@ -765,7 +766,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",textInput("Description_OUT", NULL, placeholder = "Description"))),
                   column(8,div(class = "inputNew",actionButton('addOUT_btn','Add OmicsUnitType', icon = icon("plus-circle"))))
                 ),
-                h3("Modify Omics unit type"),
+                h3(class ="h3-style","Modify Omics unit type"),
                 DTOutput('DT_AddOUT'))
             
           )),
@@ -779,7 +780,7 @@ server <- function(input, output, session) {
           h2("Data source"),
           fluidRow(
             div(class = "table_style",
-                h3("Add data source"),
+                h3(class ="h3-style","Add data source"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"), 
                          column(2, "Description"), 
@@ -797,7 +798,7 @@ server <- function(input, output, session) {
                   column(4,div(class = "inputNew",actionButton('addDataSource_btn','Add DataSource', icon = icon("plus-circle"))))
                 ),
                 
-                h3("Modify Omics unit type"),
+                h3(class ="h3-style","Modify Omics unit type"),
                 DTOutput('DT_AddDataSource'))
             
           )),
@@ -811,10 +812,7 @@ server <- function(input, output, session) {
           h2("Omics area"),
           fluidRow(
             div(class = "table_style",
-                
-                
-                
-                h3("Add Omics area"),
+                h3(class ="h3-style","Add Omics area"),
                 fluidRow(class= "tableTitle-left",
                          column(3, "Name"), 
                          column(3, "path"), 
@@ -828,7 +826,7 @@ server <- function(input, output, session) {
                   column(3,div(class = "inputNew",actionButton('Add_OmicsArea_btn','Add OmicsArea', icon = icon("plus-circle"))))
                 ),
                 
-                h3("Modify Omics area"),
+                h3(class ="h3-style","Modify Omics area"),
                 fluidRow(class= "tableTitle-left",
                          column(3, "Name"), 
                          column(3, "Path"), 
@@ -843,7 +841,7 @@ server <- function(input, output, session) {
                   column(3,div(class = "inputNew",actionButton('Modify_OmicsArea_btn','Modify OmicsArea', icon = icon("pen"))))
                   
                 ) ,
-                h3("Delete branch Omics area"),
+                h3(class ="h3-style", "Delete branch Omics area"),
                 fluidRow(class= "tableTitle-left",
                          column(3, "Name"), 
                          column(3, ""), 
@@ -874,7 +872,7 @@ server <- function(input, output, session) {
         tabItem(
           tabName = "Annotation", 
           h2("Chromosomal feature"),
-          h3("1- Annotation source"),
+          h3(class ="h3-style","1- Annotation source"),
           fluidRow( class='border-between ', 
                     column(6,align="center",
                            h3("Existing Sources"),
@@ -896,7 +894,7 @@ server <- function(input, output, session) {
           ),
           
           
-          h3("2- Import annotation file"),
+          h3(class ="h3-style","2- Import annotation file"),
           fluidRow(
             column(6,align="center",
                    h4("Annotation type "),
@@ -958,7 +956,7 @@ server <- function(input, output, session) {
           h2("Species"),
           fluidRow(
             div(class = "table_style",
-                h3("Add new species"),
+                h3(class ="h3-style","Add new species"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"),
                          column(2, "Description"),
@@ -971,7 +969,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",textInput("URL_Species", NULL, placeholder = "url"))),
                   column(6,div(class = "inputNew",actionButton('addSpecies_btn','Add species', icon = icon("plus-circle"))))
                 ),
-                h3("Modify species"),
+                h3(class ="h3-style","Modify species"),
                 DTOutput('DT_AddSpecies'))
             
           ),
@@ -979,7 +977,7 @@ server <- function(input, output, session) {
           h2("Strains"),
           fluidRow(
             div(class = "table_style",
-                h3("Add strain"),
+                h3(class ="h3-style","Add strain"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"),
                          column(2, "Description"),
@@ -994,7 +992,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",uiOutput("Species_Strain"))),
                   column(4,div(class = "inputNew",actionButton('addStrain_btn','Add strain', icon = icon("plus-circle"))))
                 ),
-                h3("Modify strain"),
+                h3(class ="h3-style","Modify strain"),
                 DTOutput('DT_AddStrain'))
             
           )
@@ -1017,14 +1015,14 @@ server <- function(input, output, session) {
           tabName = "Pixeler", 
           h2("Pixeler"),
           div(class = "table_style", 
-              h3("Modify pixeler database"),
+              h3(class ="h3-style","Modify pixeler database"),
               DTOutput('adminUsers'),
               br(),
               actionButton('removeUser', class = "pull-right",
                            label = "Remove user (0)", 
                            icon = icon("minus-circle")),
               br(),
-              h3("New pixeler"),
+              h3(class ="h3-style","New pixeler"),
               fluidRow(class= "tableTitle",
                        column(2, "User name"), 
                        column(2, "First name"),
@@ -1061,7 +1059,7 @@ server <- function(input, output, session) {
           h2("Submission"),
           fluidRow(
             column(12,
-                   h3("Delete submission(s)"),
+                   h3(class ="h3-style","Delete submission(s)"),
                    p(class="info", "Select one or more submissions from the table and click Remove."),
                    DTOutput('SubmissionsAdminTab'),
                    br(),
@@ -1073,7 +1071,7 @@ server <- function(input, output, session) {
           
           fluidRow(
             column(12,
-                   h3("Modify submission"),
+                   h3(class ="h3-style","Modify submission"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1112,7 +1110,7 @@ server <- function(input, output, session) {
           h2("PixelSets"),
           fluidRow(
             column(12,
-                   h3("Delete PixelSet(s)"),
+                   h3(class ="h3-style","Delete PixelSet(s)"),
                    p(class="info", "Select one or more PixelSets from the table and click Remove."),
                    DTOutput('PixelSetsAdminTab'), 
                    br(),
@@ -1124,7 +1122,7 @@ server <- function(input, output, session) {
           
           fluidRow(
             column(12,
-                   h3("Modify PixelSet"),
+                   h3(class ="h3-style","Modify PixelSet"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1288,7 +1286,7 @@ server <- function(input, output, session) {
   output$Profile <- renderUI({
     tagList(
       div( class = "margeProfile",
-           h3("General information"),
+           h3(class ="h3-style","General information"),
            p(tags$b("First names :"), USER$infos[1,2]),
            p(tags$b("Last names :"), USER$infos[1,3]),
            p(tags$b("User names :"), USER$infos[1,4]),
@@ -1298,7 +1296,7 @@ server <- function(input, output, session) {
            p(tags$b("Country :"), USER$infos[1,8]),
            p(tags$b("Creation date :"), USER$infos[1,9]),
            
-           h3("Change the password"),
+           h3(class ="h3-style","Change the password"),
            passwordInput("OldPW", "Old password", placeholder = "Your old password" ),
            passwordInput("NewPW1", "New password", placeholder = "Your new password" ),
            passwordInput("NewPW2", "New password (verification)", placeholder = "Retype your new password" ),
@@ -3447,9 +3445,9 @@ server <- function(input, output, session) {
   
   output$submissionFolderInfo <- renderUI(
     div(
-      h2("Supplementary information"),
+      h3(class = "h3-style","Supplementary information"),
       p(class="info", "Click on a line to have more information about submission."),
-      h3(SubFolder$subID),
+      h2(SubFolder$subID),
       p(tags$span(class="bold","Description analysis")," :",SubFolder$infoAnalysis),
       p(tags$span(class="bold","Description experiment")," :",SubFolder$infoExperiment),
       p(tags$span(class="bold","Strain")," :",SubFolder$infoStrain),
