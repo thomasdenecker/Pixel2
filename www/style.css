@@ -271,3 +271,19 @@ marg-left {
   width: 100%;
   height: 25px;
 }
+
+
+.h3-style {
+  background-color: #dd4b39!important;
+  color : white;
+  padding: 10px;
+  font-size: 18px;
+}
+
+.TagName{
+  border: solid 2px #dd4b39!important;
+  border-radius: 30px;
+  padding: 5px;
+  font-size: 14px;
+  font-weight: bold;
+}

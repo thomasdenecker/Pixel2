@@ -663,14 +663,18 @@ server <- function(input, output, session) {
         #=======================================================================
         tabItem(
           tabName = "Tags", 
-          h2("Tags"),
           htmlOutput("tagName"),
           div( class = "margeProfile",
                fluidRow(
-                 h3("Analysis with this tag"),
+                 h3(class="h3-style","Analysis with this tag"),
                  DTOutput("Tag_analysis"),
-                 h3("Experiment with this tag"),
-                 DTOutput("Tag_experiment")
+                 h3(class="h3-style","Experiment with this tag"),
+                 DTOutput("Tag_experiment"),
+                 h3(class="h3-style","All tags"),
+                 DTOutput("Tag_All"),
+                 h3(class="h3-style","Graphical representation"),
+                 htmlOutput("TagBar")
+                 
                ))),
         
         #=======================================================================
@@ -3166,8 +3170,51 @@ server <- function(input, output, session) {
   # TAG
   #=============================================================================
   
-  output$tagName<- renderText({
-    TAG$NAME 
+  pg <- dbDriver("PostgreSQL")
+  con <- dbConnect(pg, user="docker", password="docker",
+                   host=ipDB, port=5432)
+  on.exit(dbDisconnect(con))
+
+  TAG$ALLAnalysis = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
+                                        from tag, Tag_Analysis
+                                        where tag.id = tag_Analysis.id_tag
+                                        group by tag.id
+                                        ORDER by count(*) DESC;"))
+  
+  TAG$ALLExperiment = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
+                                        from tag,  Tag_Experiment
+                                        where tag.id = Tag_Experiment.id_tag
+                                        group by tag.id
+                                        ORDER by count(*) DESC;"))
+  dbDisconnect(con)
+  
+  observeEvent(TAG$ALLExperiment,{
+    TAG$ALL = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
+    TAG$ALL = cbind(TAG$ALL[, 1:2],apply(TAG$ALL[,c(3,5)], 1, sum, na.rm = T))
+    colnames(TAG$ALL) = c("Name", "Description", "Count")
+    TAG$ALL = TAG$ALL[order(TAG$ALL[,"Count"], decreasing = T),]
+    
+    TAG$BAR = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
+    TAG$BAR = cbind(TAG$BAR[, c(1,3,5)],apply(TAG$BAR[,c(3,5)], 1, sum, na.rm = T))
+    colnames(TAG$BAR) = c("Name", "Analysis", "Experiment", "Sum")
+    
+    if(nrow(TAG$BAR) > 10){
+      nbr = 10
+    } else {
+      nbr = nrow(TAG$BAR)
+    }
+    
+    TAG$BAR = TAG$BAR[order(TAG$BAR[,"Sum"], decreasing = T)[1:nbr], ]
+    TAG$BAR[is.na(TAG$BAR)] <- 0
+  })
+  
+  output$tagName<- renderUI({
+    if(!is.null(TAG$NAME) && length(TAG$NAME) != 0){
+      div(h2("Tags -", tags$span(class="TagName",TAG$NAME)))
+    } else {
+      h2("Tags")
+    }
+    
   })
   
   observeEvent(TAG$NAME,{
@@ -3178,6 +3225,20 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
+    
+    TAG$ALLAnalysis = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
+                                        from tag, Tag_Analysis
+                                        where tag.id = tag_Analysis.id_tag
+                                        group by tag.id
+                                        ORDER by count(*) DESC;"))
+    
+    TAG$ALLExperiment = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
+                                        from tag,  Tag_Experiment
+                                        where tag.id = Tag_Experiment.id_tag
+                                        group by tag.id
+                                        ORDER by count(*) DESC;"))
+                                              
+    
     TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
                                               FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
                                               WHERE tag.name ='",TAG$NAME,"' 
@@ -3205,6 +3266,26 @@ server <- function(input, output, session) {
                                     selection = 'single', 
                                     editable = F,
                                     options = list(scrollX = TRUE))
+  
+  output$Tag_All <- renderDT(TAG$ALL,selection = 'single',
+                                    editable = F,rownames= FALSE, 
+                                    options = list(scrollX = TRUE))
+  
+  observeEvent(input$Tag_All_rows_selected,{
+    
+    TAG$NAME = TAG$ALL[input$Tag_All_rows_selected,1]
+    
+    proxy = dataTableProxy('Tag_All')
+    proxy %>% selectRows(NULL)
+  })
+  
+  
+  
+  output$TagBar <- renderGvis({
+    gvisColumnChart(TAG$BAR,
+                    options=list(title="Best tags", height = 300))
+    
+  })
   
   observeEvent(input$Tag_analysis_rows_selected,{
     
