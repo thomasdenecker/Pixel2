@@ -663,8 +663,7 @@ server <- function(input, output, session) {
         #=======================================================================
         tabItem(
           tabName = "Tags", 
-          h2("Tags"),
-          htmlOutput( "tagName"),
+          htmlOutput("tagName"),
           div( class = "margeProfile",
                fluidRow(
                  h3(class="h3-style","Analysis with this tag"),
@@ -3209,8 +3208,13 @@ server <- function(input, output, session) {
     TAG$BAR[is.na(TAG$BAR)] <- 0
   })
   
-  output$tagName<- renderText({
-    TAG$NAME 
+  output$tagName<- renderUI({
+    if(!is.null(TAG$NAME) && length(TAG$NAME) != 0){
+      div(h2("Tags -", tags$span(class="TagName",TAG$NAME)))
+    } else {
+      h2("Tags")
+    }
+    
   })
   
   observeEvent(TAG$NAME,{

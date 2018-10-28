@@ -279,3 +279,11 @@ marg-left {
   padding: 10px;
   font-size: 18px;
 }
+
+.TagName{
+  border: solid 2px #dd4b39!important;
+  border-radius: 30px;
+  padding: 5px;
+  font-size: 14px;
+  font-weight: bold;
+}
