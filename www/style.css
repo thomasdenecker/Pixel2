@@ -288,6 +288,13 @@ marg-left {
   font-weight: bold;
 }
 
+.modifif-btn {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  border: solid 2px #dd4b39!important;
+  border-radius: 5px;
+}
+
 .bold{
   font-weight: bold;
 }
