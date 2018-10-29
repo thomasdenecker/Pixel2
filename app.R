@@ -1132,6 +1132,19 @@ server <- function(input, output, session) {
                        uiOutput("PixelSetAdminTab_modify_name"),
                        h5(class="bold","Description"),
                        uiOutput("PixelSetAdminTab_modify_Description"),
+                       
+                       div(class="inline", h5(class="bold","Tags")),
+                       div(class="inline tag-inline",dropdownButton(
+                         h4("Add new tag"), 
+                         textInput("PSModify_tags_NewName", NULL, placeholder = "Name"),
+                         textInput("PSModify_tags_NewDescription", NULL, placeholder = "Description"),
+                         actionButton("PSModify_Exp_tags_Newbtn", "Add tag"), size = "xs",
+                         circle = TRUE, status = "danger", icon = icon("plus"), width = "300px",
+                         tooltip = tooltipOptions(title = "Add new tag")
+                       )),
+                       tags$br(class="clearBoth"),
+
+                       p(class="italic", "All tags of pixelSet with the same experience and analysis will be modified."),
                        fluidRow(
                          column(6,
                                 h5(class="bold","Tag analysis"),
@@ -1662,7 +1675,7 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432) 
     on.exit(dbDisconnect(con))
     
-    PIXELSETLIST_RV$infoMin = dbGetQuery(con,"Select id, name, description from pixelset;")
+    PIXELSETLIST_RV$infoMin = dbGetQuery(con,"Select id, name, description from pixelset order by id;")
     
     dbDisconnect(con)
   })
@@ -1699,8 +1712,6 @@ server <- function(input, output, session) {
       disable("PixelSetAdminTab_modify_CHANGE")
     }
   })
-  
-  
   
   observeEvent(pixelsetModify$id,{
     pg <- dbDriver("PostgreSQL")
@@ -1757,6 +1768,62 @@ server <- function(input, output, session) {
   output$PixelSetAdminTab_modify_TagA<-renderUI({
     checkboxGroupInput("PixelSetAdminTab_modify_TagA_CBG", NULL, choices =pixelsetModify$TagAll,
                        selected = pixelsetModify$TagAChoices)
+  })
+  
+  
+  
+  observeEvent(input$PSModify_Exp_tags_Newbtn,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM tag
+                              WHERE name = '",tolower(input$PSModify_tags_NewName),"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This tag is already in the database",
+        type = "error"
+      )
+      
+    } else {
+      
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",tolower(input$PSModify_tags_NewName), "',
+                            '",input$PSModify_tags_NewDescription, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new tag is in the database",
+        type = "success"
+      )
+      
+      REQUEST = paste0("select * from tag ORDER BY name;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      
+      pixelsetModify$TagAll = dbGetQuery(con,paste0("select id, name from tag order by name;"))
+      namesTag = pixelsetModify$TagAll[,2] 
+      pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
+      names(pixelsetModify$TagAll) = namesTag
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagA", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagAChoices )
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagEChoices )
+      
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"PSModify_tags_NewName",value = "")
+    updateTextInput(session,"PSModify_tags_NewDescription",value = "")
+    dbDisconnect(con)
   })
   
   output$PixelSetAdminTab_modify_TagE<-renderUI({
