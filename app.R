@@ -83,7 +83,7 @@ server <- function(input, output, session) {
   rv <- reactiveValues()
   SEARCH_RV = reactiveValues()
   TAG = reactiveValues()
-  TAG$MODIF_PIXELSET_TABLE = cbind(Pixelset = NA, Analysis = NA, Experiment = NA)
+  TAG$MODIF_PIXELSET_TABLE_SELECTED = cbind(row = NA, col = NA)
   MAJ <- reactiveValues()
   
   MAJ$value = 0
@@ -250,7 +250,7 @@ server <- function(input, output, session) {
                                menuSubItem("PixelSets", tabName = "PixelSetsAdmin"), 
                                menuSubItem("Submissions", tabName = "SubmissionsAdmin"),
                                menuSubItem("Tags", tabName = "TagAdmin")
-                               ),
+                      ),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       h4(class ='sideBar',"Quick search"),
                       tags$hr(class= "sideBar"),
@@ -1115,16 +1115,41 @@ server <- function(input, output, session) {
                    fluidRow(
                      column(4,
                             h4("Select a tag"),
-                          uiOutput("tagModifUi"), 
-                          h4("Tag description"),
-                          verbatimTextOutput("tagModifDescription")
+                            uiOutput("tagModifUi"), 
+                            h4("Tag description"),
+                            verbatimTextOutput("tagModifDescription")
                      ),
                      column(8,
                             DTOutput('TagAdmin_Modify_tab')
-                            )
+                     )
                    ),
-                   actionButton("TagAdmin_Modify_btn", "Modify", class="modifif-btn pull-right")
-                   
+                   tags$br(),
+                   actionButton("TagAdmin_Modify_btn", "Modify", class="modifif-btn pull-right"),
+                   tags$br(class="clearBoth"),
+                   h3(class ="h3-style","Remove Tag"),
+                   div(class="inline", uiOutput("tagDeleteUi")),
+                   div(class="inline",actionButton("AdminTag_delete_btn", "Delete", class="modifif-btn")),
+                   tags$br(class="clearBoth"),
+                   h3(class ="h3-style","Modify Tag"),
+                   h3(class ="h3-style","Modify PixelSet"),
+                   p(class="info", "Select one of the lines to activate the modification"),
+                   sidebarLayout(
+                     sidebarPanel(
+                       h5(class="bold","Tag id"),
+                       uiOutput("TagAdminTab_modify_ID"), 
+                       h5(class="bold","Name"),
+                       uiOutput("TagAdminTab_modify_name"),
+                       h5(class="bold","Description"),
+                       uiOutput("TagAdminTab_modify_Description"),
+                       
+                       div(class="all-size",actionButton("TagAdminTab_modify_CHANGE", "Modify", class="right"))
+                       
+                     ),
+                     mainPanel(
+                       DTOutput('TagAdminTab_Modify')
+                     )
+                     
+                   ) 
             )
           )
         ),
@@ -1172,7 +1197,7 @@ server <- function(input, output, session) {
                          tooltip = tooltipOptions(title = "Add new tag")
                        )),
                        tags$br(class="clearBoth"),
-
+                       
                        p(class="italic", "All tags of pixelSet with the same experience and analysis will be modified."),
                        fluidRow(
                          column(6,
@@ -1697,7 +1722,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   # Admin Tag
   #-----------------------------------------------------------------------------
-
+  
   output$tagModifUi <- renderUI({
     choices = TAG$table[,1]
     names(choices) = TAG$table[,2]
@@ -1733,10 +1758,10 @@ server <- function(input, output, session) {
       TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
                                           analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
     }
-
+    
     if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
       TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                          experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+                                     experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
     }
     
     TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
@@ -1752,23 +1777,21 @@ server <- function(input, output, session) {
   
   
   output$TagAdmin_Modify_tab = renderDT(TAG$MODIF_PIXELSET_TABLE, server = TRUE,
-                                  selection = list(target = 'cell', 
-                                                   selected = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED) ))
+                                        selection = list(target = 'cell', 
+                                                         selected = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED) ))
   
   observeEvent(input$TagAdmin_Modify_tab_cells_selected,{
-
+    
     if(nrow(input$TagAdmin_Modify_tab_cells_selected) != 0){
       pos = which(input$TagAdmin_Modify_tab_cells_selected[,2] == "1")
-
+      
       if(length(pos) != 0){
         TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(input$TagAdmin_Modify_tab_cells_selected[-pos,])
         proxy = dataTableProxy('TagAdmin_Modify_tab')
         proxy %>% DT::selectCells(data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED))
       }
     }
-
   })
-  
   
   observeEvent(input$TagAdmin_Modify_btn,{
     confirmSweetAlert(
@@ -1809,7 +1832,7 @@ server <- function(input, output, session) {
           }
           
         } else {
-
+          
           idexperiment = dbGetQuery(con,paste0("select DISTINCT id_experiment from pixelset,analysis_experiment where pixelset.id_analysis = analysis_experiment.id_analysis and id = '",TAG$MODIF_PIXELSET_TABLE[i,1],"';"))[1,1]
           
           if (nrow(dbGetQuery(con,paste0("select * from tag_experiment where id_experiment ='",idexperiment,"' and id_tag ='",input$tagModifSI,"';"))) == 0){
@@ -1833,10 +1856,150 @@ server <- function(input, output, session) {
   }
   )
   
+  #.............................................................................
+  # Remove  Tag
+  #.............................................................................
+  # AdminTag_delete_btn tagDeleteUi
+  
+  output$tagDeleteUi <- renderUI({
+    choices = TAG$table[,1]
+    names(choices) = TAG$table[,2]
+    selectInput("tagDeleteSI", NULL, choices = choices)
+  })
+  
+  observeEvent(input$AdminTag_delete_btn,{
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_AdminTag_delete",
+      type = "warning",
+      title = "Delete this tag ?",
+      text = names(input$tagDeleteSI) ,
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_AdminTag_delete, {
+    if (isTRUE(input$confirm_AdminTag_delete)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432) 
+      on.exit(dbDisconnect(con))
+      
+      Association = F
+      
+      if(nrow(dbGetQuery(con,paste0("Select id_tag from tag_analysis where id_tag =",input$tagDeleteSI,";"))) != 0){
+        Association = T
+      }
+      
+      if(nrow(dbGetQuery(con,paste0("Select id_tag from tag_experiment where id_tag =",input$tagDeleteSI,";"))) != 0){
+        Association = T
+      }
+      
+      if(Association){
+        sendSweetAlert(
+          session = session,
+          title = "Oups!",
+          text = "This tag is used in association ! Remove before association.",
+          type = "error"
+        )
+      } else {
+        
+        dbGetQuery(con,paste0("Delete from tag where id = ",input$tagDeleteSI, ";"))
+        
+        sendSweetAlert(
+          session = session,
+          title = "Done!",
+          text = "The tag is removed ! ",
+          type = "success"
+        )
+        
+        TAG$table = dbGetQuery(con, "select * from tag ORDER BY name;")
+      }
+      dbDisconnect(con)
+      
+    }
+  })
+  
+  #.............................................................................
+  # Modify  Tag
+  #.............................................................................
+  
+  tagModif =reactiveValues()
+  
+  output$TagAdminTab_Modify <- renderDT(TAG$table, selection = 'single', 
+                                        editable = F,
+                                        options = list(scrollX = TRUE))
+  
+  output$TagAdminTab_modify_ID<-renderUI({
+    verbatimTextOutput("TagAdminTab_modify_ID_VTO", placeholder = TRUE)
+  })
+  
+  output$TagAdminTab_modify_ID_VTO <- renderText(
+    tagModif$id
+  )
+  
+  observeEvent(is.null(input$TagAdminTab_Modify_rows_selected),{
+    if(!is.null(input$TagAdminTab_Modify_rows_selected)){
+      tagModif$id = TAG$table[input$TagAdminTab_Modify_rows_selected,1]
+      enable("TagAdminTab_modify_CHANGE")
+    } else {
+      tagModif$id = ""
+      disable("TagAdminTab_modify_CHANGE")
+    }
+  })
+  
+  output$TagAdminTab_modify_name<-renderUI({
+    textAreaInput("TagAdminTab_modify_name_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),2])
+  })
+  
+  output$TagAdminTab_modify_Description<-renderUI({
+    textAreaInput("PTagAdminTab_modify_Description_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),3])
+  })
+  
+  observeEvent(input$TagAdminTab_modify_CHANGE,{
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_modify_tagModification",
+      type = "warning",
+      title = "Modify this tag ?",
+      text = as.character(tagModif$id),
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_modify_tagModification, {
+    if (isTRUE(input$confirm_modify_tagModification)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432) 
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("update tag set description ='",input$PTagAdminTab_modify_Description_TA,"' where id = ",tagModif$id , ";"))
+      dbGetQuery(con,paste0("update tag set name ='",input$TagAdminTab_modify_name_TA,"' where id = ",tagModif$id , ";"))
+      
+      TAG$table = dbGetQuery(con, "select * from tag ORDER BY name;")
+      dbDisconnect(con)
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "The tag is modified ! ",
+        type = "success"
+      )
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "The modification is cancelled ! ",
+        type = "warning"
+      )
+    }
+  }
+  )
+  
   #-----------------------------------------------------------------------------
   # END Admin Tag
   #-----------------------------------------------------------------------------
-
+  
   #-----------------------------------------------------------------------------
   # Admin PixelSet
   #-----------------------------------------------------------------------------
@@ -1890,7 +2053,7 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432) 
     on.exit(dbDisconnect(con))
-  
+    
     pixelsetModify$id_analysis_experiment = dbGetQuery(con,paste0("select DISTINCT pixelset.id_analysis, id_experiment
                                                                   from pixelSet, analysis_experiment
                                                                   where pixelSet.id = '",pixelsetModify$id,"'
@@ -3503,7 +3666,7 @@ server <- function(input, output, session) {
   con <- dbConnect(pg, user="docker", password="docker",
                    host=ipDB, port=5432)
   on.exit(dbDisconnect(con))
-
+  
   TAG$ALLAnalysis = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
                                         from tag, Tag_Analysis
                                         where tag.id = tag_Analysis.id_tag
@@ -3566,7 +3729,7 @@ server <- function(input, output, session) {
                                         where tag.id = Tag_Experiment.id_tag
                                         group by tag.id
                                         ORDER by count(*) DESC;"))
-                                              
+    
     
     TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
                                               FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
@@ -3597,8 +3760,8 @@ server <- function(input, output, session) {
                                     options = list(scrollX = TRUE))
   
   output$Tag_All <- renderDT(TAG$ALL,selection = 'single',
-                                    editable = F,rownames= FALSE, 
-                                    options = list(scrollX = TRUE))
+                             editable = F,rownames= FALSE, 
+                             options = list(scrollX = TRUE))
   
   observeEvent(input$Tag_All_rows_selected,{
     
