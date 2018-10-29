@@ -1131,7 +1131,6 @@ server <- function(input, output, session) {
                    div(class="inline",actionButton("AdminTag_delete_btn", "Delete", class="modifif-btn")),
                    tags$br(class="clearBoth"),
                    h3(class ="h3-style","Modify Tag"),
-                   h3(class ="h3-style","Modify PixelSet"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1798,8 +1797,8 @@ server <- function(input, output, session) {
       session = session,
       inputId = "confirm_modify_TagAssociation",
       type = "warning",
-      title = "Want to modify tag association for this pixelset :",
-      text = paste(TAG$MODIF_PIXELSET_TABLE[input$TagAdmin_Modify_tab_cells_selected[,1],1], collapse = " | "),
+      title = "Want to modify tag association ?",
+      text = "",
       danger_mode = TRUE
     )
   })
@@ -1818,28 +1817,30 @@ server <- function(input, output, session) {
       dbGetQuery(con,paste0("delete from tag_experiment where id_tag = '",input$tagModifSI,"';"))
       
       # Step 2 : create links
-      
-      for(cpt in 1:nrow(input$TagAdmin_Modify_tab_cells_selected)){
-        i = input$TagAdmin_Modify_tab_cells_selected[cpt, 1]
-        j = input$TagAdmin_Modify_tab_cells_selected[cpt, 2]
-        
-        if(j == 2){
+      if(nrow(input$TagAdmin_Modify_tab_cells_selected) != 0){
+        for(cpt in 1:nrow(input$TagAdmin_Modify_tab_cells_selected)){
+          i = input$TagAdmin_Modify_tab_cells_selected[cpt, 1]
+          j = input$TagAdmin_Modify_tab_cells_selected[cpt, 2]
           
-          idAnalysis = dbGetQuery(con,paste0("select DISTINCT id_analysis from pixelset where id = '",TAG$MODIF_PIXELSET_TABLE[i,1],"';"))[1,1]
-          
-          if (nrow(dbGetQuery(con,paste0("select * from tag_analysis where id_analysis ='",idAnalysis,"' and id_tag ='",input$tagModifSI,"';"))) == 0){
-            dbGetQuery(con,paste0("insert into tag_analysis (id_analysis, id_tag) Values ('",idAnalysis ,"',",input$tagModifSI,")"))
-          }
-          
-        } else {
-          
-          idexperiment = dbGetQuery(con,paste0("select DISTINCT id_experiment from pixelset,analysis_experiment where pixelset.id_analysis = analysis_experiment.id_analysis and id = '",TAG$MODIF_PIXELSET_TABLE[i,1],"';"))[1,1]
-          
-          if (nrow(dbGetQuery(con,paste0("select * from tag_experiment where id_experiment ='",idexperiment,"' and id_tag ='",input$tagModifSI,"';"))) == 0){
-            dbGetQuery(con,paste0("insert into tag_experiment (id_experiment, id_tag) Values ('",idexperiment ,"',",input$tagModifSI,")"))
+          if(j == 2){
+            
+            idAnalysis = dbGetQuery(con,paste0("select DISTINCT id_analysis from pixelset where id = '",TAG$MODIF_PIXELSET_TABLE[i,1],"';"))[1,1]
+            
+            if (nrow(dbGetQuery(con,paste0("select * from tag_analysis where id_analysis ='",idAnalysis,"' and id_tag ='",input$tagModifSI,"';"))) == 0){
+              dbGetQuery(con,paste0("insert into tag_analysis (id_analysis, id_tag) Values ('",idAnalysis ,"',",input$tagModifSI,")"))
+            }
+            
+          } else {
+            
+            idexperiment = dbGetQuery(con,paste0("select DISTINCT id_experiment from pixelset,analysis_experiment where pixelset.id_analysis = analysis_experiment.id_analysis and id = '",TAG$MODIF_PIXELSET_TABLE[i,1],"';"))[1,1]
+            
+            if (nrow(dbGetQuery(con,paste0("select * from tag_experiment where id_experiment ='",idexperiment,"' and id_tag ='",input$tagModifSI,"';"))) == 0){
+              dbGetQuery(con,paste0("insert into tag_experiment (id_experiment, id_tag) Values ('",idexperiment ,"',",input$tagModifSI,")"))
+            }
           }
         }
       }
+      
       selectSI = input$tagModifSI
       
       updateSelectInput(session, "tagModifSI", selected = "")
