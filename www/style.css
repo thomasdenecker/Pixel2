@@ -289,8 +289,7 @@ marg-left {
 }
 
 .modifif-btn {
-  margin-top: 15px;
-  margin-bottom: 15px;
+  margin-left: 5px;
   border: solid 2px #dd4b39!important;
   border-radius: 5px;
 }

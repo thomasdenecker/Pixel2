@@ -1123,7 +1123,14 @@ server <- function(input, output, session) {
                             DTOutput('TagAdmin_Modify_tab')
                             )
                    ),
-                   actionButton("TagAdmin_Modify_btn", "Modify", class="modifif-btn pull-right")
+                   tags$br(),
+                   actionButton("TagAdmin_Modify_btn", "Modify", class="modifif-btn pull-right"),
+                   tags$br(class="clearBoth"),
+                   h3(class ="h3-style","Remove Tag"),
+                   div(class="inline", uiOutput("tagDeleteUi")),
+                   div(class="inline",actionButton("AdminTag_delete_btn", "Delete", class="modifif-btn")),
+                   tags$br(class="clearBoth"),
+                   h3(class ="h3-style","Modify Tag")
                    
             )
           )
@@ -1832,6 +1839,71 @@ server <- function(input, output, session) {
     }
   }
   )
+  
+  #.............................................................................
+  # Delete  Tag
+  #.............................................................................
+  # AdminTag_delete_btn tagDeleteUi
+  
+  output$tagDeleteUi <- renderUI({
+    choices = TAG$table[,1]
+    names(choices) = TAG$table[,2]
+    selectInput("tagDeleteSI", NULL, choices = choices)
+  })
+  
+  observeEvent(input$AdminTag_delete_btn,{
+    confirmSweetAlert(
+      session = session,
+      inputId = "confirm_AdminTag_delete",
+      type = "warning",
+      title = "Delete this tag ?",
+      text = names(input$tagDeleteSI) ,
+      danger_mode = TRUE
+    )
+  })
+  
+  observeEvent(input$confirm_AdminTag_delete, {
+    if (isTRUE(input$confirm_AdminTag_delete)) {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432) 
+      on.exit(dbDisconnect(con))
+      
+      Association = F
+      
+      if(nrow(dbGetQuery(con,paste0("Select id_tag from tag_analysis where id_tag =",input$tagDeleteSI,";"))) != 0){
+        Association = T
+      }
+      
+      if(nrow(dbGetQuery(con,paste0("Select id_tag from tag_experiment where id_tag =",input$tagDeleteSI,";"))) != 0){
+        Association = T
+      }
+                         
+      if(Association){
+        sendSweetAlert(
+          session = session,
+          title = "Oups!",
+          text = "This tag is used in association ! Remove before association.",
+          type = "error"
+        )
+      } else {
+
+        dbGetQuery(con,paste0("Delete from tag where id = ",input$tagDeleteSI, ";"))
+        
+        sendSweetAlert(
+          session = session,
+          title = "Done!",
+          text = "The tag is removed ! ",
+          type = "success"
+        )
+
+        TAG$table = dbGetQuery(con, "select * from tag ORDER BY name;")
+      }
+      dbDisconnect(con)
+      
+    }
+  })
+  
   
   #-----------------------------------------------------------------------------
   # END Admin Tag
