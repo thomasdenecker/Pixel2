@@ -1126,12 +1126,20 @@ server <- function(input, output, session) {
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
-                       h5("PixelSet id"),
+                       h5(class="bold","PixelSet id"),
                        uiOutput("PixelSetAdminTab_modify_ID"),
-                       h5("Name"),
+                       h5(class="bold","Name"),
                        uiOutput("PixelSetAdminTab_modify_name"),
-                       h5("Description"),
+                       h5(class="bold","Description"),
                        uiOutput("PixelSetAdminTab_modify_Description"),
+                       fluidRow(
+                         column(6,
+                                h5(class="bold","Tag analysis"),
+                                uiOutput("PixelSetAdminTab_modify_TagA")),
+                         column(6,
+                                h5(class="bold","Tag experiment"),
+                                uiOutput("PixelSetAdminTab_modify_TagE"))
+                       ),
                        div(class="all-size",actionButton("PixelSetAdminTab_modify_CHANGE", "Modify", class="right"))
                        
                      ),
@@ -1692,9 +1700,68 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  
   observeEvent(pixelsetModify$id,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432) 
+    on.exit(dbDisconnect(con))
+  
+    pixelsetModify$id_analysis_experiment = dbGetQuery(con,paste0("select DISTINCT pixelset.id_analysis, id_experiment
+                                                                  from pixelSet, analysis_experiment
+                                                                  where pixelSet.id = '",pixelsetModify$id,"'
+                                                                  and analysis_experiment.id_analysis = pixelSet.id_analysis;"))
+    
+    pixelsetModify$TagA = dbGetQuery(con,paste0("select tag_analysis.id_analysis, tag.name, tag.id
+                                                from pixelSet, tag_analysis, tag
+                                                where pixelSet.id = '",pixelsetModify$id,"'
+                                                and pixelset.id_analysis = tag_analysis.id_analysis
+                                                and tag_analysis.id_tag = tag.id;"))
+    
+    pixelsetModify$TagE = dbGetQuery(con,paste0("select analysis_experiment.id_experiment, tag.name , tag.id
+                                                from pixelSet, analysis_experiment, Tag_Experiment, tag
+                                                where pixelSet.id = '",pixelsetModify$id,"'
+                                                and pixelset.id_analysis = analysis_experiment.id_analysis
+                                                and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
+                                                and Tag_Experiment.id_tag = tag.id;"))
+    
+    pixelsetModify$TagAll = dbGetQuery(con,paste0("select id, name from tag order by name;"))
+    namesTag = pixelsetModify$TagAll[,2] 
+    pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
+    names(pixelsetModify$TagAll) = namesTag
+    
+    dbDisconnect(con)
+    
+    if(nrow(pixelsetModify$TagE) != 0){
+      pixelsetModify$TagEChoices = pixelsetModify$TagE[,"id"]
+    } else {
+      pixelsetModify$TagEChoices = ""
+    }
+    
+    if(nrow(pixelsetModify$TagA) != 0){
+      pixelsetModify$TagAChoices = pixelsetModify$TagA[,"id"]
+    } else {
+      pixelsetModify$TagAChoices = ""
+    }
+    
+    updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagA", choices = pixelsetModify$TagAll,
+                             selected = pixelsetModify$TagAChoices )
+    updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
+                             selected = pixelsetModify$TagEChoices )
+    
     updateTextAreaInput(session,"PixelSetAdminTab_modify_name_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2] )  
     updateTextAreaInput(session,"PixelSetAdminTab_modify_Description_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3] )  
+  })
+  
+  output$PixelSetAdminTab_modify_TagA<-renderUI({
+    checkboxGroupInput("PixelSetAdminTab_modify_TagA_CBG", NULL, choices =pixelsetModify$TagAll,
+                       selected = pixelsetModify$TagAChoices)
+  })
+  
+  output$PixelSetAdminTab_modify_TagE<-renderUI({
+    checkboxGroupInput("PixelSetAdminTab_modify_TagE_CBG", NULL, choices =pixelsetModify$TagAll,
+                       selected =pixelsetModify$TagEChoices )
   })
   
   output$PixelSetAdminTab_modify_name<-renderUI({
@@ -1725,6 +1792,31 @@ server <- function(input, output, session) {
       
       dbGetQuery(con,paste0("update pixelset set description ='",input$PixelSetAdminTab_modify_Description_TA,"' where id = '",pixelsetModify$id, "';"))
       dbGetQuery(con,paste0("update pixelset set name ='",input$PixelSetAdminTab_modify_name_TA,"' where id = '",pixelsetModify$id, "';"))
+      
+      if(nrow(pixelsetModify$TagA) != 0){
+        for(i in 1:nrow(pixelsetModify$TagA)){
+          dbGetQuery(con,paste0("delete from tag_analysis where id_analysis = '",pixelsetModify$TagA[i,1],"' and id_tag = ",pixelsetModify$TagA[i,3],";"))
+        }
+        
+      }
+      
+      if(nrow(pixelsetModify$TagE) != 0){
+        for(i in 1:nrow(pixelsetModify$TagE)){
+          dbGetQuery(con,paste0("delete from Tag_Experiment where id_experiment = '",pixelsetModify$TagE[i,1],"' and id_tag = ",pixelsetModify$TagE[i,3],";"))
+        }
+      }
+      
+      if(length(input$PixelSetAdminTab_modify_TagA_CBG) != 0){
+        for(i in input$PixelSetAdminTab_modify_TagA_CBG ){
+          dbGetQuery(con,paste0("insert into tag_analysis (id_analysis, id_tag) Values ('",pixelsetModify$id_analysis_experiment[1,1] ,"',",i,")"))
+        }
+      }
+      
+      if(length(input$PixelSetAdminTab_modify_TagE_CBG) != 0){
+        for(i in input$PixelSetAdminTab_modify_TagE_CBG ){
+          dbGetQuery(con,paste0("insert into Tag_Experiment (id_experiment, id_tag) Values ('",pixelsetModify$id_analysis_experiment[1,2] ,"',",i,")"))
+        }
+      }
       
       # Update All
       MAJ$value = MAJ$value + 1
