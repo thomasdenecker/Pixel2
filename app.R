@@ -2332,7 +2332,7 @@ server <- function(input, output, session) {
                             ;")
       
       PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
-      
+      updateMeta(dbGetQuery(con,paste0("Select id_submission from pixelset where id = '",pixelsetModify$id,"'"))[1,1])
       dbDisconnect(con)
     }
   })
