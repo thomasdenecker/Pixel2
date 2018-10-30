@@ -1100,6 +1100,14 @@ server <- function(input, output, session) {
                      )
                    )
             )
+          ),
+          
+          fluidRow(
+            column(12,
+                   h3(class ="h3-style","Update all meta"),
+                   p(class="info", "After modifications in Add information, you can update all meta."),
+                   actionButton("updateAllMeta", "Update")
+            )
           )
         ), 
         #=======================================================================
@@ -1636,9 +1644,119 @@ server <- function(input, output, session) {
       
       colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
       
+      updateMeta(submissionModify$id)
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "Submission(s) is modified!",
+        type = "success"
+      )
       
       dbDisconnect(con)
     }
+  })
+  
+  updateMeta <-function(idSubmission){
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    # submissionModify$id
+    OUT_inter = dbGetQuery(con,paste0("select DISTINCT omicsunittype.name from pixelset, pixel, omicsunittype 
+                                      where pixelset.id_submission ='",idSubmission,"' 
+                                      and pixel.pixelSet_id = pixelset.id 
+                                      and pixel.OmicsUnitType_id = omicsunittype.id;"))
+    
+    Info_inter= dbGetQuery(con,paste0("select E.description, EXTRACT(YEAR FROM E.completionDate), OA.name, DS.name, species.name, strain.name, 
+                                      A.description, EXTRACT(YEAR FROM a.completionDate), a.notebook_file, a.secondary_data_file, PS.name, PS.description,PS.pixelSet_file, PS.id
+                                      from pixelset PS, analysis A, analysis_experiment AE, experiment E, DataSource DS, strain , species, omicsarea OA
+                                      where PS.id_submission = '",idSubmission,"'
+                                      and PS.id_analysis = A.id
+                                      and A.id = AE.id_analysis
+                                      and AE.id_experiment = E.id
+                                      and E.strainId = strain.id
+                                      and E.omicsareaid = OA.id
+                                      and E.DataSourceId = DS.id
+                                      and strain.species_id = species.id;"))
+    
+    time = format(Sys.time(), "%Y-%m-%d_%H-%M-%S")
+    
+    if( Info_inter[1,9] != ""){
+      fileNB = unlist(strsplit(Info_inter[1,9],split = "/"))[length(unlist(strsplit(Info_inter[1,9],split = "/")))]
+    } else {
+      fileNB = ""
+    }
+    
+    if( Info_inter[1,10] != ""){
+      fileSD = unlist(strsplit(Info_inter[1,10],split = "/"))[length(unlist(strsplit(Info_inter[1,10],split = "/")))]
+    } else {
+      fileSD = ""
+    }
+    
+    meta = rbind(
+      c("Experiment_description", Info_inter[1,1]),
+      c("Experiment_completionDate",Info_inter[1,2]	),
+      c("Experiment_omicsArea",	Info_inter[1,3]),
+      c("Experiment_omicsUnitType",OUT_inter[1,1]),
+      c("Experiment_dataSource",Info_inter[1,4]	),
+      c("Experiment_species",Info_inter[1,5]	),
+      c("Experiment_strain",Info_inter[1,6]	),
+      c("Analysis_description",Info_inter[1,7]	),
+      c("Analysis_completionDate",Info_inter[1,8]	),
+      c("Analysis_notebookFile",fileNB	),
+      c("Analysis_secondaryDataFile",	fileSD)
+    )
+    
+    for(i in 1:nrow(Info_inter)){
+      meta = rbind(meta,
+                   c("PixelSet1_name",Info_inter[i,11]	),
+                   c("PixelSet1_description",Info_inter[i,12]	),
+                   c("PixelSet1_file",Info_inter[i,13]	)
+      )          
+    }
+    
+    write.table(meta, paste0("www/Submissions/", idSubmission,"/meta_",time,".txt") ,
+                sep = "\t", row.names = F, col.names= F,quote = F)
+    
+    setwd("www/Submissions/")
+    file.remove(paste0(idSubmission,".zip"))
+    zip(idSubmission, idSubmission)
+    setwd("../..")
+    
+    dbDisconnect(con)
+    
+  }
+  
+  observeEvent(input$updateAllMeta,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    submission = dbGetQuery(con,"Select id from submission")
+    if(nrow(submission) != 0){
+      for(s in submission[,1]){
+        updateMeta(s)
+      }
+      
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "All Submissions are updated!",
+        type = "success"
+      )
+      
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Ops!",
+        text = "No Submission to update!",
+        type = "warning"
+      )
+    }
+    
+    dbDisconnect(con)
   })
   
   #.............................................................................
@@ -1753,24 +1871,26 @@ server <- function(input, output, session) {
     
     TAG$MODIF_PIXELSET_TABLE = dbGetQuery(con,"Select id from pixelset;")
     
-    if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
-      TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                          analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+    if(nrow(TAG$MODIF_PIXELSET_TABLE) != 0){
+      if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
+        TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                            analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+      }
+      
+      if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
+        TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                       experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+      }
+      
+      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
+      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
+      
+      TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
+      TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
+      proxy = dataTableProxy('TagAdmin_Modify_tab')
+      proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
     }
-    
-    if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
-      TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                     experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
-    }
-    
-    TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
-    TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
-    
-    TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
-    TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
-    proxy = dataTableProxy('TagAdmin_Modify_tab')
-    proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
-    
+
     dbDisconnect(con)
   })
   
@@ -2097,8 +2217,10 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
                              selected = pixelsetModify$TagEChoices )
     
-    updateTextAreaInput(session,"PixelSetAdminTab_modify_name_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2] )  
-    updateTextAreaInput(session,"PixelSetAdminTab_modify_Description_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3] )  
+    if(!is.null(PIXELSETLIST_RV$infoMin) && nrow(PIXELSETLIST_RV$infoMin) != 0) {
+      updateTextAreaInput(session,"PixelSetAdminTab_modify_name_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2] )  
+      updateTextAreaInput(session,"PixelSetAdminTab_modify_Description_TA", value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3] )  
+    }
   })
   
   output$PixelSetAdminTab_modify_TagA<-renderUI({
@@ -2168,11 +2290,19 @@ server <- function(input, output, session) {
   })
   
   output$PixelSetAdminTab_modify_name<-renderUI({
-    textAreaInput("PixelSetAdminTab_modify_name_TA",NULL, value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2])
+    if(!is.null(PIXELSETLIST_RV$infoMin) && nrow(PIXELSETLIST_RV$infoMin) != 0){
+      textAreaInput("PixelSetAdminTab_modify_name_TA",NULL, value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),2])
+    } else {
+      NULL
+    }
   })
   
   output$PixelSetAdminTab_modify_Description<-renderUI({
-    textAreaInput("PixelSetAdminTab_modify_Description_TA",NULL, value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3])
+    if(!is.null(PIXELSETLIST_RV$infoMin) && nrow(PIXELSETLIST_RV$infoMin) != 0){
+      textAreaInput("PixelSetAdminTab_modify_Description_TA",NULL, value = PIXELSETLIST_RV$infoMin[which(PIXELSETLIST_RV$infoMin[,1] == pixelsetModify$id),3])
+    } else {
+      NULL
+    }
   })
   
   observeEvent(input$PixelSetAdminTab_modify_CHANGE,{
@@ -2239,6 +2369,13 @@ server <- function(input, output, session) {
                             ;")
       
       PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      updateMeta(dbGetQuery(con,paste0("Select id_submission from pixelset where id = '",pixelsetModify$id,"'"))[1,1])
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "PixelSet is modified!",
+        type = "success"
+      )
       
       dbDisconnect(con)
     }
@@ -3172,7 +3309,7 @@ server <- function(input, output, session) {
   )
   
   output$PixelSetTags = renderUI({
-    if(nrow(TAG$table) !=0){
+    if(nrow(TAG$table) !=0 && length(PIXELSETLIST_RV$tags[!duplicated(PIXELSETLIST_RV$tags[,"name"]),"name"]) != 0){
       checkboxGroupButtons("PixelSetTags_CBG", NULL,
                            choices = PIXELSETLIST_RV$tags[!duplicated(PIXELSETLIST_RV$tags[,"name"]),"name"],
                            status = "default",
@@ -3682,23 +3819,25 @@ server <- function(input, output, session) {
   dbDisconnect(con)
   
   observeEvent(TAG$ALLExperiment,{
-    TAG$ALL = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
-    TAG$ALL = cbind(TAG$ALL[, 1:2],apply(TAG$ALL[,c(3,5)], 1, sum, na.rm = T))
-    colnames(TAG$ALL) = c("Name", "Description", "Count")
-    TAG$ALL = TAG$ALL[order(TAG$ALL[,"Count"], decreasing = T),]
-    
-    TAG$BAR = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
-    TAG$BAR = cbind(TAG$BAR[, c(1,3,5)],apply(TAG$BAR[,c(3,5)], 1, sum, na.rm = T))
-    colnames(TAG$BAR) = c("Name", "Analysis", "Experiment", "Sum")
-    
-    if(nrow(TAG$BAR) > 10){
-      nbr = 10
-    } else {
-      nbr = nrow(TAG$BAR)
+    if(!is.null(TAG$ALLExperiment) && nrow(TAG$ALLExperiment) != 0){
+      TAG$ALL = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
+      TAG$ALL = cbind(TAG$ALL[, 1:2],apply(TAG$ALL[,c(3,5)], 1, sum, na.rm = T))
+      colnames(TAG$ALL) = c("Name", "Description", "Count")
+      TAG$ALL = TAG$ALL[order(TAG$ALL[,"Count"], decreasing = T),]
+      
+      TAG$BAR = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
+      TAG$BAR = cbind(TAG$BAR[, c(1,3,5)],apply(TAG$BAR[,c(3,5)], 1, sum, na.rm = T))
+      colnames(TAG$BAR) = c("Name", "Analysis", "Experiment", "Sum")
+      
+      if(nrow(TAG$BAR) > 10){
+        nbr = 10
+      } else {
+        nbr = nrow(TAG$BAR)
+      }
+      
+      TAG$BAR = TAG$BAR[order(TAG$BAR[,"Sum"], decreasing = T)[1:nbr], ]
+      TAG$BAR[is.na(TAG$BAR)] <- 0
     }
-    
-    TAG$BAR = TAG$BAR[order(TAG$BAR[,"Sum"], decreasing = T)[1:nbr], ]
-    TAG$BAR[is.na(TAG$BAR)] <- 0
   })
   
   output$tagName<- renderUI({
@@ -3775,8 +3914,13 @@ server <- function(input, output, session) {
   
   
   output$TagBar <- renderGvis({
-    gvisColumnChart(TAG$BAR,
-                    options=list(title="Best tags", height = 300))
+    if(!is.null(TAG$BAR) && nrow(TAG$BAR) != 0 ){
+      gvisColumnChart(TAG$BAR,
+                      options=list(title="Best tags", height = 300))
+    } else {
+      NULL
+    }
+    
     
   })
   
@@ -4900,12 +5044,11 @@ server <- function(input, output, session) {
                                 c("Experiment_description", input$submission_Exp_description),
                                 c("Experiment_completionDate", input$submission_Exp_completionDate),
                                 c("Experiment_omicsArea", input$Submission_Exp_omicsArea_SI),
-                                c("Experiment_omicsUnitType", input$submission_Exp_completionDate),
+                                c("Experiment_omicsUnitType", input$submission_pixelSet_OUT),
                                 
                                 c("Experiment_dataSource", input$Submission_Exp_dataSource_SI),
                                 c("Experiment_species", input$Submission_Exp_Species_SI),
-                                c("Experiment_strain", input$Submission_Exp_Strain_SI),
-                                c("Experiment_tags", paste(input$Submission_Exp_tags_CBG, collapse = "|" ))
+                                c("Experiment_strain", input$Submission_Exp_Strain_SI)
       )
       
       
@@ -4935,23 +5078,50 @@ server <- function(input, output, session) {
       #-------------------------------------------------------------------------
       
       # Add analysis in META
+      
+      if(is.null(input$submission_Analysis_notebook$name) ){
+        fileNotebookname = ""
+      } else {
+        fileNotebookname = input$submission_Analysis_notebook$name
+      }
+      
+      if (is.null(input$submission_Analysis_secondary_data$name)){
+        fileSDName = ""
+      } else {
+        fileSDName = input$submission_Analysis_secondary_data$name
+      }
+      
       submissionRV$META = rbind(submissionRV$META,
                                 c("Analysis_description",input$submission_Analysis_description),
                                 c("Analysis_completionDate",input$submission_Exp_completionDate),
-                                c("Analysis_notebookFile",input$submission_Analysis_notebook$name),
-                                c("Analysis_secondaryDataFile",input$submission_Analysis_secondary_data$name),
-                                c("Analysis_tags",paste(input$Submission_Analysis_tags_CBG, collapse = "|" ))
+                                c("Analysis_notebookFile",fileNotebookname),
+                                c("Analysis_secondaryDataFile",fileSDName)
                                 
       )
       
       # Add analysis
       id_analysis = paste0("Analysis_",time)
       adresse_analysis = paste0("Submissions/",id_Submission,"/")
-      adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
-      adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
       
-      file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
-      file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
+      if(fileNotebookname == ""){
+        adresse_analysis_notebook = ""
+      } else {
+        adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
+        file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
+      }
+      
+      if(fileSDName == ""){
+        adresse_analysis_SD = ""
+      } else {
+        adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
+        file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
+      }
+      # 
+      # adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
+      # adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
+      # 
+      # file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
+      # file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
       
       REQUEST_Analysis =  paste0("insert into analysis (id, description, completionDate, notebook_file,secondary_data_file) values ('",id_analysis,"','",input$submission_Analysis_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",adresse_analysis_notebook,"','",adresse_analysis_SD,"');")
       dbGetQuery(con, REQUEST_Analysis)
@@ -5023,7 +5193,7 @@ server <- function(input, output, session) {
         }
       })
       
-      write.table(submissionRV$META, paste0("www/Submissions/", id_Submission,"/meta.txt") ,
+      write.table(submissionRV$META, paste0("www/Submissions/", id_Submission,"/meta_",time,".txt") ,
                   sep = "\t", row.names = F, col.names= F,quote = F)
       
       setwd("www/Submissions/")
