@@ -1100,6 +1100,14 @@ server <- function(input, output, session) {
                      )
                    )
             )
+          ),
+          
+          fluidRow(
+            column(12,
+                   h3(class ="h3-style","Update all meta"),
+                   p(class="info", "After modifications in Add information, you can update all meta."),
+                   actionButton("updateAllMeta", "Update")
+            )
           )
         ), 
         #=======================================================================
@@ -1637,7 +1645,12 @@ server <- function(input, output, session) {
       colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
       
       updateMeta(submissionModify$id)
-      
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "Submission(s) is modified!",
+        type = "success"
+      )
       
       dbDisconnect(con)
     }
@@ -1702,7 +1715,6 @@ server <- function(input, output, session) {
                    c("PixelSet1_file",Info_inter[i,13]	)
       )          
     }
-    cat(dim(meta), file =stderr())
     
     write.table(meta, paste0("www/Submissions/", idSubmission,"/meta_",time,".txt") ,
                 sep = "\t", row.names = F, col.names= F,quote = F)
@@ -1713,14 +1725,39 @@ server <- function(input, output, session) {
     setwd("../..")
     
     dbDisconnect(con)
-    sendSweetAlert(
-      session = session,
-      title = "Done!",
-      text = "Submission is modified!",
-      type = "success"
-    )
     
   }
+  
+  observeEvent(input$updateAllMeta,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    submission = dbGetQuery(con,"Select id from submission")
+    if(nrow(submission) != 0){
+      for(s in submission[,1]){
+        updateMeta(s)
+      }
+      
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "All Submissions are updated!",
+        type = "success"
+      )
+      
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Ops!",
+        text = "No Submission to update!",
+        type = "warning"
+      )
+    }
+    
+    dbDisconnect(con)
+  })
   
   #.............................................................................
   # Remove submission
@@ -2333,6 +2370,13 @@ server <- function(input, output, session) {
       
       PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
       updateMeta(dbGetQuery(con,paste0("Select id_submission from pixelset where id = '",pixelsetModify$id,"'"))[1,1])
+      sendSweetAlert(
+        session = session,
+        title = "Done!",
+        text = "PixelSet is modified!",
+        type = "success"
+      )
+      
       dbDisconnect(con)
     }
   })
