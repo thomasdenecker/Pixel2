@@ -2194,9 +2194,12 @@ server <- function(input, output, session) {
                                                 and Tag_Experiment.id_tag = tag.id;"))
     
     pixelsetModify$TagAll = dbGetQuery(con,paste0("select id, name from tag order by name;"))
-    namesTag = pixelsetModify$TagAll[,2] 
-    pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
-    names(pixelsetModify$TagAll) = namesTag
+    
+    if(nrow(pixelsetModify$TagAll) != 0){
+      namesTag = pixelsetModify$TagAll[,2] 
+      pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
+      names(pixelsetModify$TagAll) = namesTag
+    }
     
     dbDisconnect(con)
     
