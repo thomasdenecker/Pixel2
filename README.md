@@ -1,5 +1,8 @@
-# Pixel2
+<p align="center"><img src="www/Images/logo.png" alt="logo" height="150px"></p>
 
+------
+
+**Pixel2** is an original digital assistant to help people involved in a multi-omics biological project
 
 ## Requirements
 
@@ -12,8 +15,6 @@ installed the following requirements before trying to bootstrap the application:
 required docker tools (see links above).
 
 **Docker must be on for the duration of Pixel2 use.**
-
-## Quick start
 
 ## Quick start
 
