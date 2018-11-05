@@ -1,5 +1,6 @@
-# Pixel2
-
+<img src="www/Images/logo.png" alt="logo" style="display: block;
+    margin-left: auto;
+    margin-right: auto; height:150px">
 
 ## Requirements
 
