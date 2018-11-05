@@ -2,12 +2,12 @@ docker stop PIXEL_DB
 
 docker rm PIXEL_DB
 
-docker build -t pixel_db .
+docker build -t pixel2_db .
 
-docker tag pixel_db tdenecker/pixel_db
+docker tag pixel_db tdenecker/pixel2_db
 
-docker run --name PIXEL_DB -d tdenecker/pixel_db
+docker run --name PIXEL_DB -d tdenecker/pixel2_db
 
-docker start PIXEL_DB
+docker start PIXEL2_DB
 
-docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" bPeaksDB > Database/ipDB.txt
+docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" PIXEL2_DB > ipDB.txt
