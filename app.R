@@ -2866,10 +2866,6 @@ server <- function(input, output, session) {
         # TABLE CREATION
         newTableName <- input$sup_name
         columnNewTable <- colnames(database)[-1]
-        # columnNewTable <- gsub("[[:punct:]]", "",colnames(database)[-1] )
-        # cat(paste(1,"  ", columnNewTable,"\n"), file = stderr())
-        # columnNewTable <- gsub(" ", "_",columnNewTable)
-        # cat(paste(2,"  ", columnNewTable,"\n"), file = stderr())
         
         REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
@@ -2957,6 +2953,9 @@ server <- function(input, output, session) {
         }
       }  
     })
+    
+    MAJ$value = MAJ$value + 1
+    
     dbDisconnect(con)
   })
   
