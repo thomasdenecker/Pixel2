@@ -1915,9 +1915,16 @@ server <- function(input, output, session) {
   
   
   output$tagModifUi <- renderUI({
-    choices = TAG$table[,1]
-    names(choices) = TAG$table[,2]
+    if(!is.null(TAG$table) && nrow(TAG$table)!=0){
+      choices = TAG$table[,1]
+      names(choices) = TAG$table[,2]
+      
+    } else {
+      choices = ""
+    }
+    
     selectInput("tagModifSI", NULL, choices = choices)
+
   })
   
   output$tagModifDescription <- renderText({
@@ -1929,41 +1936,45 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432) 
     on.exit(dbDisconnect(con))
-    TAG$MODIF_Description = dbGetQuery(con,paste0("select description from tag where tag.id = '",input$tagModifSI,"';"))[1,1]
-    TAG$MODIF_PIXELSET_ANALYSIS = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Analysis
-                                                        from pixelSet, tag_analysis, tag
-                                                        where tag.id = ",input$tagModifSI,"
-                                                        and pixelset.id_analysis = tag_analysis.id_analysis
-                                                        and tag_analysis.id_tag = tag.id;"))
     
-    TAG$MODIF_PIXELSET_EXP = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Experiment
-                                                    from pixelSet, analysis_experiment, Tag_Experiment, tag
-                                                   where tag.id = ",input$tagModifSI,"
-                                                   and pixelset.id_analysis = analysis_experiment.id_analysis
-                                                   and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
-                                                   and Tag_Experiment.id_tag = tag.id;"))
-    
-    TAG$MODIF_PIXELSET_TABLE = dbGetQuery(con,"Select id from pixelset;")
-    
-    if(nrow(TAG$MODIF_PIXELSET_TABLE) != 0){
-      if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
-        TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                            analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+    if(!is.null(input$tagModifSI) && input$tagModifSI != ""){
+      TAG$MODIF_Description = dbGetQuery(con,paste0("select description from tag where tag.id = ",input$tagModifSI,";"))[1,1]
+      TAG$MODIF_PIXELSET_ANALYSIS = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Analysis
+                                                          from pixelSet, tag_analysis, tag
+                                                          where tag.id = ",input$tagModifSI,"
+                                                          and pixelset.id_analysis = tag_analysis.id_analysis
+                                                          and tag_analysis.id_tag = tag.id;"))
+      
+      TAG$MODIF_PIXELSET_EXP = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Experiment
+                                                     from pixelSet, analysis_experiment, Tag_Experiment, tag
+                                                     where tag.id = ",input$tagModifSI,"
+                                                     and pixelset.id_analysis = analysis_experiment.id_analysis
+                                                     and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
+                                                     and Tag_Experiment.id_tag = tag.id;"))
+      
+      TAG$MODIF_PIXELSET_TABLE = dbGetQuery(con,"Select id from pixelset;")
+      
+      if(nrow(TAG$MODIF_PIXELSET_TABLE) != 0){
+        if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
+          TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                              analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+        }
+        
+        if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
+          TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                         experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+        }
+        
+        TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
+        TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
+        
+        TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
+        TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
+        proxy = dataTableProxy('TagAdmin_Modify_tab')
+        proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
       }
-      
-      if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
-        TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                       experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
-      }
-      
-      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
-      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
-      
-      TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
-      TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
-      proxy = dataTableProxy('TagAdmin_Modify_tab')
-      proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
     }
+    
 
     dbDisconnect(con)
   })
@@ -2057,9 +2068,16 @@ server <- function(input, output, session) {
   # AdminTag_delete_btn tagDeleteUi
   
   output$tagDeleteUi <- renderUI({
-    choices = TAG$table[,1]
-    names(choices) = TAG$table[,2]
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      choices = TAG$table[,1]
+      names(choices) = TAG$table[,2]
+      
+    } else {
+      choices = ""
+    }
+    
     selectInput("tagDeleteSI", NULL, choices = choices)
+
   })
   
   observeEvent(input$AdminTag_delete_btn,{
@@ -2144,11 +2162,15 @@ server <- function(input, output, session) {
   })
   
   output$TagAdminTab_modify_name<-renderUI({
-    textAreaInput("TagAdminTab_modify_name_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),2])
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      textAreaInput("TagAdminTab_modify_name_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),2])
+    }
   })
   
   output$TagAdminTab_modify_Description<-renderUI({
-    textAreaInput("PTagAdminTab_modify_Description_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),3])
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      textAreaInput("PTagAdminTab_modify_Description_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),3])
+    }
   })
   
   observeEvent(input$TagAdminTab_modify_CHANGE,{
@@ -3372,10 +3394,12 @@ server <- function(input, output, session) {
       
       PIXELSETLIST_RV$tagsList = interList
       
-      PIXELSETLIST_RV$tagsTab = cbind(names(PIXELSETLIST_RV$tagsList),unlist(lapply(PIXELSETLIST_RV$tagsList, paste, collapse = " | ")) )
-      colnames(PIXELSETLIST_RV$tagsTab) = c("ID", "Tags")
+      if(!is.null(PIXELSETLIST_RV$tagsList)  && length(PIXELSETLIST_RV$tagsList) != 0){
+        PIXELSETLIST_RV$tagsTab = cbind(names(PIXELSETLIST_RV$tagsList),unlist(lapply(PIXELSETLIST_RV$tagsList, paste, collapse = " | ")) )
+        colnames(PIXELSETLIST_RV$tagsTab) = c("ID", "Tags")
+        PIXELSETLIST_RV$infoWithTags = merge(PIXELSETLIST_RV$info, PIXELSETLIST_RV$tagsTab,by = "ID", all = T)
+      }
       
-      PIXELSETLIST_RV$infoWithTags = merge(PIXELSETLIST_RV$info, PIXELSETLIST_RV$tagsTab,by = "ID", all = T)
       dbDisconnect(con)
     }
   })
@@ -3435,7 +3459,9 @@ server <- function(input, output, session) {
       PIXELSETLIST_RV$Selected = pos
       
     }else{
-      PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$infoWithTags)
+      if(!is.null(PIXELSETLIST_RV$infoWithTags) && nrow(PIXELSETLIST_RV$infoWithTags) != 0 ){
+        PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$infoWithTags)
+      }
     }
   })
   
