@@ -53,7 +53,7 @@ ipDB = read.table("Database/ipDB.txt", header = F, stringsAsFactors = F)[1,1]
 # UI
 ################################################################################
 
-header <- dashboardHeader(title = "Pixel")
+header <- dashboardHeader(title = "Pixel2")
 sidebar <- dashboardSidebar(uiOutput("sidebarpanel"))
 body <- dashboardBody(useShinyjs(), 
                       useShinyalert(),
@@ -128,6 +128,22 @@ server <- function(input, output, session) {
                                  and pixelset.id_analysis = analysis.id
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
+    
+    SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
+                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
+                                     from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
+                                     where pixelset.id_submission = submission.id 
+                                     and pixelset.id_analysis = analysis.id
+                                     and analysis_experiment.id_analysis = analysis.id
+                                     and analysis_experiment.id_experiment = experiment.id
+                                     and experiment.strainId = strain.id
+                                     and pixel.pixelSet_id = pixelset.id
+                                     and omicsunittype.id = pixel.OmicsUnitType_id
+                                     and experiment.omicsAreaid = omicsarea.id;")
+    
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) !=0){
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
+    }
     
     # Reinit search values
     CF$name = NULL
@@ -223,36 +239,44 @@ server <- function(input, output, session) {
           sidebarMenu(id = "tabs",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
                       menuItem("Submissions", tabName = "Submissions", icon = icon("upload")),
-                      menuItem("Explorer", tabName = "Explorer", icon = icon("search"),
-                               startExpanded = F,
-                               menuSubItem("Chromosomal feature", tabName = "CF_item"),
-                               menuSubItem("Tags", tabName = "Tags"),
-                               menuSubItem("Submission", tabName = "submissionFolder")
-                      ),
-                      menuItem("PixelSets", tabName = "PixelSets", icon = icon("folder"),
+                      menuItem("Information", tabName = "Information", icon = icon("info-circle"),
                                startExpanded = F,
                                menuSubItem("A PixelSet", tabName = "PixelSet"),
-                               menuSubItem("PixelSet list", tabName = "PixelSetList"),
-                               menuSubItem("Exploration of Multi PixelSets", tabName = "PixelSetExplo")
-                      ),
-                      menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
-                               startExpanded = F,
-                               menuSubItem("Chromosomal feature", tabName = "Annotation"),
-                               menuSubItem("Omics unit type", tabName = "AddOUT"), 
-                               menuSubItem("Data source", tabName = "AddDataSource"),
-                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
-                               menuSubItem("Species & strains", tabName = "AddSpecies")
+                               menuSubItem("A chromosomal feature", tabName = "CF_item"),
+                               menuSubItem("A tag", tabName = "Tags")
                       ),
                       
-                      menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
+                      menuItem("Database exploration", tabName = "Explorer", icon = icon("search"),
                                startExpanded = F,
-                               menuSubItem("Pixeler", tabName = "Pixeler"),
-                               menuSubItem("PixelSets", tabName = "PixelSetsAdmin"), 
-                               menuSubItem("Submissions", tabName = "SubmissionsAdmin"),
+                               menuSubItem("Search by PixelSets", tabName = "PixelSetList"),
+                               menuSubItem("Search by submissions", tabName = "submissionFolder")
+                      ),
+                      
+                      
+                      menuItem("Data integration", tabName = "PixelSetExplo", icon = icon("align-justify")),
+                      
+                      menuItem("Manage PixelSets", tabName = "ManagePixelSets", icon = icon("folder"),
+                               startExpanded = F,
+                               menuSubItem("Manage PixelSets", tabName = "PixelSetsAdmin"), 
+                               menuSubItem("Manage submissions", tabName = "SubmissionsAdmin")     
+                      ),
+                      
+                      menuItem("Manage annotations", tabName = "ManageAnnotations", icon = icon("pencil"),
+                               startExpanded = F,
+                               menuSubItem("Chromosomal feature", tabName = "Annotation"),
+                               menuSubItem("Data source", tabName = "AddDataSource"),
+                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
+                               menuSubItem("Omics unit type", tabName = "AddOUT"), 
+                               menuSubItem("Species & strains", tabName = "AddSpecies"),
                                menuSubItem("Tags", tabName = "TagAdmin")
                       ),
-                      menuItem("Profile", tabName = "Profile", icon = icon("user")),
-                      h4(class ='sideBar',"Quick search"),
+
+                      menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
+                               startExpanded = F,
+                               menuSubItem("Manage Pixelers", tabName = "Pixeler") 
+                      ),
+                      menuItem("Pixeler information", tabName = "Profile", icon = icon("user")),
+                      h4(class ='sideBar',"Quick searches"),
                       tags$hr(class= "sideBar"),
                       h5(class= "sideBar", "Chromosomal feature"),
                       sidebarSearchForm(textId = "searchCF", buttonId = "searchButtonCF",label = "CAGL0A01243g..."),
@@ -271,7 +295,7 @@ server <- function(input, output, session) {
           sidebarMenu("tabMenu",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
                       menuItem("PixelSet", tabName = "PixelSet", icon = icon("search")), 
-                      menuItem("Explorer", tabName = "Explorer", icon = icon("signal")),
+                      menuItem("Dat", tabName = "Explorer", icon = icon("signal")),
                       menuItem("Profile", tabName = "Profile", icon = icon("user")),
                       sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
           )
@@ -339,7 +363,7 @@ server <- function(input, output, session) {
             div(class="col-sm-6",
                 div(class="box box-primary",
                     div(class="box-body",
-                        h2(class="center","Pixeler informations"), br(),
+                        h2(class="center","Pixeler information"), br(),
                         DT::dataTableOutput('pixelerInfo')
                     )
                 )
@@ -351,7 +375,7 @@ server <- function(input, output, session) {
             div(class="col-sm-12",
                 div(class="box box-primary",
                     div(class="box-body",
-                        h2(class="center","Last PixelSet imported"), br(),
+                        h2(class="center","Last imported PixelSets"), br(),
                         DT::dataTableOutput('PixelSetInfo')
                     )
                 )
@@ -527,7 +551,7 @@ server <- function(input, output, session) {
                  
                  column(6,
                         fluidRow(
-                          h3("Properties"),
+                          h3("Annotations from Pixeler"),
                           htmlOutput("PixelSet_explo")
                         ),
                         fluidRow(
@@ -539,7 +563,7 @@ server <- function(input, output, session) {
                         )
                  ),
                  column(6,
-                        fluidRow(div(class= "search",h3("Graphical representations"))), 
+                        fluidRow(div(class= "search",h3("Graphics"))), 
                         fluidRow(
                           htmlOutput("PixelSetHistoValue")
                         ), 
@@ -547,8 +571,8 @@ server <- function(input, output, session) {
                           htmlOutput("PixelSetHistoQS")
                         ),
                         fluidRow(div(class= "search",
-                                     h3("Search gene list"),
-                                     p("To search a list of genes, separate them by';' To return to the complete list of genes, click on the clear button."),
+                                     h3("Search for a list of chromosomal features"),
+                                     p("To search a list of chromosomal features, separate them by';' To return to the complete list of genes, click on the clear button."),
                                      tags$textarea(id = "PS_searchGenelist", rows = 5),
                                      actionButton("PS_searchGenelist_clear_btn",label = "Clear"),
                                      actionButton("PS_searchGenelist_btn",label = "Search")
@@ -571,22 +595,23 @@ server <- function(input, output, session) {
           h2("PixelSet List"),
           fluidRow(
             column(12,
-                   h3(class="title-pixelset","Selection"),
+                   h3(class="title-pixelset","Current selection"),
                    verbatimTextOutput('PixelSetRowSelected'),
-                   actionButton(class="pull-right PS-btn","PixelSetExploreBtn", "Explore"),
+                   actionButton(class="pull-right PS-btn","PixelSetExploreBtn", "Integration of Multi PixelSets"),
                    actionButton(class="pull-right PS-btn","PixelSetExploreSelectAll", "Select all"),
                    actionButton(class="pull-right PS-btn", "PixelSetExploreDeselectAll", "Deselect all")
             )
           ),
           fluidRow(
             column(12,
-                   h3(class="title-pixelset","Selection by tag"),
+                   h3(class="title-pixelset","Filter by tags"),
                    uiOutput("PixelSetTags")
             )
           ),
           fluidRow(
             column(12,
-                   
+                   h3(class="title-pixelset","Available pixelset"),
+                   p(class="info", "Click on the lines to select one or more Pixelsets."),
                    DTOutput("PIXELSETLIST_tab")
             )
           )
@@ -598,24 +623,24 @@ server <- function(input, output, session) {
         
         tabItem(
           tabName = "PixelSetExplo", 
-          h2("Exploration of Multi PixelSets"),
+          h2("Integration of Multi PixelSets"),
           fluidRow(
             column(12,
-                   h3("Content of multi PixelSets",  class= "title-pixelset"),
+                   h3("List of selected PixelSets",  class= "title-pixelset"),
                    DTOutput("PSExploContent"),
-                   h3("Distribution",  class= "title-pixelset"),
+                   h3("Graphics",  class= "title-pixelset"),
                    uiOutput("PSExploUI")      
             )),
           fluidRow(
             column(12,
-                   h3("Upset R",  class= "title-pixelset"),
+                   h3("Intersection between chromosomal features",  class= "title-pixelset"),
                    plotOutput("UpsetR")
             )
           ),
           fluidRow(
             column(12,
-                   h3("Search gene list",  class= "title-pixelset"),
-                   p("To search a list of genes, separate them by';' To return to the complete list of genes, click on the clear button."),
+                   h3("Search for a list of chromosomal features",  class= "title-pixelset"),
+                   p("To search a list of chromosomal features, separate them by';' To return to the complete list of genes, click on the clear button."),
                    tags$textarea(id = "MPS_searchGenelist", rows = 5),
                    actionButton("MPS_searchGenelist_clear_btn",label = "Clear"),
                    actionButton("MPS_searchGenelist_btn",label = "Search")
@@ -623,7 +648,7 @@ server <- function(input, output, session) {
           ),
           fluidRow(
             column(12, 
-                   h3("Pixel",  class= "title-pixelset"),
+                   h3("Pixels",  class= "title-pixelset"),
                    downloadButton('MPS_export_csv', 'CSV'),
                    downloadButton('MPS_export_tsv', 'TSV'),
                    downloadButton('MPS_export_excel', 'EXCEL'),
@@ -670,6 +695,8 @@ server <- function(input, output, session) {
           htmlOutput("tagName"),
           div( class = "margeProfile",
                fluidRow(
+                 h3(class="h3-style","Description"),
+                 textOutput("TagDecription"),     
                  h3(class="h3-style","Analysis with this tag"),
                  DTOutput("Tag_analysis"),
                  h3(class="h3-style","Experiment with this tag"),
@@ -758,7 +785,7 @@ server <- function(input, output, session) {
           h2("Omics unit type"),
           fluidRow(
             div(class = "table_style",
-                h3(class ="h3-style","Add Omics unit type"),
+                h3(class ="h3-style","Add a new type of omics unit"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"), 
                          column(2, "Description"), 
@@ -769,7 +796,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",textInput("Description_OUT", NULL, placeholder = "Description"))),
                   column(8,div(class = "inputNew",actionButton('addOUT_btn','Add OmicsUnitType', icon = icon("plus-circle"))))
                 ),
-                h3(class ="h3-style","Modify Omics unit type"),
+                h3(class ="h3-style","Modify existing types of omics units"),
                 DTOutput('DT_AddOUT'))
             
           )),
@@ -780,14 +807,14 @@ server <- function(input, output, session) {
         
         tabItem(
           tabName = "AddDataSource", 
-          h2("Data source"),
+          h2("Source of dataset"),
           fluidRow(
             div(class = "table_style",
-                h3(class ="h3-style","Add data source"),
+                h3(class ="h3-style","Add a new source of dataset"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"), 
                          column(2, "Description"), 
-                         column(2, "published"),
+                         column(2, "Published"),
                          column(2, "URL"),
                          column(4, "")
                 ),
@@ -801,13 +828,13 @@ server <- function(input, output, session) {
                   column(4,div(class = "inputNew",actionButton('addDataSource_btn','Add DataSource', icon = icon("plus-circle"))))
                 ),
                 
-                h3(class ="h3-style","Modify Omics unit type"),
+                h3(class ="h3-style","Modify existing sources of dataset"),
                 DTOutput('DT_AddDataSource'))
             
           )),
         
         #=======================================================================
-        # Tab content : Add dataSource
+        # Tab content : Add Omics Area
         #=======================================================================
         
         tabItem(
@@ -815,10 +842,10 @@ server <- function(input, output, session) {
           h2("Omics area"),
           fluidRow(
             div(class = "table_style",
-                h3(class ="h3-style","Add Omics area"),
+                h3(class ="h3-style","Add a new omics area"),
                 fluidRow(class= "tableTitle-left",
                          column(3, "Name"), 
-                         column(3, "path"), 
+                         column(3, "Select path"), 
                          column(3, "Description"),
                          column(3, "")
                 ),
@@ -829,7 +856,7 @@ server <- function(input, output, session) {
                   column(3,div(class = "inputNew",actionButton('Add_OmicsArea_btn','Add OmicsArea', icon = icon("plus-circle"))))
                 ),
                 
-                h3(class ="h3-style","Modify Omics area"),
+                h3(class ="h3-style","Modify existing Omics area"),
                 fluidRow(class= "tableTitle-left",
                          column(3, "Name"), 
                          column(3, "Path"), 
@@ -844,9 +871,9 @@ server <- function(input, output, session) {
                   column(3,div(class = "inputNew",actionButton('Modify_OmicsArea_btn','Modify OmicsArea', icon = icon("pen"))))
                   
                 ) ,
-                h3(class ="h3-style", "Delete branch Omics area"),
+                h3(class ="h3-style", "Manage omics area"),
                 fluidRow(class= "tableTitle-left",
-                         column(3, "Name"), 
+                         column(3, "Omics area to be deleted"), 
                          column(3, ""), 
                          column(3, ""),
                          column(3, "")
@@ -859,7 +886,7 @@ server <- function(input, output, session) {
                 ) ,
                 
                 div(class= "tree",
-                    h3(class = 'center', "Organisation of omicsArea"),
+                    h3(class = 'center', "Organization of omics area"),
                     htmlOutput("treeOmicsArea")
                 )
                 
@@ -875,22 +902,22 @@ server <- function(input, output, session) {
         tabItem(
           tabName = "Annotation", 
           h2("Chromosomal feature"),
-          h3(class ="h3-style","1- Annotation source"),
+          h3(class ="h3-style","1- Sources of annotations"),
           fluidRow( class='border-between ', 
                     column(6,align="center",
-                           h3("Existing Sources"),
+                           h3("Existing annotation sources"),
                            uiOutput("SSUI"),
                            htmlOutput("DescriCFSource")
                     ),
                     column(6,align="center",
-                           h3("Create new source"),
-                           h4("Source name"),
+                           h3("Add a new source of annotations"),
+                           h4("Name"),
                            textInput("CFSourceName",NULL ),
-                           h4("abbreviation"),
+                           h4("Abbreviation"),
                            textInput("CFAbbreviation",NULL ),
-                           h4("Source description"),
+                           h4("Description"),
                            textAreaInput("CFSourceDescription", NULL, resize = "vertical"),
-                           h4("Source URL"),
+                           h4("URL"),
                            textInput("CFSourceURL", NULL),
                            actionButton("addCFSource", "Add source")
                     )
@@ -900,7 +927,7 @@ server <- function(input, output, session) {
           h3(class ="h3-style","2- Import annotation file"),
           fluidRow(
             column(6,align="center",
-                   h4("Annotation type "),
+                   h4("Select annotation type"),
                    selectInput("importTypeCF",NULL,
                                c("Main information" = "main",
                                  "Supplementary information" = "sup"))
@@ -959,11 +986,11 @@ server <- function(input, output, session) {
           h2("Species"),
           fluidRow(
             div(class = "table_style",
-                h3(class ="h3-style","Add new species"),
+                h3(class ="h3-style","Add a new species"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"),
                          column(2, "Description"),
-                         column(2, "url"),
+                         column(2, "URL"),
                          column(6, "")
                 ),
                 fluidRow(
@@ -972,7 +999,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",textInput("URL_Species", NULL, placeholder = "url"))),
                   column(6,div(class = "inputNew",actionButton('addSpecies_btn','Add species', icon = icon("plus-circle"))))
                 ),
-                h3(class ="h3-style","Modify species"),
+                h3(class ="h3-style","Modify existing species"),
                 DTOutput('DT_AddSpecies'))
             
           ),
@@ -980,7 +1007,7 @@ server <- function(input, output, session) {
           h2("Strains"),
           fluidRow(
             div(class = "table_style",
-                h3(class ="h3-style","Add strain"),
+                h3(class ="h3-style","Add a new strain"),
                 fluidRow(class= "tableTitle",
                          column(2, "Name"),
                          column(2, "Description"),
@@ -995,7 +1022,7 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",uiOutput("Species_Strain"))),
                   column(4,div(class = "inputNew",actionButton('addStrain_btn','Add strain', icon = icon("plus-circle"))))
                 ),
-                h3(class ="h3-style","Modify strain"),
+                h3(class ="h3-style","Modify existing strains"),
                 DTOutput('DT_AddStrain'))
             
           )
@@ -1018,7 +1045,7 @@ server <- function(input, output, session) {
           tabName = "Pixeler", 
           h2("Pixeler"),
           div(class = "table_style", 
-              h3(class ="h3-style","Modify pixeler database"),
+              h3(class ="h3-style","Modify pixeler information"),
               DTOutput('adminUsers'),
               br(),
               actionButton('removeUser', class = "pull-right",
@@ -1062,7 +1089,7 @@ server <- function(input, output, session) {
           h2("Submission"),
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Delete submission(s)"),
+                   h3(class ="h3-style","Delete previous submission(s)"),
                    p(class="info", "Select one or more submissions from the table and click Remove."),
                    DTOutput('SubmissionsAdminTab'),
                    br(),
@@ -1074,7 +1101,7 @@ server <- function(input, output, session) {
           
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Modify submission"),
+                   h3(class ="h3-style","Modify previous submission"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1119,7 +1146,12 @@ server <- function(input, output, session) {
           h2("Tag"), 
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Association Tag - Pixelset"),
+                   h3(class ="h3-style","Add a new tag"),
+                   div(class="inline-block-element",textInput("ManageTag_NewName", "Name", placeholder = "Name")),
+                   div(class="inline-block-element",textInput("ManageTag_NewDescription", "Description", placeholder = "Description")),
+                   div(class="inline-block-element",actionButton("ManageTag_Newbtn", "Add a new tag")),
+                   
+                   h3(class ="h3-style","Association between Tags and PixelSets"),
                    fluidRow(
                      column(4,
                             h4("Select a tag"),
@@ -1134,11 +1166,11 @@ server <- function(input, output, session) {
                    tags$br(),
                    actionButton("TagAdmin_Modify_btn", "Modify", class="modifif-btn pull-right"),
                    tags$br(class="clearBoth"),
-                   h3(class ="h3-style","Remove Tag"),
+                   h3(class ="h3-style","Remove a tag"),
                    div(class="inline", uiOutput("tagDeleteUi")),
                    div(class="inline",actionButton("AdminTag_delete_btn", "Delete", class="modifif-btn")),
                    tags$br(class="clearBoth"),
-                   h3(class ="h3-style","Modify Tag"),
+                   h3(class ="h3-style","Modify existing tags"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1183,7 +1215,7 @@ server <- function(input, output, session) {
           
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Modify PixelSet"),
+                   h3(class ="h3-style","Modify existing PixelSets"),
                    p(class="info", "Select one of the lines to activate the modification"),
                    sidebarLayout(
                      sidebarPanel(
@@ -1467,7 +1499,7 @@ server <- function(input, output, session) {
   #.  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
   
   output$SubmissionsAdminTab_modify <- renderDT(SubFolder$TabModif, selection = 'single',
-                                                options = list(scrollX = TRUE))
+                                                options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   observeEvent(is.null(input$SubmissionsAdminTab_modify_rows_selected),{
     if(!is.null(input$SubmissionsAdminTab_modify_rows_selected)){
@@ -1502,23 +1534,25 @@ server <- function(input, output, session) {
   })
   
   observeEvent(submissionModify$id,{
-    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
-    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
-    updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
-    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
-    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
-    
-    if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
-      if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
-        status = "true"
-      } else if( ! SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
-        status = "false"
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
+      updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
+      updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
+      updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
+      updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
+
+      if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
+        if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+          status = "true"
+        } else if( ! SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+          status = "false"
+        }
+        updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", choices = c(Validated = "true","Not valideted" ="false"))
+      } else {
+        status = ""
       }
-      updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", choices = c(Validated = "true","Not valideted" ="false"))
-    } else {
-      status = ""
+      updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
     }
-    updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
   })
   
   
@@ -1539,11 +1573,15 @@ server <- function(input, output, session) {
   })
   
   output$SubmissionsAdminTab_modify_DescriptionAnalysis<-renderUI({
-    textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
+    }
   })
   
   output$SubmissionsAdminTab_modify_DescriptionExperiment<-renderUI({
-    textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
+    }
   })
   
   output$SubmissionsAdminTab_modify_Strain<-renderUI({
@@ -1765,7 +1803,7 @@ server <- function(input, output, session) {
   
   output$SubmissionsAdminTab <- renderDT(SubFolder$Tab, selection = 'multiple', 
                                          editable = F ,escape = 3,
-                                         options = list(scrollX = TRUE))
+                                         options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   
   observeEvent(is.null(input$SubmissionsAdminTab_rows_selected),{
@@ -1840,10 +1878,75 @@ server <- function(input, output, session) {
   # Admin Tag
   #-----------------------------------------------------------------------------
   
+
+  observeEvent(input$ManageTag_Newbtn,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM tag
+                              WHERE name = '",tolower(input$ManageTag_NewName),"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This tag is already in the database",
+        type = "error"
+      )
+      
+    } else {
+      
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",tolower(input$ManageTag_NewName), "',
+                            '",input$ManageTag_NewDescription, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new tag is in the database",
+        type = "success"
+      )
+      
+      REQUEST = paste0("select * from tag ORDER BY name;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      
+      pixelsetModify$TagAll = dbGetQuery(con,paste0("select id, name from tag order by name;"))
+      namesTag = pixelsetModify$TagAll[,2] 
+      pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
+      names(pixelsetModify$TagAll) = namesTag
+    
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagA", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagAChoices )
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagEChoices )
+      
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"ManageTag_NewName",value = "")
+    updateTextInput(session,"ManageTag_NewDescription",value = "")
+    dbDisconnect(con)
+  })
+  
+  
+  
   output$tagModifUi <- renderUI({
-    choices = TAG$table[,1]
-    names(choices) = TAG$table[,2]
+    if(!is.null(TAG$table) && nrow(TAG$table)!=0){
+      choices = TAG$table[,1]
+      names(choices) = TAG$table[,2]
+      
+    } else {
+      choices = ""
+    }
+    
     selectInput("tagModifSI", NULL, choices = choices)
+
   })
   
   output$tagModifDescription <- renderText({
@@ -1855,41 +1958,45 @@ server <- function(input, output, session) {
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432) 
     on.exit(dbDisconnect(con))
-    TAG$MODIF_Description = dbGetQuery(con,paste0("select description from tag where tag.id = '",input$tagModifSI,"';"))[1,1]
-    TAG$MODIF_PIXELSET_ANALYSIS = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Analysis
-                                                        from pixelSet, tag_analysis, tag
-                                                        where tag.id = ",input$tagModifSI,"
-                                                        and pixelset.id_analysis = tag_analysis.id_analysis
-                                                        and tag_analysis.id_tag = tag.id;"))
     
-    TAG$MODIF_PIXELSET_EXP = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Experiment
-                                                    from pixelSet, analysis_experiment, Tag_Experiment, tag
-                                                   where tag.id = ",input$tagModifSI,"
-                                                   and pixelset.id_analysis = analysis_experiment.id_analysis
-                                                   and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
-                                                   and Tag_Experiment.id_tag = tag.id;"))
-    
-    TAG$MODIF_PIXELSET_TABLE = dbGetQuery(con,"Select id from pixelset;")
-    
-    if(nrow(TAG$MODIF_PIXELSET_TABLE) != 0){
-      if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
-        TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                            analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+    if(!is.null(input$tagModifSI) && input$tagModifSI != ""){
+      TAG$MODIF_Description = dbGetQuery(con,paste0("select description from tag where tag.id = ",input$tagModifSI,";"))[1,1]
+      TAG$MODIF_PIXELSET_ANALYSIS = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Analysis
+                                                          from pixelSet, tag_analysis, tag
+                                                          where tag.id = ",input$tagModifSI,"
+                                                          and pixelset.id_analysis = tag_analysis.id_analysis
+                                                          and tag_analysis.id_tag = tag.id;"))
+      
+      TAG$MODIF_PIXELSET_EXP = dbGetQuery(con,paste0("select pixelset.id, 'Saved' Experiment
+                                                     from pixelSet, analysis_experiment, Tag_Experiment, tag
+                                                     where tag.id = ",input$tagModifSI,"
+                                                     and pixelset.id_analysis = analysis_experiment.id_analysis
+                                                     and analysis_experiment.id_experiment = Tag_Experiment.id_experiment
+                                                     and Tag_Experiment.id_tag = tag.id;"))
+      
+      TAG$MODIF_PIXELSET_TABLE = dbGetQuery(con,"Select id from pixelset;")
+      
+      if(nrow(TAG$MODIF_PIXELSET_TABLE) != 0){
+        if(nrow(TAG$MODIF_PIXELSET_ANALYSIS) == 0){
+          TAG$MODIF_PIXELSET_ANALYSIS = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                              analysis = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+        }
+        
+        if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
+          TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
+                                         experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
+        }
+        
+        TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
+        TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
+        
+        TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
+        TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
+        proxy = dataTableProxy('TagAdmin_Modify_tab')
+        proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
       }
-      
-      if(nrow(TAG$MODIF_PIXELSET_EXP) == 0){
-        TAG$MODIF_PIXELSET_EXP = cbind(id = TAG$MODIF_PIXELSET_TABLE[,1],
-                                       experiment = rep(NA, nrow(TAG$MODIF_PIXELSET_TABLE)))
-      }
-      
-      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE,TAG$MODIF_PIXELSET_ANALYSIS ,by = "id", all = T)
-      TAG$MODIF_PIXELSET_TABLE = merge(TAG$MODIF_PIXELSET_TABLE, TAG$MODIF_PIXELSET_EXP ,by = "id", all = T)
-      
-      TAG$MODIF_PIXELSET_TABLE_SELECTED = which(TAG$MODIF_PIXELSET_TABLE == "Saved", arr.ind = T)
-      TAG$MODIF_PIXELSET_TABLE_SELECTED = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED)
-      proxy = dataTableProxy('TagAdmin_Modify_tab')
-      proxy %>% DT::selectCells(TAG$MODIF_PIXELSET_TABLE_SELECTED)
     }
+    
 
     dbDisconnect(con)
   })
@@ -1983,9 +2090,16 @@ server <- function(input, output, session) {
   # AdminTag_delete_btn tagDeleteUi
   
   output$tagDeleteUi <- renderUI({
-    choices = TAG$table[,1]
-    names(choices) = TAG$table[,2]
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      choices = TAG$table[,1]
+      names(choices) = TAG$table[,2]
+      
+    } else {
+      choices = ""
+    }
+    
     selectInput("tagDeleteSI", NULL, choices = choices)
+
   })
   
   observeEvent(input$AdminTag_delete_btn,{
@@ -2049,7 +2163,7 @@ server <- function(input, output, session) {
   
   output$TagAdminTab_Modify <- renderDT(TAG$table, selection = 'single', 
                                         editable = F,
-                                        options = list(scrollX = TRUE))
+                                        options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   output$TagAdminTab_modify_ID<-renderUI({
     verbatimTextOutput("TagAdminTab_modify_ID_VTO", placeholder = TRUE)
@@ -2070,11 +2184,15 @@ server <- function(input, output, session) {
   })
   
   output$TagAdminTab_modify_name<-renderUI({
-    textAreaInput("TagAdminTab_modify_name_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),2])
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      textAreaInput("TagAdminTab_modify_name_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),2])
+    }
   })
   
   output$TagAdminTab_modify_Description<-renderUI({
-    textAreaInput("PTagAdminTab_modify_Description_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),3])
+    if(!is.null(TAG$table) && nrow(TAG$table) != 0){
+      textAreaInput("PTagAdminTab_modify_Description_TA",NULL, value = TAG$table[which(TAG$table[,1] == tagModif$id),3])
+    }
   })
   
   observeEvent(input$TagAdminTab_modify_CHANGE,{
@@ -2139,7 +2257,7 @@ server <- function(input, output, session) {
   
   output$PixelSetsAdminTab <- renderDT(PIXELSETLIST_RV$info, selection = 'multiple', 
                                        editable = F,
-                                       options = list(scrollX = TRUE))
+                                       options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   #.............................................................................
   # Remove Pixelsets
@@ -2149,7 +2267,7 @@ server <- function(input, output, session) {
   
   output$PixelSetsAdminTab_Modify <- renderDT(PIXELSETLIST_RV$infoMin, selection = 'single', 
                                               editable = F,
-                                              options = list(scrollX = TRUE))
+                                              options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   output$PixelSetAdminTab_modify_ID<-renderUI({
     verbatimTextOutput("PixelSetAdminTab_modify_ID_VTO", placeholder = TRUE)
@@ -2468,7 +2586,7 @@ server <- function(input, output, session) {
   
   output$adminUsers <- renderDT(USERS$infos, selection = 'multiple', 
                                 editable = TRUE,
-                                options = list(scrollX = TRUE))
+                                options = list(scrollX = TRUE, searchHighlight = TRUE))
   proxy = dataTableProxy('adminUsers')
   
   
@@ -2696,8 +2814,7 @@ server <- function(input, output, session) {
                         quote = input$quote_CF,
                         stringsAsFactors = F
     )
-    # Select id from species where name ='Saccharomyces cerevisiae';
-    
+
     species_id  = dbGetQuery(con, paste0("Select id from species where name = '",database[1,8],"';"))[1,1]
     default_db_id = dbGetQuery(con, paste0("Select id from CFSource where name = '",input$selectSource,"';"))[1,1]
     
@@ -2771,10 +2888,6 @@ server <- function(input, output, session) {
         # TABLE CREATION
         newTableName <- input$sup_name
         columnNewTable <- colnames(database)[-1]
-        # columnNewTable <- gsub("[[:punct:]]", "",colnames(database)[-1] )
-        # cat(paste(1,"  ", columnNewTable,"\n"), file = stderr())
-        # columnNewTable <- gsub(" ", "_",columnNewTable)
-        # cat(paste(2,"  ", columnNewTable,"\n"), file = stderr())
         
         REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
                         paste(paste( columnNewTable, "TEXT"), collapse = ",")
@@ -2862,6 +2975,7 @@ server <- function(input, output, session) {
         }
       }  
     })
+    MAJ$value = MAJ$value + 1
     dbDisconnect(con)
   })
   
@@ -2869,7 +2983,7 @@ server <- function(input, output, session) {
     if(input$importTypeCF == "main"){
       "By selecting 'Main information', you choose to enter new chromosomal 
       features or update existing ones. The table must be composed of 8 columns: feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start coordinate, stop coordinate, strand, description, species and
-      url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142').The selected source will be added as the default database. "
+      url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142'). The imported chromosomal features will have as a reference database the source you selected above."
     } else if (input$importTypeCF == "sup"){
       "By selecting 'Supplementary information', you choose to import additional information. "
     }
@@ -2892,8 +3006,10 @@ server <- function(input, output, session) {
     selectInput('selectSource', NULL, rv$Source[,2])
   })
   
-  output$DescriCFSource <- renderText({
-    rv$Source[which(rv$Source[, 2] == input$selectSource), 4]
+  output$DescriCFSource <- renderUI({
+    HTML(paste(rv$Source[which(rv$Source[, 2] == input$selectSource), 4],
+    tags$br(),
+    a("Link to source", href= rv$Source[which(rv$Source[, 2] == input$selectSource), 5], target="_blank")))
   })
   
   
@@ -2905,7 +3021,7 @@ server <- function(input, output, session) {
   
   
   #=============================================================================
-  # Quick search
+  # Quick searches
   #=============================================================================
   #-----------------------------------------------------------------------------
   # Chromosomal feature
@@ -3024,7 +3140,7 @@ server <- function(input, output, session) {
   })
   
   #=============================================================================
-  # End Quick search
+  # End Quick searches
   #=============================================================================
   
   #=============================================================================
@@ -3197,7 +3313,7 @@ server <- function(input, output, session) {
   output$CF_Pixel <- renderDT(CF$PIXEL, 
                               selection = 'none', 
                               editable = F,
-                              options = list(scrollX = TRUE))
+                              options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   output$CF_Tag_experiment <- renderDT(CF$CF_Tag_experiment, 
                                        selection = 'single', 
@@ -3297,11 +3413,17 @@ server <- function(input, output, session) {
       
       PIXELSETLIST_RV$tagsList = interList
       
+      if(!is.null(PIXELSETLIST_RV$tagsList)  && length(PIXELSETLIST_RV$tagsList) != 0){
+        PIXELSETLIST_RV$tagsTab = cbind(names(PIXELSETLIST_RV$tagsList),unlist(lapply(PIXELSETLIST_RV$tagsList, paste, collapse = " | ")) )
+        colnames(PIXELSETLIST_RV$tagsTab) = c("ID", "Tags")
+        PIXELSETLIST_RV$infoWithTags = merge(PIXELSETLIST_RV$info, PIXELSETLIST_RV$tagsTab,by = "ID", all = T)
+      }
+      
       dbDisconnect(con)
     }
   })
   
-  output$PIXELSETLIST_tab <- renderDT(PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,],
+  output$PIXELSETLIST_tab <- renderDT( PIXELSETLIST_RV$infoWithTags[PIXELSETLIST_RV$Selected,],
                                       selection = 'multiple',server = FALSE,
                                       editable = F, filter = 'top',
                                       extensions = 'Buttons', options = list(
@@ -3331,9 +3453,9 @@ server <- function(input, output, session) {
   
   observeEvent(is.null(input$PIXELSETLIST_tab_rows_selected),{
     if(!is.null(input$PIXELSETLIST_tab_rows_selected)){
-      updateActionButton(session, "PixelSetExploreBtn", label = paste0("Explore (",length(input$PIXELSETLIST_tab_rows_selected),")"))
+      updateActionButton(session, "PixelSetExploreBtn", label = paste0("Integration of Multi PixelSets (",length(input$PIXELSETLIST_tab_rows_selected),")"))
     }else{
-      updateActionButton(session, "PixelSetExploreBtn", label = "Explore (0)")
+      updateActionButton(session, "PixelSetExploreBtn", label = "Integration of Multi PixelSets (0)")
     }
     
   })
@@ -3350,14 +3472,15 @@ server <- function(input, output, session) {
   
   observeEvent(is.null(input$PixelSetTags_CBG),{
     if(!is.null(input$PixelSetTags_CBG)){
-      
       inter1 = names(PIXELSETLIST_RV$tagsList)[unlist(lapply(PIXELSETLIST_RV$tagsList, function(x, vec){sum(x%in%vec)==length(vec)}, vec = sort(input$PixelSetTags_CBG)))]
-      inter2 = PIXELSETLIST_RV$info[,1] %in% inter1
+      inter2 = PIXELSETLIST_RV$infoWithTags[,1] %in% inter1
       pos = which(inter2)
       PIXELSETLIST_RV$Selected = pos
       
     }else{
-      PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$info)
+      if(!is.null(PIXELSETLIST_RV$infoWithTags) && nrow(PIXELSETLIST_RV$infoWithTags) != 0 ){
+        PIXELSETLIST_RV$Selected = 1:nrow(PIXELSETLIST_RV$infoWithTags)
+      }
     }
   })
   
@@ -3375,7 +3498,7 @@ server <- function(input, output, session) {
   observeEvent(input$PixelSetExploreBtn,{
     PixelSetExploRV$UpsetR = list()
     
-    PixelSetExploRV$PixelSetID = PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,1]
+    PixelSetExploRV$PixelSetID = PIXELSETLIST_RV$infoWithTags[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,1]
     if(length(PixelSetExploRV$PixelSetID) !=0){
       updateTabItems (session, "tabs", selected = "PixelSetExplo")
       shinyjs::runjs("window.scrollTo(0, 0)")
@@ -3516,13 +3639,13 @@ server <- function(input, output, session) {
     }
   )
   
-  output$PSExploContent <- renderDT(PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,],
+  output$PSExploContent <- renderDT(PIXELSETLIST_RV$infoWithTags[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,],
                                     selection = 'single', options = list(
                                       scrollX = TRUE,searchHighlight = TRUE
                                     ))
   
   observeEvent(input$PSExploContent_rows_selected,{
-    SEARCH_RV$PIXELSET = PIXELSETLIST_RV$info[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,][input$PSExploContent_rows_selected,1]
+    SEARCH_RV$PIXELSET = PIXELSETLIST_RV$infoWithTags[PIXELSETLIST_RV$Selected,][input$PIXELSETLIST_tab_rows_selected,][input$PSExploContent_rows_selected,1]
     proxy = dataTableProxy('PSExploContent')
     proxy %>% selectRows(NULL)
   })
@@ -3822,7 +3945,8 @@ server <- function(input, output, session) {
   dbDisconnect(con)
   
   observeEvent(TAG$ALLExperiment,{
-    if(!is.null(TAG$ALLExperiment) && nrow(TAG$ALLExperiment) != 0){
+    if(!is.null(TAG$ALLExperiment) && nrow(TAG$ALLExperiment) != 0 && 
+       !is.null(TAG$ALLAnalysis) && nrow(TAG$ALLAnalysis) != 0){
       TAG$ALL = merge(TAG$ALLAnalysis, TAG$ALLExperiment  ,by = "name", all = T)
       TAG$ALL = cbind(TAG$ALL[, 1:2],apply(TAG$ALL[,c(3,5)], 1, sum, na.rm = T))
       colnames(TAG$ALL) = c("Name", "Description", "Count")
@@ -3861,6 +3985,15 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
+    TAG$DESCRIPTION = dbGetQuery(con,paste0("select name, description
+                                            from tag
+                                            where name = '",TAG$NAME,"';"))
+    if(TAG$DESCRIPTION[1,2] == ""){
+      TAG$DESCRIPTION = "No description saved"
+    } else {
+      TAG$DESCRIPTION = TAG$DESCRIPTION[1,2]
+    }
+    
     TAG$ALLAnalysis = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
                                         from tag, Tag_Analysis
                                         where tag.id = tag_Analysis.id_tag
@@ -3895,16 +4028,16 @@ server <- function(input, output, session) {
   output$Tag_analysis <- renderDT(TAG$PIXEL_SET_ANALYSIS, 
                                   selection = 'single', 
                                   editable = F,
-                                  options = list(scrollX = TRUE))
+                                  options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   output$Tag_experiment <- renderDT(TAG$PIXEL_SET_EXP, 
                                     selection = 'single', 
                                     editable = F,
-                                    options = list(scrollX = TRUE))
+                                    options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   output$Tag_All <- renderDT(TAG$ALL,selection = 'single',
                              editable = F,rownames= FALSE, 
-                             options = list(scrollX = TRUE))
+                             options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   observeEvent(input$Tag_All_rows_selected,{
     
@@ -3923,8 +4056,10 @@ server <- function(input, output, session) {
     } else {
       NULL
     }
-    
-    
+  })
+  
+  output$TagDecription <- renderText({
+    TAG$DESCRIPTION
   })
   
   observeEvent(input$Tag_analysis_rows_selected,{
@@ -3995,7 +4130,7 @@ server <- function(input, output, session) {
   output$submissionFolderTab <- renderDT(SubFolder$Tab, 
                                          selection = 'single', 
                                          editable = F,escape = 3,
-                                         options = list(scrollX = TRUE))
+                                         options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   SubFolder$TabID = NULL
   
@@ -4031,9 +4166,7 @@ server <- function(input, output, session) {
       
       SubFolder$infoStrain = SubFolder$infoG[1,6]
       SubFolder$infoSpecies = SubFolder$infoG[1,7]
-      
-      
-      
+ 
       SubFolder$TagA = dbGetQuery(con,paste0("select tag.name 
       from pixelset,  tag_Analysis, tag 
       where pixelSet.id_submission = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
@@ -4130,7 +4263,7 @@ server <- function(input, output, session) {
   
   output$DT_AddOUT <- renderDT(AddRV$OUT, selection = 'none', 
                                editable = TRUE,
-                               options = list(scrollX = TRUE))
+                               options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   
   # Edit OUT
@@ -4168,6 +4301,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         } 
       }else {
         AddRV$OUT[i, j] <<- DT::coerceValue(AddRV$OUT[i, j], AddRV$OUT[i, j])
@@ -4227,7 +4362,7 @@ server <- function(input, output, session) {
   
   output$DT_AddDataSource <- renderDT(AddRV$DataSource, selection = 'none', 
                                       editable = TRUE,
-                                      options = list(scrollX = TRUE))
+                                      options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   
   # Edit OUT
@@ -4265,6 +4400,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         } 
       }else {
         AddRV$DataSource[i, j] <<- DT::coerceValue(AddRV$DataSource[i, j], AddRV$DataSource[i, j])
@@ -4582,7 +4719,7 @@ server <- function(input, output, session) {
   
   output$DT_AddSpecies <- renderDT(AddRV$Species, selection = 'none',
                                    editable = TRUE,
-                                   options = list(scrollX = TRUE))
+                                   options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   
   # Edit OUT
@@ -4620,6 +4757,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         }
       }else {
         AddRV$Species[i, j] <<- DT::coerceValue(AddRV$Species[i, j], AddRV$Species[i, j])
@@ -4685,7 +4824,7 @@ server <- function(input, output, session) {
   
   output$DT_AddStrain <- renderDT(AddRV$Strain, selection = 'none',
                                   editable = TRUE,
-                                  options = list(scrollX = TRUE))
+                                  options = list(scrollX = TRUE, searchHighlight = TRUE))
   
   # Edit OUT
   
@@ -4722,6 +4861,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         }
       }else {
         AddRV$Strain[i, j] <<- DT::coerceValue(AddRV$Strain[i, j], AddRV$Strain[i, j])
@@ -5002,30 +5143,54 @@ server <- function(input, output, session) {
     
     CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
     
-    
-    warning_sub = NULL
-    for( i in 1:input$submission_pixelSet_nbr){
-      inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                                 header = as.logical(input$header_PS),
-                                 sep = input$sep_PS,
-                                 quote = input$quote_PS
-      )
-      pos = !(inter_warning[,1] %in% CF_Temp[,1])
-      refused = inter_warning[pos,1]
+    if(nrow(CF_Temp) != 0){
+      warning_sub = NULL
+      allCF = 0
+      refusedCF = 0
+      for( i in 1:input$submission_pixelSet_nbr){
+        inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                                   header = as.logical(input$header_PS),
+                                   sep = input$sep_PS,
+                                   quote = input$quote_PS
+        )
+        pos = !(inter_warning[,1] %in% CF_Temp[,1])
+        refused = inter_warning[pos,1]
+        
+        allCF = allCF + nrow(inter_warning)
+        refusedCF = refusedCF +length(refused)
+        
+        warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+      }
       
-      warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+      if(allCF == refusedCF){
+        sendSweetAlert(
+          session = session,
+          title = "Oops !!",
+          text = "No chromosomal features have been found for your genes. Possible reasons: (1) The chromosomal features are not in the database or (2) the data was not correctly read (The wrong column separator was used?)",
+          type = "error"
+        )
+      }else {
+        confirmSweetAlert(
+          session = session,
+          inputId = "confirm_submission_warning",
+          type = "warning",
+          title = "Want to confirm ?",
+          text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Refused </b>:",round(refusedCF * 100/allCF) ,"%</p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
+          danger_mode = TRUE,  html = TRUE
+        )
+      }
+
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "There are no chromosomal features in the database",
+        type = "error"
+      )
     }
     
     dbDisconnect(con)
     
-    confirmSweetAlert(
-      session = session,
-      inputId = "confirm_submission_warning",
-      type = "warning",
-      title = "Want to confirm ?",
-      text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database.</i></p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
-      danger_mode = TRUE,  html = TRUE
-    )
   })
   
   
