@@ -239,21 +239,25 @@ server <- function(input, output, session) {
                       
                       menuItem("Data integration", tabName = "PixelSetExplo", icon = icon("align-justify")),
                       
-                      menuItem("Add information", tabName = "Administration", icon = icon("plus-circle"),
+                      menuItem("Manage PixelSets", tabName = "ManagePixelSets", icon = icon("folder"),
                                startExpanded = F,
-                               menuSubItem("Chromosomal feature", tabName = "Annotation"),
-                               menuSubItem("Omics unit type", tabName = "AddOUT"), 
-                               menuSubItem("Data source", tabName = "AddDataSource"),
-                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
-                               menuSubItem("Species & strains", tabName = "AddSpecies")
+                               menuSubItem("Manage PixelSets", tabName = "PixelSetsAdmin"), 
+                               menuSubItem("Manage submissions", tabName = "SubmissionsAdmin")     
                       ),
                       
+                      menuItem("Manage annotations", tabName = "ManageAnnotations", icon = icon("pencil"),
+                               startExpanded = F,
+                               menuSubItem("Chromosomal feature", tabName = "Annotation"),
+                               menuSubItem("Data source", tabName = "AddDataSource"),
+                               menuSubItem("Omics area", tabName = "AddOmicsArea"),
+                               menuSubItem("Omics unit type", tabName = "AddOUT"), 
+                               menuSubItem("Species & strains", tabName = "AddSpecies"),
+                               menuSubItem("Tags", tabName = "TagAdmin")
+                      ),
+
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
-                               menuSubItem("Manage Pixeler", tabName = "Pixeler"),
-                               menuSubItem("Manage PixelSets", tabName = "PixelSetsAdmin"), 
-                               menuSubItem("Manage submissions", tabName = "SubmissionsAdmin"),
-                               menuSubItem("Manage tags", tabName = "TagAdmin")
+                               menuSubItem("Manage Pixelers", tabName = "Pixeler") 
                       ),
                       menuItem("Pixeler information", tabName = "Profile", icon = icon("user")),
                       h4(class ='sideBar',"Quick searches"),
@@ -613,8 +617,8 @@ server <- function(input, output, session) {
             )),
           fluidRow(
             column(12,
-                   h3("Upset R",  class= "title-pixelset"),
-                   plotOutput("Intersection between chromosomal features")
+                   h3("Intersection between chromosomal features",  class= "title-pixelset"),
+                   plotOutput("UpsetR")
             )
           ),
           fluidRow(
@@ -1126,6 +1130,11 @@ server <- function(input, output, session) {
           h2("Tag"), 
           fluidRow(
             column(12,
+                   h3(class ="h3-style","Add a new tag"),
+                   div(class="inline-block-element",textInput("ManageTag_NewName", "Name", placeholder = "Name")),
+                   div(class="inline-block-element",textInput("ManageTag_NewDescription", "Description", placeholder = "Description")),
+                   div(class="inline-block-element",actionButton("ManageTag_Newbtn", "Add a new tag")),
+                   
                    h3(class ="h3-style","Association between Tags and PixelSets"),
                    fluidRow(
                      column(4,
@@ -1846,6 +1855,64 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   # Admin Tag
   #-----------------------------------------------------------------------------
+  
+
+  observeEvent(input$ManageTag_Newbtn,{
+    
+    REQUEST_EXISTING = paste0("SELECT *
+                              FROM tag
+                              WHERE name = '",tolower(input$ManageTag_NewName),"';")
+    
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "This tag is already in the database",
+        type = "error"
+      )
+      
+    } else {
+      
+      REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
+                            '",tolower(input$ManageTag_NewName), "',
+                            '",input$ManageTag_NewDescription, "');
+                            ")
+      dbGetQuery(con, REQUESTE_ADD)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Nice !",
+        text = "A new tag is in the database",
+        type = "success"
+      )
+      
+      REQUEST = paste0("select * from tag ORDER BY name;")
+      TAG$table = dbGetQuery(con, REQUEST)
+      
+      pixelsetModify$TagAll = dbGetQuery(con,paste0("select id, name from tag order by name;"))
+      namesTag = pixelsetModify$TagAll[,2] 
+      pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
+      names(pixelsetModify$TagAll) = namesTag
+    
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagA", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagAChoices )
+      updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
+                               selected = pixelsetModify$TagEChoices )
+      
+      dbDisconnect(con)
+    }
+    
+    updateTextInput(session,"ManageTag_NewName",value = "")
+    updateTextInput(session,"ManageTag_NewDescription",value = "")
+    dbDisconnect(con)
+  })
+  
+  
   
   output$tagModifUi <- renderUI({
     choices = TAG$table[,1]
