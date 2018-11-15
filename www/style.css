@@ -55,7 +55,7 @@ button.myBtn {
   width: 200px;
 }
 
-.PS-btn{
+.PS-btn {
   margin-left: 5px;
 }
 
@@ -105,7 +105,7 @@ General
   text-align: right;
 }
 
-.bold{
+.bold {
   font-weight: bold;
 }
 
@@ -118,7 +118,7 @@ General
   margin-left: 10px;
 }
 
-.right{
+.right {
   float: right;
 }
 
@@ -130,12 +130,12 @@ General
   font-style: italic;
 }
 
-.all-size{
+.all-size {
   width: 100%;
   height: 25px;
 }
 
-.sideBar{
+.sideBar {
   margin-left: 10px;
   margin-right: 10px;
 }
@@ -177,14 +177,18 @@ Header
 Inline
 *******************************************************************************/
 
-div.inline { float:left; }
-.clearBoth { clear:both; }
+div.inline {
+  float: left;
+}
 
-.tag-inline{
+.clearBoth {
+  clear: both;
+}
+
+.tag-inline {
   margin-left: 5px;
   width: 100px;
 }
-
 
 /*******************************************************************************
 Input
@@ -250,15 +254,15 @@ PixelSet
 
 .PixelSet h3 {
   margin-left: -10px;
-  background-color: #dd4b39!important;
-  color : white;
+  background-color: #dd4b39 !important;
+  color: white;
   padding: 10px;
   font-size: 18px;
 }
 
 .title-pixelset {
-  background-color: #dd4b39!important;
-  color : white;
+  background-color: #dd4b39 !important;
+  color: white;
   padding: 10px;
   font-size: 18px;
 }
@@ -267,13 +271,13 @@ PixelSet
 Search
 *******************************************************************************/
 
-#searchRefine{
- float: left;
- text-align: left;
+#searchRefine {
+  float: left;
+  text-align: left;
 }
 
-#searchRefine label{
-  margin :0px;
+#searchRefine label {
+  margin: 0px;
 }
 
 /*******************************************************************************
@@ -307,8 +311,8 @@ Table
 Tag
 *******************************************************************************/
 
-.TagName{
-  border: solid 2px #dd4b39!important;
+.TagName {
+  border: solid 2px #dd4b39 !important;
   border-radius: 30px;
   padding: 5px;
   font-size: 14px;
@@ -318,20 +322,20 @@ Tag
 /*******************************************************************************
 Title
 *******************************************************************************/
+
 .h3-style {
-  background-color: #dd4b39!important;
-  color : white;
+  background-color: #dd4b39 !important;
+  color: white;
   padding: 10px;
   font-size: 18px;
 }
 
 .title-cf {
-  background-color: #dd4b39!important;
-  color : white;
+  background-color: #dd4b39 !important;
+  color: white;
   padding: 10px;
   font-size: 18px;
 }
-
 
 /*******************************************************************************
 Tree

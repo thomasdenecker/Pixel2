@@ -20,15 +20,19 @@ required docker tools (see links above).
 
 Did you read the "Requirements" section above?
 
-** Project is not yet on Docker HUB. Installation is not yet possible **
-
 ### PIXEL2 project installation
 
-Download the zip file, extract this file and copy the obtained folder where you want on your computer. Note that if you move the folder, the installation procedure will have to be redone.
+Download the zip file ([here](https://github.com/thomasdenecker/Pixel2/archive/master.zip)), extract this file and copy the obtained folder where you want on your computer. Note that if you move the folder, the installation procedure will have to be redone.
+
+#### Windows installation
 
 In this folder, you will find a file named INSTALLATION_MAC_LINUX.sh (for MAC and Linux users) and INSTALLATION_WINDOWS.bat (for Windows users). By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
 
-**NOTE** (MAC users)
+#### Mac OsX installation
+
+In this folder, you will find a file named INSTALLATION_MAC.sh. By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
+
+**NOTE**
 
 You can also doucle click the file INSTALLATION_MAC_LINUX.sh. In this situation a small manipulation is required (1 time only).
 In your Finder, right-click the file INSTALLATION_MAC_LINUX.sh and select "Open with" and then "Other...".
@@ -36,6 +40,18 @@ In your Finder, right-click the file INSTALLATION_MAC_LINUX.sh and select "Open 
 Here you can select the application you want the file to be execute with. In this case it should be the Terminal. To be able to select the Terminal, you have to switch from "Recommended Applications" to "All Applications"  (the Terminal.app application can be found in the Utilities folder).
 
 Check "Always Open With" and after clicking OK you should be able to execute you SHELL script by simply double-clicking it.
+
+#### Linux installation
+
+**In command line**
+```
+cd PATH/TO/Pixel2/folder
+./INSTALLATION_LINUX.sh
+```
+Once the installation is complete, use this command to launch the application:
+```
+./Pixel2.sh
+```
 
 ### Pixel2 utilisation
 
