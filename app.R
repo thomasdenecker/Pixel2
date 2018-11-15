@@ -129,6 +129,22 @@ server <- function(input, output, session) {
                                  and analysis_experiment.id_analysis = analysis.id
                                  and analysis_experiment.id_experiment = experiment.id ;")
     
+    SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
+                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
+                                     from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
+                                     where pixelset.id_submission = submission.id 
+                                     and pixelset.id_analysis = analysis.id
+                                     and analysis_experiment.id_analysis = analysis.id
+                                     and analysis_experiment.id_experiment = experiment.id
+                                     and experiment.strainId = strain.id
+                                     and pixel.pixelSet_id = pixelset.id
+                                     and omicsunittype.id = pixel.OmicsUnitType_id
+                                     and experiment.omicsAreaid = omicsarea.id;")
+    
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) !=0){
+      colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
+    }
+    
     # Reinit search values
     CF$name = NULL
     TAG$NAME = NULL
@@ -1518,23 +1534,25 @@ server <- function(input, output, session) {
   })
   
   observeEvent(submissionModify$id,{
-    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
-    updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
-    updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
-    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
-    updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
-    
-    if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
-      if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
-        status = "true"
-      } else if( ! SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
-        status = "false"
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionAnalysis_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2] )  
+      updateTextAreaInput(session,"SubmissionsAdminTab_modify_DescriptionExperiment_TA", value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3] )  
+      updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
+      updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
+      updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
+
+      if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
+        if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+          status = "true"
+        } else if( ! SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
+          status = "false"
+        }
+        updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", choices = c(Validated = "true","Not valideted" ="false"))
+      } else {
+        status = ""
       }
-      updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", choices = c(Validated = "true","Not valideted" ="false"))
-    } else {
-      status = ""
+      updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
     }
-    updateSelectInput(session, "SubmissionsAdminTab_modify_STATUS_SI", selected = status )
   })
   
   
@@ -1844,22 +1862,6 @@ server <- function(input, output, session) {
       }
       
       MAJ$value = MAJ$value + 1
-      
-      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
-                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
-                                       from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
-                                       where pixelset.id_submission = submission.id 
-                                       and pixelset.id_analysis = analysis.id
-                                       and analysis_experiment.id_analysis = analysis.id
-                                       and analysis_experiment.id_experiment = experiment.id
-                                       and experiment.strainId = strain.id
-                                       and pixel.pixelSet_id = pixelset.id
-                                       and omicsunittype.id = pixel.OmicsUnitType_id
-                                       and experiment.omicsAreaid = omicsarea.id;")
-      
-      if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) !=0){
-        colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
-      }
       
       sendSweetAlert(
         session = session,
@@ -4299,6 +4301,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         } 
       }else {
         AddRV$OUT[i, j] <<- DT::coerceValue(AddRV$OUT[i, j], AddRV$OUT[i, j])
@@ -4396,6 +4400,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         } 
       }else {
         AddRV$DataSource[i, j] <<- DT::coerceValue(AddRV$DataSource[i, j], AddRV$DataSource[i, j])
@@ -4751,6 +4757,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         }
       }else {
         AddRV$Species[i, j] <<- DT::coerceValue(AddRV$Species[i, j], AddRV$Species[i, j])
@@ -4853,6 +4861,8 @@ server <- function(input, output, session) {
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
           dbDisconnect(con)
+          
+          MAJ$value = MAJ$value + 1
         }
       }else {
         AddRV$Strain[i, j] <<- DT::coerceValue(AddRV$Strain[i, j], AddRV$Strain[i, j])
