@@ -5143,30 +5143,54 @@ server <- function(input, output, session) {
     
     CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
     
-    
-    warning_sub = NULL
-    for( i in 1:input$submission_pixelSet_nbr){
-      inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                                 header = as.logical(input$header_PS),
-                                 sep = input$sep_PS,
-                                 quote = input$quote_PS
-      )
-      pos = !(inter_warning[,1] %in% CF_Temp[,1])
-      refused = inter_warning[pos,1]
+    if(nrow(CF_Temp) != 0){
+      warning_sub = NULL
+      allCF = 0
+      refusedCF = 0
+      for( i in 1:input$submission_pixelSet_nbr){
+        inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                                   header = as.logical(input$header_PS),
+                                   sep = input$sep_PS,
+                                   quote = input$quote_PS
+        )
+        pos = !(inter_warning[,1] %in% CF_Temp[,1])
+        refused = inter_warning[pos,1]
+        
+        allCF = allCF + nrow(inter_warning)
+        refusedCF = refusedCF +length(refused)
+        
+        warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+      }
       
-      warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+      if(allCF == refusedCF){
+        sendSweetAlert(
+          session = session,
+          title = "Oops !!",
+          text = "No chromosomal features have been found for your genes. Possible reasons: (1) The chromosomal features are not in the database or (2) the data was not correctly read (The wrong column separator was used?)",
+          type = "error"
+        )
+      }else {
+        confirmSweetAlert(
+          session = session,
+          inputId = "confirm_submission_warning",
+          type = "warning",
+          title = "Want to confirm ?",
+          text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Refused </b>:",round(refusedCF * 100/allCF) ,"%</p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
+          danger_mode = TRUE,  html = TRUE
+        )
+      }
+
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "There are no chromosomal features in the database",
+        type = "error"
+      )
     }
     
     dbDisconnect(con)
     
-    confirmSweetAlert(
-      session = session,
-      inputId = "confirm_submission_warning",
-      type = "warning",
-      title = "Want to confirm ?",
-      text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database.</i></p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
-      danger_mode = TRUE,  html = TRUE
-    )
   })
   
   
