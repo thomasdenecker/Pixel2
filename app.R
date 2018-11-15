@@ -675,6 +675,8 @@ server <- function(input, output, session) {
           htmlOutput("tagName"),
           div( class = "margeProfile",
                fluidRow(
+                 h3(class="h3-style","Description"),
+                 textOutput("TagDecription"),     
                  h3(class="h3-style","Analysis with this tag"),
                  DTOutput("Tag_analysis"),
                  h3(class="h3-style","Experiment with this tag"),
@@ -1900,7 +1902,7 @@ server <- function(input, output, session) {
   })
   
   
-  output$TagAdmin_Modify_tab = renderDT(TAG$MODIF_PIXELSET_TABLE, server = TRUE, searchHighlight = TRUE,
+  output$TagAdmin_Modify_tab = renderDT(TAG$MODIF_PIXELSET_TABLE, server = TRUE,
                                         selection = list(target = 'cell', 
                                                          selected = data.matrix(TAG$MODIF_PIXELSET_TABLE_SELECTED) ))
   
@@ -3871,6 +3873,15 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
+    TAG$DESCRIPTION = dbGetQuery(con,paste0("select name, description
+                                            from tag
+                                            where name = '",TAG$NAME,"';"))
+    if(TAG$DESCRIPTION[1,2] == ""){
+      TAG$DESCRIPTION = "No description saved"
+    } else {
+      TAG$DESCRIPTION = TAG$DESCRIPTION[1,2]
+    }
+    
     TAG$ALLAnalysis = dbGetQuery(con,paste0("select tag.name, tag.description, count(*)
                                         from tag, Tag_Analysis
                                         where tag.id = tag_Analysis.id_tag
@@ -3933,8 +3944,10 @@ server <- function(input, output, session) {
     } else {
       NULL
     }
-    
-    
+  })
+  
+  output$TagDecription <- renderText({
+    TAG$DESCRIPTION
   })
   
   observeEvent(input$Tag_analysis_rows_selected,{
