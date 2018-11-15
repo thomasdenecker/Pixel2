@@ -1555,11 +1555,15 @@ server <- function(input, output, session) {
   })
   
   output$SubmissionsAdminTab_modify_DescriptionAnalysis<-renderUI({
-    textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      textAreaInput("SubmissionsAdminTab_modify_DescriptionAnalysis_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),2])
+    }
   })
   
   output$SubmissionsAdminTab_modify_DescriptionExperiment<-renderUI({
-    textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
+    if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) != 0){
+      textAreaInput("SubmissionsAdminTab_modify_DescriptionExperiment_TA",NULL, value = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),3])
+    }
   })
   
   output$SubmissionsAdminTab_modify_Strain<-renderUI({
@@ -1840,6 +1844,22 @@ server <- function(input, output, session) {
       }
       
       MAJ$value = MAJ$value + 1
+      
+      SubFolder$TabModif =  dbGetQuery(con,"select DISTINCT submission.id, analysis.description, 
+                                            experiment.description,submission.status, strain.name, omicsunittype.name, omicsarea.name
+                                       from submission, pixelset, experiment, analysis_experiment, analysis, strain, pixel, omicsunittype, omicsArea
+                                       where pixelset.id_submission = submission.id 
+                                       and pixelset.id_analysis = analysis.id
+                                       and analysis_experiment.id_analysis = analysis.id
+                                       and analysis_experiment.id_experiment = experiment.id
+                                       and experiment.strainId = strain.id
+                                       and pixel.pixelSet_id = pixelset.id
+                                       and omicsunittype.id = pixel.OmicsUnitType_id
+                                       and experiment.omicsAreaid = omicsarea.id;")
+      
+      if(!is.null(SubFolder$TabModif) && nrow(SubFolder$TabModif) !=0){
+        colnames(SubFolder$TabModif) = c("ID", "Analysis description", "Experiment description", "Validated?", "Strain", "OmicsUnitType", "OmicsArea")
+      }
       
       sendSweetAlert(
         session = session,
@@ -2953,9 +2973,7 @@ server <- function(input, output, session) {
         }
       }  
     })
-    
     MAJ$value = MAJ$value + 1
-    
     dbDisconnect(con)
   })
   
@@ -4146,9 +4164,7 @@ server <- function(input, output, session) {
       
       SubFolder$infoStrain = SubFolder$infoG[1,6]
       SubFolder$infoSpecies = SubFolder$infoG[1,7]
-      
-      
-      
+ 
       SubFolder$TagA = dbGetQuery(con,paste0("select tag.name 
       from pixelset,  tag_Analysis, tag 
       where pixelSet.id_submission = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
