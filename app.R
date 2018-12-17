@@ -98,14 +98,15 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
-    REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"',", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
-                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType
+    REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"', ", datasource.name as ",'"',"Datasource",'"', ", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+                            from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType, datasource
                           where PS.id_analysis = analysis.id
                           and PS.id = pixel.pixelset_id
                           and pixel.omicsunittype_id = OmicsUnitType.id
                           and analysis.id = AE.id_analysis
                           and AE.id_experiment = experiment.id
                           and experiment.strainId = strain.id
+                          and experiment.DataSourceId = datasource.id
                           and strain.species_id = species.id
                           and experiment.omicsAreaid = OmicsArea.id
                           and PS.id_submission = Submission.id
