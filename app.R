@@ -3047,6 +3047,8 @@ server <- function(input, output, session) {
           text = "This chromosomal feature isn't in Pixel...",
           type = "error"
         )
+        updateTextInput(session, "searchCF", value = "")
+        
       } else {
         inter = testCF[,1] 
         names(inter) = paste0(testCF[,1], " (", testCF[,2], ")") 
