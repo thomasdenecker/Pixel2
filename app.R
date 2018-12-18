@@ -903,6 +903,22 @@ server <- function(input, output, session) {
         tabItem(
           tabName = "Annotation", 
           h2("Chromosomal feature"),
+          h3(class ="h3-style","Help"),
+          fluidRow(
+            column(3,
+                   h4("Datatable composition"),
+                   p("The table must be composed of 8 columns: 
+                      feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start 
+                      coordinate, stop coordinate, strand, description, species and
+                      url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142'). 
+                      The imported chromosomal features will have as a reference database the source you selected above.")
+            ),
+            column(9, 
+                   h4("Example"),
+                   dataTableOutput(outputId = "example_CF")
+            )
+          ),
+          
           h3(class ="h3-style","1- Sources of annotations"),
           fluidRow( class='border-between ', 
                     column(6,align="center",
@@ -926,22 +942,6 @@ server <- function(input, output, session) {
           
           
           h3(class ="h3-style","2- Import annotation file"),
-          fluidRow(
-            column(6,align="center",
-                   h4("Select annotation type"),
-                   selectInput("importTypeCF",NULL,
-                               c("Main information" = "main",
-                                 "Supplementary information" = "sup"))
-            ),
-            column(6, 
-                   h4("Help "),
-                   textOutput("helpImportTypeCF"),
-                   br(),
-                   uiOutput("Sup")
-                   
-            )
-          ),
-          
           fluidRow(
             column(3,
                    h3("Parameters"),
@@ -971,7 +971,7 @@ server <- function(input, output, session) {
                                 selected = "", inline=T)
             ), 
             column(9, 
-                   h3("Preview"),
+                   h3("File preview"),
                    dataTableOutput(outputId = "contents_CF"))
           ),
           actionButton(inputId = "ImportCF", label = "Import", class= "myBtn" , icon = icon("upload"))
@@ -2736,6 +2736,20 @@ server <- function(input, output, session) {
   # Annotation
   #.............................................................................
   
+  output$example_CF <-  renderDataTable({
+
+    df <- read.csv("Data/CF_CGLAB.txt",
+                   header = T,
+                   sep = "\t",
+                   quote = "",
+                   nrows=5, 
+                   col.names = c( "Feature name", "Gene name", "Chromosome",
+                                  "Start coordinate", "Stop coordinate", 
+                                  "Strand", "Description", "Species", "URL")
+    )
+    
+  },  options = list(scrollX = TRUE , dom = 't')) 
+  
   output$contents_CF <-  renderDataTable({
     
     req(input$fileCF)
@@ -2820,7 +2834,7 @@ server <- function(input, output, session) {
     default_db_id = dbGetQuery(con, paste0("Select id from CFSource where name = '",input$selectSource,"';"))[1,1]
     
     withProgress(message = 'Import in Database', value = 0, {
-      if(input$importTypeCF == "main"){
+      # if(input$importTypeCF == "main"){
         if(ncol(database) == 9){
           n <- nrow(database)
           rv$ERROR = F
@@ -2884,112 +2898,102 @@ server <- function(input, output, session) {
             type = "error"
           )
         }
-      } else {
-        
-        # TABLE CREATION
-        newTableName <- input$sup_name
-        columnNewTable <- colnames(database)[-1]
-        
-        REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
-                        paste(paste( columnNewTable, "TEXT"), collapse = ",")
-                        ,", cfsource_id INTEGER, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_id) REFERENCES CFSource (id), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
-        
-        
-        
-        tryCatch(dbSendQuery(con, REQUEST)
-                 , error = function(c) {
-                   
-                   sendSweetAlert(
-                     session = session,
-                     title = "Error : Table creation",
-                     text = paste0(c,"\n The chevron shows you where the error is."),
-                     type = "error"
-                   )
-                   
-                   rv$ERROR = T
-                   
-                 },warning = function(c) {
-                   sendSweetAlert(
-                     session = session,
-                     title = "Error : Table creation",
-                     text = paste0(c,"\n The chevron shows you where the error is."),
-                     type = "warning"
-                   )
-                   
-                   rv$ERROR = T
-                   
-                 }
-        )
-        
-        # insert in new table
-        n <- nrow(database)
-        rv$ERROR = F
-        for(i in 1:nrow(database)){
-          
-          incProgress(1/n, detail = paste("Doing part", i))
-          
-          if(nrow(dbGetQuery(con,paste0("select * from chromosomalfeature where feature_name ='",gsub("\'"," Prime", database[i,1]),"';")))!=0){
-            
-            REQUEST_ANNOT = paste0("INSERT INTO ",newTableName," (feature_name ,",paste(columnNewTable, collapse = ","),",cfsource_id ) VALUES ( ", paste0("'", gsub("\'"," Prime", database[i,]),"'",collapse = ","),",'",default_db_id,"');")
-            
-            tryCatch(dbSendQuery(con, REQUEST_ANNOT)
-                     , error = function(c) {
-                       sendSweetAlert(
-                         session = session,
-                         title = "Error : Table creation",
-                         text = paste0(c,"\n The chevron shows you where the error is."),
-                         type = "error"
-                       )
-                       
-                       
-                       rv$ERROR = T
-                       rv$ERROR_ALL = T
-                       rv$linesNotSaved = c(rv$linesNotSaved , i)
-                     },warning = function(c) {
-                       sendSweetAlert(
-                         session = session,
-                         title = "Error : Table creation",
-                         text = paste0(c,"\n The chevron shows you where the error is."),
-                         type = "warning"
-                       )
-                       
-                       rv$ERROR = T
-                       rv$ERROR_ALL = T
-                       rv$linesNotSaved = c(rv$linesNotSaved , i)
-                     }
-            )
-            
-            REQUEST_ANNOT = paste0("INSERT INTO annotation (feature_name , annot_table) VALUES ('",gsub("\'"," Prime", database[i,1]), "','",newTableName, "');")
-            
-            dbSendQuery(con, REQUEST_ANNOT)
-            
-          }
-        }
-        
-        if(rv$ERROR == F){
-          sendSweetAlert(
-            session = session,
-            title = "Congratulations!",
-            text = "The import was successful!",
-            type = "success"
-          )
-        }
-      }  
+      # } 
+      # else {
+      #   
+      #   # TABLE CREATION
+      #   newTableName <- input$sup_name
+      #   columnNewTable <- colnames(database)[-1]
+      #   
+      #   REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
+      #                   paste(paste( columnNewTable, "TEXT"), collapse = ",")
+      #                   ,", cfsource_id INTEGER, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_id) REFERENCES CFSource (id), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
+      #   
+      #   
+      #   
+      #   tryCatch(dbSendQuery(con, REQUEST)
+      #            , error = function(c) {
+      #              
+      #              sendSweetAlert(
+      #                session = session,
+      #                title = "Error : Table creation",
+      #                text = paste0(c,"\n The chevron shows you where the error is."),
+      #                type = "error"
+      #              )
+      #              
+      #              rv$ERROR = T
+      #              
+      #            },warning = function(c) {
+      #              sendSweetAlert(
+      #                session = session,
+      #                title = "Error : Table creation",
+      #                text = paste0(c,"\n The chevron shows you where the error is."),
+      #                type = "warning"
+      #              )
+      #              
+      #              rv$ERROR = T
+      #              
+      #            }
+      #   )
+      #   
+      #   # insert in new table
+      #   n <- nrow(database)
+      #   rv$ERROR = F
+      #   for(i in 1:nrow(database)){
+      #     
+      #     incProgress(1/n, detail = paste("Doing part", i))
+      #     
+      #     if(nrow(dbGetQuery(con,paste0("select * from chromosomalfeature where feature_name ='",gsub("\'"," Prime", database[i,1]),"';")))!=0){
+      #       
+      #       REQUEST_ANNOT = paste0("INSERT INTO ",newTableName," (feature_name ,",paste(columnNewTable, collapse = ","),",cfsource_id ) VALUES ( ", paste0("'", gsub("\'"," Prime", database[i,]),"'",collapse = ","),",'",default_db_id,"');")
+      #       
+      #       tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+      #                , error = function(c) {
+      #                  sendSweetAlert(
+      #                    session = session,
+      #                    title = "Error : Table creation",
+      #                    text = paste0(c,"\n The chevron shows you where the error is."),
+      #                    type = "error"
+      #                  )
+      #                  
+      #                  
+      #                  rv$ERROR = T
+      #                  rv$ERROR_ALL = T
+      #                  rv$linesNotSaved = c(rv$linesNotSaved , i)
+      #                },warning = function(c) {
+      #                  sendSweetAlert(
+      #                    session = session,
+      #                    title = "Error : Table creation",
+      #                    text = paste0(c,"\n The chevron shows you where the error is."),
+      #                    type = "warning"
+      #                  )
+      #                  
+      #                  rv$ERROR = T
+      #                  rv$ERROR_ALL = T
+      #                  rv$linesNotSaved = c(rv$linesNotSaved , i)
+      #                }
+      #       )
+      #       
+      #       REQUEST_ANNOT = paste0("INSERT INTO annotation (feature_name , annot_table) VALUES ('",gsub("\'"," Prime", database[i,1]), "','",newTableName, "');")
+      #       
+      #       dbSendQuery(con, REQUEST_ANNOT)
+      #       
+      #     }
+      #   }
+      #   
+      #   if(rv$ERROR == F){
+      #     sendSweetAlert(
+      #       session = session,
+      #       title = "Congratulations!",
+      #       text = "The import was successful!",
+      #       type = "success"
+      #     )
+      #   }
+      # }  
     })
     MAJ$value = MAJ$value + 1
     dbDisconnect(con)
   })
-  
-  output$helpImportTypeCF <- renderText({ 
-    if(input$importTypeCF == "main"){
-      "By selecting 'Main information', you choose to enter new chromosomal 
-      features or update existing ones. The table must be composed of 8 columns: feature name (i.e : YAL068C), gene name (i.e PAU8), chromosome, start coordinate, stop coordinate, strand, description, species and
-      url (ie. for SGD it's ' https://www.yeastgenome.org/locus/' + SGD id : 'https://www.yeastgenome.org/locus/S000002142'). The imported chromosomal features will have as a reference database the source you selected above."
-    } else if (input$importTypeCF == "sup"){
-      "By selecting 'Supplementary information', you choose to import additional information. "
-    }
-  })
-  
   
   #.............................................................................
   # Source 
@@ -3011,13 +3015,6 @@ server <- function(input, output, session) {
     HTML(paste(rv$Source[which(rv$Source[, 2] == input$selectSource), 4],
     tags$br(),
     a("Link to source", href= rv$Source[which(rv$Source[, 2] == input$selectSource), 5], target="_blank")))
-  })
-  
-  
-  output$Sup = renderUI({
-    if(input$importTypeCF == "sup"){
-      textInput("sup_name", "Name of table")
-    }
   })
   
   
@@ -3779,7 +3776,10 @@ server <- function(input, output, session) {
   # PixelSet : Pixel
   #-----------------------------------------------------------------------------
   
-  output$PixelSet_explo_Pixel <- renderDT( PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,], server = FALSE,
+  output$PixelSet_explo_Pixel <- renderDT( {
+                                            PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,]
+                                            }, 
+                                           server = FALSE,
                                            selection = 'single', 
                                            editable = F,
                                            extensions = 'Buttons',
@@ -3809,13 +3809,18 @@ server <- function(input, output, session) {
     if (is.null(PIXELSET_RV$Pixel)){
       NULL
     } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
-      Hist <-gvisHistogram(data.frame(Value = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"]), options=list(
-        colors="['#ff0000']",
-        legend="{ position: 'none'}",
-        title="Values",
-        width='100%', height=360),
-        "PixelSetHistoValue")
-      Hist
+      if(!is.na(as.numeric(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"][1])) ){
+        Hist <-gvisHistogram(data.frame(Value = as.numeric(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"])), options=list(
+          colors="['#ff0000']",
+          legend="{ position: 'none'}",
+          title="Values",
+          width='100%', height=360),
+          "PixelSetHistoValue")
+        Hist
+      } else {
+        NULL
+      }
+      
     } else{
       NULL
     }
@@ -3828,14 +3833,17 @@ server <- function(input, output, session) {
     if(is.null(PIXELSET_RV$Pixel)){
       NULL
     } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
-      
-      gvisHistogram(data.frame(QS = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]), 
-                    options=list(
-                      colors="['#3366ff']",
-                      legend="{ position: 'none'}",
-                      title="Quality scores",
-                      width='100%', height=360),
-                    "PixelSetHistoQS")
+      if(sum(is.na(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]) ) != length(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"])){
+        gvisHistogram(data.frame(QS = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]), 
+                      options=list(
+                        colors="['#3366ff']",
+                        legend="{ position: 'none'}",
+                        title="Quality scores",
+                        width='100%', height=360),
+                      "PixelSetHistoQS")
+      } else {
+       NULL 
+      }
       
     } else{
       NULL
@@ -4940,17 +4948,6 @@ server <- function(input, output, session) {
   observe({
     if(is.null(input$fileCF)){
       disable("ImportCF")
-    } else if(input$importTypeCF =="sup"){
-      if(is.null(input$sup_name) ){
-        disable("ImportCF")
-      }else {
-        if(input$sup_name == ""){
-          disable("ImportCF")
-        } else {
-          enable("ImportCF")
-        }
-      }
-      
     } else{
       enable("ImportCF")
     }
@@ -5357,7 +5354,7 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",inter[j,2],"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })

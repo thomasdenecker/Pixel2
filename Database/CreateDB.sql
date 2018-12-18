@@ -331,7 +331,7 @@ Pixel
 
 CREATE TABLE Pixel (
   id serial primary key,
-  value NUMERIC,
+  value TEXT,
   quality_score NUMERIc,
   pixelSet_id TEXT,
   cf_feature_name TEXT,
