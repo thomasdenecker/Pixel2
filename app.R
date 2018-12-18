@@ -3776,7 +3776,10 @@ server <- function(input, output, session) {
   # PixelSet : Pixel
   #-----------------------------------------------------------------------------
   
-  output$PixelSet_explo_Pixel <- renderDT( PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,], server = FALSE,
+  output$PixelSet_explo_Pixel <- renderDT( {
+                                            PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,]
+                                            }, 
+                                           server = FALSE,
                                            selection = 'single', 
                                            editable = F,
                                            extensions = 'Buttons',
@@ -3806,13 +3809,18 @@ server <- function(input, output, session) {
     if (is.null(PIXELSET_RV$Pixel)){
       NULL
     } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
-      Hist <-gvisHistogram(data.frame(Value = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"]), options=list(
-        colors="['#ff0000']",
-        legend="{ position: 'none'}",
-        title="Values",
-        width='100%', height=360),
-        "PixelSetHistoValue")
-      Hist
+      if(!is.na(as.numeric(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"][1])) ){
+        Hist <-gvisHistogram(data.frame(Value = as.numeric(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Value"])), options=list(
+          colors="['#ff0000']",
+          legend="{ position: 'none'}",
+          title="Values",
+          width='100%', height=360),
+          "PixelSetHistoValue")
+        Hist
+      } else {
+        NULL
+      }
+      
     } else{
       NULL
     }
@@ -3825,14 +3833,17 @@ server <- function(input, output, session) {
     if(is.null(PIXELSET_RV$Pixel)){
       NULL
     } else if(!is.null(PIXELSET_RV$Pixel) & nrow(PIXELSET_RV$Pixel) != 0 ){
-      
-      gvisHistogram(data.frame(QS = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]), 
-                    options=list(
-                      colors="['#3366ff']",
-                      legend="{ position: 'none'}",
-                      title="Quality scores",
-                      width='100%', height=360),
-                    "PixelSetHistoQS")
+      if(sum(is.na(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]) ) != length(PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"])){
+        gvisHistogram(data.frame(QS = PIXELSET_RV$Pixel[input$PixelSet_explo_Pixel_rows_all,"Quality score"]), 
+                      options=list(
+                        colors="['#3366ff']",
+                        legend="{ position: 'none'}",
+                        title="Quality scores",
+                        width='100%', height=360),
+                      "PixelSetHistoQS")
+      } else {
+       NULL 
+      }
       
     } else{
       NULL
