@@ -5343,7 +5343,7 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values(",inter[j,2],",", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",inter[j,2],"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })
