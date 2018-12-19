@@ -271,7 +271,7 @@ server <- function(input, output, session) {
                                menuSubItem("Species & strains", tabName = "AddSpecies"),
                                menuSubItem("Tags", tabName = "TagAdmin")
                       ),
-
+                      
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
                                menuSubItem("Manage Pixelers", tabName = "Pixeler") 
@@ -1541,7 +1541,7 @@ server <- function(input, output, session) {
       updateSelectInput(session, "SubmissionsAdminTab_modify_Strain_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),5] )
       updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsUnitType_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),6] )
       updateSelectInput(session, "SubmissionsAdminTab_modify_OmicsArea_SI", selected = SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),7] )
-
+      
       if(!is.null(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) && length(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]) != 0){
         if(SubFolder$TabModif[which(SubFolder$TabModif[,1] == submissionModify$id),4]){
           status = "true"
@@ -1879,7 +1879,7 @@ server <- function(input, output, session) {
   # Admin Tag
   #-----------------------------------------------------------------------------
   
-
+  
   observeEvent(input$ManageTag_Newbtn,{
     
     REQUEST_EXISTING = paste0("SELECT *
@@ -1921,7 +1921,7 @@ server <- function(input, output, session) {
       namesTag = pixelsetModify$TagAll[,2] 
       pixelsetModify$TagAll = pixelsetModify$TagAll [,1]
       names(pixelsetModify$TagAll) = namesTag
-    
+      
       updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagA", choices = pixelsetModify$TagAll,
                                selected = pixelsetModify$TagAChoices )
       updateCheckboxGroupInput(session, "PixelSetAdminTab_modify_TagE", choices = pixelsetModify$TagAll,
@@ -1947,7 +1947,7 @@ server <- function(input, output, session) {
     }
     
     selectInput("tagModifSI", NULL, choices = choices)
-
+    
   })
   
   output$tagModifDescription <- renderText({
@@ -1998,7 +1998,7 @@ server <- function(input, output, session) {
       }
     }
     
-
+    
     dbDisconnect(con)
   })
   
@@ -2100,7 +2100,7 @@ server <- function(input, output, session) {
     }
     
     selectInput("tagDeleteSI", NULL, choices = choices)
-
+    
   })
   
   observeEvent(input$AdminTag_delete_btn,{
@@ -2737,7 +2737,7 @@ server <- function(input, output, session) {
   #.............................................................................
   
   output$example_CF <-  renderDataTable({
-
+    
     df <- read.csv("Data/CF_CGLAB.txt",
                    header = T,
                    sep = "\t",
@@ -2829,75 +2829,75 @@ server <- function(input, output, session) {
                         quote = input$quote_CF,
                         stringsAsFactors = F
     )
-
+    
     species_id  = dbGetQuery(con, paste0("Select id from species where name = '",database[1,8],"';"))[1,1]
     default_db_id = dbGetQuery(con, paste0("Select id from CFSource where name = '",input$selectSource,"';"))[1,1]
     
     withProgress(message = 'Import in Database', value = 0, {
       # if(input$importTypeCF == "main"){
-        if(ncol(database) == 9){
-          n <- nrow(database)
-          rv$ERROR = F
-          for(i in 1:nrow(database)){
-            
-            incProgress(1/n, detail = paste("Doing part", i))
-            
-            REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
-            if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
-              REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
-                                     "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
-                                     "',description ='",gsub("\'"," Prime",database[i,7]),"',species_id ='",species_id, "', url ='",database[i,9] ,"',default_db_id ='",default_db_id 
-                                     ,"' WHERE Feature_name = '",database[i,1],"';" );
-            } else {
-              REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'"," Prime",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
-                                     ");")
-            }
-            
-            tryCatch(dbSendQuery(con, REQUEST_ANNOT)
-                     , error = function(c) {
-                       
-                       sendSweetAlert(
-                         session = session,
-                         title = "Error : Table creation",
-                         text = paste0(c,"\n The chevron shows you where the error is."),
-                         type = "error"
-                       )
-                       rv$ERROR = T
-                     },warning = function(c) {
-                       sendSweetAlert(
-                         session = session,
-                         title = "Error : Table creation",
-                         text = paste0(c,"\n The chevron shows you where the error is."),
-                         type = "warning"
-                       )
-                       rv$ERROR = T
-                     }
-            )
-            
-            if(rv$ERROR == T){
-              break()
-            } 
-            
+      if(ncol(database) == 9){
+        n <- nrow(database)
+        rv$ERROR = F
+        for(i in 1:nrow(database)){
+          
+          incProgress(1/n, detail = paste("Doing part", i))
+          
+          REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
+          if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
+            REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
+                                   "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
+                                   "',description ='",gsub("\'"," Prime",database[i,7]),"',species_id ='",species_id, "', url ='",database[i,9] ,"',default_db_id ='",default_db_id 
+                                   ,"' WHERE Feature_name = '",database[i,1],"';" );
+          } else {
+            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'"," Prime",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
+                                   ");")
           }
           
-          if(rv$ERROR == F){
-            sendSweetAlert(
-              session = session,
-              title = "Congratulations!",
-              text = "The import was successful!",
-              type = "success"
-            )
-          }
+          tryCatch(dbSendQuery(con, REQUEST_ANNOT)
+                   , error = function(c) {
+                     
+                     sendSweetAlert(
+                       session = session,
+                       title = "Error : Table creation",
+                       text = paste0(c,"\n The chevron shows you where the error is."),
+                       type = "error"
+                     )
+                     rv$ERROR = T
+                   },warning = function(c) {
+                     sendSweetAlert(
+                       session = session,
+                       title = "Error : Table creation",
+                       text = paste0(c,"\n The chevron shows you where the error is."),
+                       type = "warning"
+                     )
+                     rv$ERROR = T
+                   }
+          )
           
+          if(rv$ERROR == T){
+            break()
+          } 
           
-        } else {
+        }
+        
+        if(rv$ERROR == F){
           sendSweetAlert(
             session = session,
-            title = "Error!",
-            text = paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 9."),
-            type = "error"
+            title = "Congratulations!",
+            text = "The import was successful!",
+            type = "success"
           )
         }
+        
+        
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = "Error!",
+          text = paste0("The table format is not correct. The number of columns is",ncol(database)," instead of 9."),
+          type = "error"
+        )
+      }
       # } 
       # else {
       #   
@@ -3013,8 +3013,8 @@ server <- function(input, output, session) {
   
   output$DescriCFSource <- renderUI({
     HTML(paste(rv$Source[which(rv$Source[, 2] == input$selectSource), 4],
-    tags$br(),
-    a("Link to source", href= rv$Source[which(rv$Source[, 2] == input$selectSource), 5], target="_blank")))
+               tags$br(),
+               a("Link to source", href= rv$Source[which(rv$Source[, 2] == input$selectSource), 5], target="_blank")))
   })
   
   
@@ -3417,6 +3417,8 @@ server <- function(input, output, session) {
         PIXELSETLIST_RV$tagsTab = cbind(names(PIXELSETLIST_RV$tagsList),unlist(lapply(PIXELSETLIST_RV$tagsList, paste, collapse = " | ")) )
         colnames(PIXELSETLIST_RV$tagsTab) = c("ID", "Tags")
         PIXELSETLIST_RV$infoWithTags = merge(PIXELSETLIST_RV$info, PIXELSETLIST_RV$tagsTab,by = "ID", all = T)
+      } else {
+        PIXELSETLIST_RV$infoWithTags = PIXELSETLIST_RV$info
       }
       
       dbDisconnect(con)
@@ -3424,13 +3426,13 @@ server <- function(input, output, session) {
   })
   
   output$PIXELSETLIST_tab <- renderDT( PIXELSETLIST_RV$infoWithTags[PIXELSETLIST_RV$Selected,],
-                                      selection = 'multiple',server = FALSE,
-                                      editable = F, filter = 'top',
-                                      extensions = 'Buttons', options = list(
-                                        scrollX = TRUE,searchHighlight = TRUE,
-                                        dom = 'Bfrtip',
-                                        buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-                                      )
+                                       selection = 'multiple',server = FALSE,
+                                       editable = F, filter = 'top',
+                                       extensions = 'Buttons', options = list(
+                                         scrollX = TRUE,searchHighlight = TRUE,
+                                         dom = 'Bfrtip',
+                                         buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                                       )
   )
   
   output$PixelSetTags = renderUI({
@@ -3532,6 +3534,15 @@ server <- function(input, output, session) {
       
       colnames(PixelSetExploRV$TAB) = c("Feature name", "Gene name", "Description",
                                         colnamesinter)
+      
+      sendSweetAlert(
+        session = session,
+        title = "Duplicated data! ",
+        text = HTML(paste("Selected pixelsets contain duplicate lines. There is redundancy in the table for the following chromosomal features: <br>", 
+                          paste(unique(PixelSetExploRV$TAB[duplicated(PixelSetExploRV$TAB[,1]),1]), collapse = " "))),
+        type = "warning", html = T
+      )
+      
       
       PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
       dbDisconnect(con)
@@ -3777,18 +3788,18 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   output$PixelSet_explo_Pixel <- renderDT( {
-                                            PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,]
-                                            }, 
-                                           server = FALSE,
-                                           selection = 'single', 
-                                           editable = F,
-                                           extensions = 'Buttons',
-                                           options = list(scrollX = TRUE, 
-                                                          pageLength = 50, 
-                                                          extensions = 'Buttons', 
-                                                          searchHighlight = TRUE,
-                                                          dom = 'Bfrtip',
-                                                          buttons = c('csv', 'excel','print') ))
+    PIXELSET_RV$Pixel[PIXELSET_RV$SEARCH,]
+  }, 
+  server = FALSE,
+  selection = 'single', 
+  editable = F,
+  extensions = 'Buttons',
+  options = list(scrollX = TRUE, 
+                 pageLength = 50, 
+                 extensions = 'Buttons', 
+                 searchHighlight = TRUE,
+                 dom = 'Bfrtip',
+                 buttons = c('csv', 'excel','print') ))
   
   observeEvent(input$PixelSet_explo_Pixel_rows_selected,{
     updateTabItems (session, "tabs", selected = "CF_item")
@@ -3842,7 +3853,7 @@ server <- function(input, output, session) {
                         width='100%', height=360),
                       "PixelSetHistoQS")
       } else {
-       NULL 
+        NULL 
       }
       
     } else{
@@ -4177,7 +4188,7 @@ server <- function(input, output, session) {
       
       SubFolder$infoStrain = SubFolder$infoG[1,6]
       SubFolder$infoSpecies = SubFolder$infoG[1,7]
- 
+      
       SubFolder$TagA = dbGetQuery(con,paste0("select tag.name 
       from pixelset,  tag_Analysis, tag 
       where pixelSet.id_submission = '", SubFolder$Tab[input$submissionFolderTab_rows_selected,1] ,"'
@@ -5132,65 +5143,98 @@ server <- function(input, output, session) {
   
   observeEvent(input$Submission,{
     
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
+    filename = NULL 
+    for(i in 1:input$submission_pixelSet_nbr){
+      filename = c(filename, eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))))
+    }
     
-    #---------------------------------------------------------------------------
-    # Check
-    #---------------------------------------------------------------------------
-    
-    CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
-    
-    if(nrow(CF_Temp) != 0){
-      warning_sub = NULL
-      allCF = 0
-      refusedCF = 0
-      for( i in 1:input$submission_pixelSet_nbr){
-        inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                                   header = as.logical(input$header_PS),
-                                   sep = input$sep_PS,
-                                   quote = input$quote_PS
-        )
-        pos = !(inter_warning[,1] %in% CF_Temp[,1])
-        refused = inter_warning[pos,1]
-        
-        allCF = allCF + nrow(inter_warning)
-        refusedCF = refusedCF +length(refused)
-        
-        warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
-      }
-      
-      if(allCF == refusedCF){
-        sendSweetAlert(
-          session = session,
-          title = "Oops !!",
-          text = "No chromosomal features have been found for your genes. Possible reasons: (1) The chromosomal features are not in the database or (2) the data was not correctly read (The wrong column separator was used?)",
-          type = "error"
-        )
-      }else {
-        confirmSweetAlert(
-          session = session,
-          inputId = "confirm_submission_warning",
-          type = "warning",
-          title = "Want to confirm ?",
-          text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Refused </b>:",round(refusedCF * 100/allCF) ,"%</p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
-          danger_mode = TRUE,  html = TRUE
-        )
-      }
-
-    } else {
+    if(nrow(AddRV$DataSource) == 0 ){
       sendSweetAlert(
         session = session,
         title = "Oops !!",
-        text = "There are no chromosomal features in the database",
+        text = "No data source are saved.  Please go here : Manage annotation > Data source ",
         type = "error"
       )
+    } else if (nrow(AddRV$Strain) == 0){
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "No strains are saved.  Please go here : Manage annotation > Species & strains ",
+        type = "error"
+      )
+      
+    } else if (is.null(filename) || length(which(filename == "")) != 0  || length(filename) != input$submission_pixelSet_nbr) {
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "All files are not selected to import. Please check your files.",
+        type = "error"
+      )
+    } else {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      #---------------------------------------------------------------------------
+      # Check
+      #---------------------------------------------------------------------------
+      
+      CF_Temp = dbGetQuery(con,paste0("SELECT feature_name from chromosomalfeature;"))
+      
+      if(nrow(CF_Temp) != 0){
+        warning_sub = NULL
+        duplicated_sub = NULL
+        allCF = 0
+        refusedCF = 0
+        for( i in 1:input$submission_pixelSet_nbr){
+          inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                                     header = as.logical(input$header_PS),
+                                     sep = input$sep_PS,
+                                     quote = input$quote_PS
+          )
+          pos = !(inter_warning[,1] %in% CF_Temp[,1])
+          refused = inter_warning[pos,1]
+          
+          allCF = allCF + nrow(inter_warning)
+          refusedCF = refusedCF +length(refused)
+          
+          warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+          duplicated_sub = c(duplicated_sub,paste0("<b>PixelSet ", i, "</b> <br/>", paste( unique(inter_warning[duplicated(inter_warning[,1]), 1]), collapse = "\t")) )
+          
+        }
+        
+        if(allCF == refusedCF){
+          sendSweetAlert(
+            session = session,
+            title = "Oops !!",
+            text = "No chromosomal features have been found for your genes. Possible reasons: (1) The chromosomal features are not in the database or (2) the data was not correctly read (The wrong column separator was used?)",
+            type = "error"
+          )
+        }else {
+          confirmSweetAlert(
+            session = session,
+            inputId = "confirm_submission_warning",
+            type = "warning",
+            title = "Want to confirm ?",
+            text = HTML("<h3>Refused </h3><hr><p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Percent </b>:",round(refusedCF * 100/allCF) ,"%</p>",
+                        paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>"), 
+                        "<h3>Duplicated</h3><hr><p><i>NOTE : If you confirm, the duplicated pixels will be saved in the database. As a result, there will be redundancy when creating multipixelsets with these pixelsets.</i></p>",paste("<br/><p>",duplicated_sub,"</p>", collapse = "<br/>") ),
+            danger_mode = TRUE,  html = TRUE
+          )
+        }
+        
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = "Oops !!",
+          text = "There are no chromosomal features in the database",
+          type = "error"
+        )
+      }
+      
+      dbDisconnect(con)
     }
-    
-    dbDisconnect(con)
-    
   })
   
   
