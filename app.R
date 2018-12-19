@@ -3417,6 +3417,8 @@ server <- function(input, output, session) {
         PIXELSETLIST_RV$tagsTab = cbind(names(PIXELSETLIST_RV$tagsList),unlist(lapply(PIXELSETLIST_RV$tagsList, paste, collapse = " | ")) )
         colnames(PIXELSETLIST_RV$tagsTab) = c("ID", "Tags")
         PIXELSETLIST_RV$infoWithTags = merge(PIXELSETLIST_RV$info, PIXELSETLIST_RV$tagsTab,by = "ID", all = T)
+      } else {
+        PIXELSETLIST_RV$infoWithTags = PIXELSETLIST_RV$info
       }
       
       dbDisconnect(con)
