@@ -3533,6 +3533,15 @@ server <- function(input, output, session) {
       colnames(PixelSetExploRV$TAB) = c("Feature name", "Gene name", "Description",
                                         colnamesinter)
       
+      sendSweetAlert(
+        session = session,
+        title = "Duplicated data! ",
+        text = HTML(paste("Selected pixelsets contain duplicate lines. There is redundancy in the table for the following chromosomal features: <br>", 
+                          paste(unique(PixelSetExploRV$TAB[duplicated(PixelSetExploRV$TAB[,1]),1]), collapse = " "))),
+        type = "warning", html = T
+      )
+      
+      
       PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
       dbDisconnect(con)
       
@@ -5173,6 +5182,7 @@ server <- function(input, output, session) {
       
       if(nrow(CF_Temp) != 0){
         warning_sub = NULL
+        duplicated_sub = NULL
         allCF = 0
         refusedCF = 0
         for( i in 1:input$submission_pixelSet_nbr){
@@ -5188,6 +5198,8 @@ server <- function(input, output, session) {
           refusedCF = refusedCF +length(refused)
           
           warning_sub= c(warning_sub, paste0("<b>PixelSet ", i, "</b> <br/>", paste(refused, collapse = "\t")))
+          duplicated_sub = c(duplicated_sub,paste0("<b>PixelSet ", i, "</b> <br/>", paste( unique(inter_warning[duplicated(inter_warning[,1]), 1]), collapse = "\t")) )
+          
         }
         
         if(allCF == refusedCF){
@@ -5203,7 +5215,9 @@ server <- function(input, output, session) {
             inputId = "confirm_submission_warning",
             type = "warning",
             title = "Want to confirm ?",
-            text = HTML("<p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Refused </b>:",round(refusedCF * 100/allCF) ,"%</p>",paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>")),
+            text = HTML("<h3>Refused </h3><hr><p><i>NOTE : If you confirm, the pixels associated with the genes below will not be imported into the database</i></p><p><b>Percent </b>:",round(refusedCF * 100/allCF) ,"%</p>",
+                        paste("<br/><p>",warning_sub,"</p>", collapse = "<br/>"), 
+                        "<h3>Duplicated</h3><hr><p><i>NOTE : If you confirm, the duplicated pixels will be saved in the database. As a result, there will be redundancy when creating multipixelsets with these pixelsets.</i></p>",paste("<br/><p>",duplicated_sub,"</p>", collapse = "<br/>") ),
             danger_mode = TRUE,  html = TRUE
           )
         }
