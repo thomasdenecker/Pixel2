@@ -66,19 +66,19 @@ Double click on PIXEL2 file and open your internet browser, typing the following
 During development, you will probably need to have the R outputs in the terminal. Passing through a docker, to have these outputs, you have to access the log file. The following command launches the application and has a log file that will be in the application folder. To help you in the choice of path of the application, you can look in the launch of the application.
 
 ```
-docker run -ti --rm --link PIXEL_DB:postgres -p 3839:3838 -v YOUR_APPLICATION_PATH:/srv/shiny-server -v YOUR_APPLICATION_PATH:/var/log/shiny-server tdenecker/pixel2_app R
+docker run -ti --rm --link PIXEL2_DB:postgres -p 3839:3838 -v YOUR_APPLICATION_PATH:/srv/shiny-server -v YOUR_APPLICATION_PATH:/var/log/shiny-server tdenecker/pixel2_app R
 ```
 
 ### Connect to database with command line:  
 ```
-docker run -it --rm --link PIXEL_DB:postgres postgres psql -h postgres -U docker
+docker run -it --rm --link PIXEL2_DB:postgres postgres psql -h postgres -U docker
 ```
 The default password is docker. If you change this password, remember to make the change in the application code.
 
 ### Connect to a R session
 
 ```
-docker run -ti --rm --link PIXEL_DB:postgres -p 3839:3838 -v YOUR_APPLICATION_PATH:/srv/shiny-server tdenecker/pixel2_app R
+docker run -ti --rm --link PIXEL2_DB:postgres -p 3839:3838 -v YOUR_APPLICATION_PATH:/srv/shiny-server tdenecker/pixel2_app R
 ```
 
 **Warning**: nothing is saved in this session (package installation, ...)
