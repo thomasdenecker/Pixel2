@@ -99,7 +99,7 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
-    REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"', ", datasource.name as ",'"',"Datasource",'"', ", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
+    REQUEST_Info = paste0("select DISTINCT PS.id as",'"',"ID",'"',", PS.name as ",'"',"Name",'"', ", species.name as ",'"',"Species",'"',", OmicsUnitType.name as ",'"',"Omics Unit Type",'"',", OmicsArea.name as ",'"',"Omics Area",'"',", pixeler.user_name as ",'"',"Pixeler",'"', ", datasource.name as ",'"',"Datasource",'"', ", analysis.description as ",'"',"Analysis",'"',", experiment.description as ",'"',"Experiment",'"',"
                             from pixelset PS, analysis, Analysis_Experiment AE, experiment, strain, species, OmicsArea, Submission, pixeler, pixel, OmicsUnitType, datasource
                           where PS.id_analysis = analysis.id
                           and PS.id = pixel.pixelset_id
@@ -3689,13 +3689,10 @@ server <- function(input, output, session) {
   
   output$PSExploTab <- renderDT(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,],
                                 selection = 'none',
-                                # server = FALSE,
                                 editable = F, filter = 'top',
-                                #extensions = 'Buttons', 
                                 options = list(
-                                  scrollX = TRUE,searchHighlight = TRUE
-                                  #,dom = 'Bfrtip',
-                                  # buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                                  scrollX = TRUE,searchHighlight = TRUE,
+                                  search = list(regex = TRUE, caseInsensitive = TRUE)
                                 ) )
   
   #-----------------------------------------------------------------------------
