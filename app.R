@@ -59,11 +59,12 @@ body <- dashboardBody(useShinyjs(),
                       useShinyalert(),
                       tags$head(tags$link(href = "Images/pixel_icon.png",
                                           rel ="icon", type="image/png")),
-                      
                       # Add css style
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
-                                     href="style.css" />'))
-                      ,
+                                     href="style.css" />')), 
+                      tags$head(tags$script(HTML("$(document).on('click', '.autoname', function () {
+                                Shiny.onInputChange('last_btn',this.id);
+                                                  });"))),
                       uiOutput("body"))
 ui <- dashboardPage(skin= "red", header, sidebar, body)
 
@@ -158,7 +159,7 @@ server <- function(input, output, session) {
   # END Reactive values 
   #=============================================================================
   
-  login <- div( class="authenfication", 
+  login <- div( class="authenfiion", 
                 h2("Login"),
                 div(class = "center_input",textInput("USER", "Username")),
                 div(class = "center_input",passwordInput("PW", "Password")),
@@ -716,12 +717,13 @@ server <- function(input, output, session) {
           tabName = "CF_item", 
           uiOutput("CF_title"),
           fluidRow(
-            div(class="col-md-6",
+            div(class="col-lg-6",
                 uiOutput("CF_information")
             ),
-            div(class="col-md-6",
+            div(class="col-lg-6",
                 h2(class="title-cf","Supplementary information"),
-                tabsetPanel(id = "tab_sup_annot")
+                #tabsetPanel(id = "tab_sup_annot")
+                htmlOutput("sup_annot")
             )
           ),
           
@@ -1103,7 +1105,7 @@ server <- function(input, output, session) {
           fluidRow(
             column(12,
                    h3(class ="h3-style","Modify previous submission"),
-                   p(class="info", "Select one of the lines to activate the modification"),
+                   p(class="info", "Select one of the lines to activate the modifiion"),
                    sidebarLayout(
                      sidebarPanel(
                        h5("Submission id"),
@@ -3181,6 +3183,12 @@ server <- function(input, output, session) {
                                        and omicsunittype_id = OmicsUnitType.id;"))
     
     
+    CF$PIXEL_quantitative = CF$PIXEL[!is.na(as.numeric(CF$PIXEL[,1])), ]
+    CF$PIXEL_qualitative = CF$PIXEL[is.na(as.numeric(CF$PIXEL[,1])), ]
+    CF$PIXELSET_quantitative = CF$PIXELSET[!is.na(as.numeric(CF$PIXELSET[,3])),]
+    CF$PIXELSET_qualitative = CF$PIXELSET[is.na(as.numeric(CF$PIXELSET[,3])),]
+    
+    
     CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
                                                   where pixel.cf_feature_name ='",CF$name,"' and
                                                   pixel.pixelset_id = PS.id 
@@ -3234,26 +3242,44 @@ server <- function(input, output, session) {
                                                       group by tag.name;"))
     
     
-    Sup_tab = dbGetQuery(con, paste0("select annot_table from annotation where feature_name ='",CF$name,"';"))
     
-    if(nrow(Sup_tab) != 0){
-      for(i in 1:nrow(Sup_tab)){
-        
-        result = dbGetQuery(con, paste0("select * from ",Sup_tab[i,1]," where feature_name ='",CF$name,"';"))
-        result = paste("<b>", gsub("_", " " ,colnames(result)[-1]),"</b> : ", result[1,-1])
-        result = paste(result, collapse = "<br>")
-        
-        if(i == 1){
-          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = T)
-        } else {
-          appendTab("tab_sup_annot", tabPanel(Sup_tab[i,1], HTML(result)),select = F)
-        }
-        
-        CF$sup_id = c(CF$sup_id, Sup_tab[i,1])
-      }
+    CF$Sup_tab = NULL 
+    CF$PIXELSET_qualitative = CF$PIXELSET_qualitative[order(CF$PIXELSET_qualitative[,"name"]), ]
+    
+    # Sequence 
+    posS = which(CF$PIXELSET_qualitative[,"name"] ==  "Sequence")
+    CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
+                                    paste(strsplit(CF$PIXELSET_qualitative[posS,"value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
+    
+    # Go terms 
+    posGO = which(CF$PIXELSET_qualitative[,"name"] ==  "GO terms")
+    if (length(posGO) != 0){
+      table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"value"]," # ")), ncol = 3, byrow = T)
+      table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "'>", table[,1], "</a>" )
+      table = apply(table, 1, paste, collapse= "</td><td>")
+      table = paste(table, collapse = "</td></tr><tr><td>")
+      
+      cat(paste( '<table class="table table-striped"><thead>
+                                        <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
+                 </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>'"), file = stderr())
+      
+      CF$Sup_tab = c(CF$Sup_tab, paste( '<h3>Go terms</h3><table class="table table-striped"><thead>
+                                        <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
+                                        </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>"))
     }
+  
+    if(nrow(CF$PIXELSET_qualitative[-c(posS, posGO),]) != 0){
+      CF$Sup_tab = c(CF$Sup_tab,"<h3>Qualitative information</h3>")
+      CF$Sup_tab = c(CF$Sup_tab,paste("<b>",CF$PIXELSET_qualitative[-c(posS, posGO),"name"],"</b> : ", CF$PIXELSET_qualitative[-c(posS, posGO),"value"], "<br>"))
+    }
+    
     dbDisconnect(con)
   })
+  
+  output$sup_annot <- renderUI({
+    HTML(CF$Sup_tab)
+  })
+  
   
   output$CF_title <- renderUI(
     if(!is.null(CF$name) & length(CF$name) != 0){
@@ -3305,12 +3331,12 @@ server <- function(input, output, session) {
     }
   })
   
-  output$CF_PixelSET <- renderDT(CF$PIXELSET, 
+  output$CF_PixelSET <- renderDT(CF$PIXELSET_quantitative, 
                                  selection = 'single', 
                                  editable = F,
                                  options = list(scrollX = TRUE, searchHighlight = TRUE))
   
-  output$CF_Pixel <- renderDT(CF$PIXEL, 
+  output$CF_Pixel <- renderDT(CF$PIXEL_quantitative, 
                               selection = 'none', 
                               editable = F,
                               options = list(scrollX = TRUE, searchHighlight = TRUE))
@@ -3710,7 +3736,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$CF_PixelSET_rows_selected,{
-    SEARCH_RV$PIXELSET = CF$PIXELSET[input$CF_PixelSET_rows_selected,"pixelset_id"]
+    SEARCH_RV$PIXELSET = CF$PIXELSET_quantitative[input$CF_PixelSET_rows_selected,"pixelset_id"]
     proxy = dataTableProxy('CF_PixelSET')
     proxy %>% selectRows(NULL)
   })
@@ -5502,6 +5528,8 @@ server <- function(input, output, session) {
         appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
                                             h4("Name") ,
                                             textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO term", class="autoname"), 
                                             h4("Description"),
                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
@@ -5514,6 +5542,8 @@ server <- function(input, output, session) {
         appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
                                              h4("Name") ,
                                              textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                             actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                             actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
                                              h4("Description"),
                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                              fileInput(paste0("submission_pixelSet_file",i),label = NULL,
@@ -5526,6 +5556,20 @@ server <- function(input, output, session) {
     }
     
   })
+  
+  observeEvent({input$last_btn},{
+    
+    id = unlist(strsplit({input$last_btn}, "_"))
+    
+    if(id[2] == "Sequence"){
+      updateTextInput(session,inputId = paste0("submission_pixelSet_name_", id[3]), value = "Sequence" )
+    } else if (id[2] == "GO"){
+      updateTextInput(session,inputId = paste0("submission_pixelSet_name_", id[3]),value =  "GO terms" )
+    } 
+  }
+  )
+  
+  
   
   output$submission_pixelSet_OUT_UI <- renderUI({
     choices = AddRV$OUT[,1]
