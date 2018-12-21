@@ -585,7 +585,8 @@ server <- function(input, output, session) {
                ),
                fluidRow(
                  h3("Pixels"),
-                 DTOutput("PixelSet_explo_Pixel"))
+                 DTOutput("PixelSet_explo_Pixel")
+               )
           )),
         
         #=======================================================================
@@ -657,6 +658,15 @@ server <- function(input, output, session) {
                    br(),br(),
                    DTOutput("PSExploTab")
             )
+          ),
+          fluidRow(
+            column(12, 
+                   h3("Extract gene list",  class= "title-pixelset"),
+                   p(class="info","List of unique genes selected in the table.The list is formatted for Pixel2 search areas."), 
+                   textOutput('geneListMPS'),
+                   tags$br(),
+                   htmlOutput('geneListSizeMPS')
+                   )
           )
           
         ),
@@ -3267,7 +3277,7 @@ server <- function(input, output, session) {
                                         <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
                                         </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>"))
     }
-  
+    
     if(nrow(CF$PIXELSET_qualitative[-c(posS, posGO),]) != 0){
       CF$Sup_tab = c(CF$Sup_tab,"<h3>Qualitative information</h3>")
       CF$Sup_tab = c(CF$Sup_tab,paste("<b>",CF$PIXELSET_qualitative[-c(posS, posGO),"name"],"</b> : ", CF$PIXELSET_qualitative[-c(posS, posGO),"value"], "<br>"))
@@ -3604,6 +3614,10 @@ server <- function(input, output, session) {
     }
   })
   
+  #-----------------------------------------------------------------------------
+  # MultiPixelSets : Histogram
+  #-----------------------------------------------------------------------------
+
   observeEvent(PixelSetExploRV$PixelSetID,{
     
     lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
@@ -3634,6 +3648,27 @@ server <- function(input, output, session) {
       })
     })
   })
+  
+  #-----------------------------------------------------------------------------
+  # MultiPixelSets : extract gene list
+  #-----------------------------------------------------------------------------
+
+  
+  output$geneListMPS = renderText({
+    if(!is.null(input$PSExploTab_rows_all) && length(input$PSExploTab_rows_all) != nrow(PixelSetExploRV$TAB)){
+      paste(unique(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,1]), collapse = " ; ")
+    }
+  })
+  
+  output$geneListSizeMPS = renderUI({
+    if(!is.null(input$PSExploTab_rows_all) && length(input$PSExploTab_rows_all) != nrow(PixelSetExploRV$TAB)){
+      HTML(paste("<b>Size list</b>: ",length(unique(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][input$PSExploTab_rows_all,1]))))
+    }
+  })
+  
+  #-----------------------------------------------------------------------------
+  # MultiPixelSets : UpserR
+  #-----------------------------------------------------------------------------
   
   
   output$UpsetR <- renderPlot({
@@ -3832,7 +3867,6 @@ server <- function(input, output, session) {
     proxy = dataTableProxy('PixelSet_explo_Pixel')
     proxy %>% selectRows(NULL)
   })
-  
   
   #-----------------------------------------------------------------------------
   # PixelSet : Histo
