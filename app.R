@@ -651,6 +651,22 @@ server <- function(input, output, session) {
           ),
           fluidRow(
             column(12, 
+                   h3("Filter",  class= "title-pixelset"),
+                   p(class="info","Filter with regex (qualitative data) and threshold (quantitative data)."),
+                   sidebarLayout(
+                     sidebarPanel(
+                       actionButton("add_filter_btn", "Add new filter",icon = icon("plus-circle")),
+                       actionButton("rm_filter_btn", "Remove last filter", icon = icon("plus-circle"))
+                     ),
+                     mainPanel(
+                       uiOutput("textbox_ui")
+                     )
+                   ),
+                   actionButton("filter_btn", "Filter", icon = icon("filter"))
+            )
+          ),
+          fluidRow(
+            column(12, 
                    h3("Pixels",  class= "title-pixelset"),
                    downloadButton('MPS_export_csv', 'CSV'),
                    downloadButton('MPS_export_tsv', 'TSV'),
@@ -3670,7 +3686,6 @@ server <- function(input, output, session) {
   # MultiPixelSets : UpserR
   #-----------------------------------------------------------------------------
   
-  
   output$UpsetR <- renderPlot({
     if(!is.null(PixelSetExploRV$UpsetR) && length(PixelSetExploRV$UpsetR) > 1){
       upset(fromList(PixelSetExploRV$UpsetR), text.scale= 1.8)
@@ -3679,6 +3694,121 @@ server <- function(input, output, session) {
     }
     
   })
+  
+  
+  
+  #-----------------------------------------------------------------------------
+  # MultiPixelSets : FILTERS
+  #-----------------------------------------------------------------------------
+  
+  # Track the number of input boxes to render
+  counter <- reactiveValues(n = 0)
+  
+  #Track the number of input boxes previously
+  prevcount <-reactiveValues(n = 0)
+  
+  observeEvent(input$add_filter_btn, {
+    counter$n <- counter$n + 1
+    prevcount$n <- counter$n - 1})
+  
+  observeEvent(input$rm_filter_btn, {
+    if (counter$n > 0) {
+      counter$n <- counter$n - 1 
+      prevcount$n <- counter$n + 1
+    }
+    
+  })
+  
+  output$counter <- renderPrint(print(counter$n))
+  
+  textboxes <- reactive({
+    
+    n <- counter$n
+    
+    if (n > 0) {
+      # If the no. of textboxes previously where more than zero, then 
+      # save the text inputs in those text boxes 
+      if(prevcount$n > 0){
+        
+        vals = c()
+        choice = c()
+        
+        if(prevcount$n > n){
+          lesscnt <- n
+          isInc <- FALSE
+        }else{
+          lesscnt <- prevcount$n
+          isInc <- TRUE
+        }
+        
+        for(i in 1:lesscnt){
+          inpid = paste0("Regex",i)
+          vals[i] = input[[inpid]] 
+          
+          inpid = paste0("col",i)
+          choice[i] = input[[inpid]] 
+        }
+        
+        if(isInc){
+          vals <- c(vals, "")
+        }
+        
+        lapply(seq_len(n), function(i) {
+          fluidRow(
+              column(4, selectInput(paste0("col", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] )),
+              column(8 ,textInput(inputId = paste0("Regex", i),label = NULL, width = "100%",value = vals[i])))
+        })
+        
+      }else{
+        lapply(seq_len(n), function(i) {
+          fluidRow(
+               column(4,selectInput(paste0("col", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB))),
+               column(8,textInput(inputId = paste0("Regex", i),label = NULL, width = "100%", placeholder = "a regex expression"))
+          )
+        }) 
+      }
+      
+    }
+    
+  })
+  
+  output$textbox_ui <- renderUI({ textboxes() })
+  
+  observeEvent(input$filter_btn, {
+    if(counter$n > 0){
+      filterlist = NULL
+      for (i in 1:counter$n){
+        filterlist = c(filterlist,
+                       PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$Regex",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col",i)))] , ignore.case = T, value = F),1])
+      } 
+      filterlist = paste(unique(filterlist), collapse = " ; ")
+      updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = filterlist)
+      PixelSetExploRV$SEARCH = which(PixelSetExploRV$TAB[, "Feature name"] %in% unlist(strsplit(gsub(" ","", filterlist), ";")))
+      
+      if( length(PixelSetExploRV$SEARCH) == 0){
+        PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "None of the genes were found in the Pixel table.",
+          type = "error"
+        )
+      }
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "No filters selected...",
+        type = "warning"
+      )
+    }
+    }
+  )
+  
+  
+  #-----------------------------------------------------------------------------
+  # MultiPixelSets : Download table
+  #-----------------------------------------------------------------------------
   
   output$MPS_export_csv <- downloadHandler(
     filename = function() {
