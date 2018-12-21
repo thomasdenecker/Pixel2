@@ -65,6 +65,10 @@ body <- dashboardBody(useShinyjs(),
                       tags$head(tags$script(HTML("$(document).on('click', '.autoname', function () {
                                 Shiny.onInputChange('last_btn',this.id);
                                                   });"))),
+                      tags$head(tags$script(HTML("$(document).on('change', '.dynamicSI select', function () { 
+                                Shiny.onInputChange('last_SI',this.id);
+                                Shiny.onInputChange('lastSelect', Math.random());
+                                                 });"))),
                       uiOutput("body"))
 ui <- dashboardPage(skin= "red", header, sidebar, body)
 
@@ -640,6 +644,25 @@ server <- function(input, output, session) {
                    plotOutput("UpsetR")
             )
           ),
+          
+          fluidRow(
+            column(12, 
+                   h3("Filter",  class= "title-pixelset"),
+                   p(class="info","Filter with regex (qualitative data) and threshold (quantitative data)."),
+                   sidebarLayout(
+                     sidebarPanel(
+                       actionButton("add_filter_btn", "Add new filter",icon = icon("plus-circle")),
+                       actionButton("rm_filter_btn", "Remove last filter", icon = icon("minus-circle"))
+                     ),
+                     mainPanel(
+                       uiOutput("textbox_ui")
+                     )
+                   ),
+                   actionButton("filter_clear_btn", "Clear", icon = icon("trash")),
+                   actionButton("filter_btn", "Filter", icon = icon("filter"))
+            )
+          ),
+          
           fluidRow(
             column(12,
                    h3("Search for a list of chromosomal features",  class= "title-pixelset"),
@@ -649,22 +672,7 @@ server <- function(input, output, session) {
                    actionButton("MPS_searchGenelist_btn",label = "Search")
             )
           ),
-          fluidRow(
-            column(12, 
-                   h3("Filter",  class= "title-pixelset"),
-                   p(class="info","Filter with regex (qualitative data) and threshold (quantitative data)."),
-                   sidebarLayout(
-                     sidebarPanel(
-                       actionButton("add_filter_btn", "Add new filter",icon = icon("plus-circle")),
-                       actionButton("rm_filter_btn", "Remove last filter", icon = icon("plus-circle"))
-                     ),
-                     mainPanel(
-                       uiOutput("textbox_ui")
-                     )
-                   ),
-                   actionButton("filter_btn", "Filter", icon = icon("filter"))
-            )
-          ),
+          
           fluidRow(
             column(12, 
                    h3("Pixels",  class= "title-pixelset"),
@@ -3694,8 +3702,7 @@ server <- function(input, output, session) {
     }
     
   })
-  
-  
+
   
   #-----------------------------------------------------------------------------
   # MultiPixelSets : FILTERS
@@ -3726,11 +3733,13 @@ server <- function(input, output, session) {
     n <- counter$n
     
     if (n > 0) {
+      
+      cat("encore", file = stderr())
+      cat(n, file = stderr())
       # If the no. of textboxes previously where more than zero, then 
       # save the text inputs in those text boxes 
       if(prevcount$n > 0){
-        
-        vals = c()
+        val = list()
         choice = c()
         
         if(prevcount$n > n){
@@ -3742,34 +3751,74 @@ server <- function(input, output, session) {
         }
         
         for(i in 1:lesscnt){
-          inpid = paste0("Regex",i)
-          vals[i] = input[[inpid]] 
-          
-          inpid = paste0("col",i)
+          inpid = paste0("col_",i)
           choice[i] = input[[inpid]] 
+
+          inpid = paste0("FilterUiElement_",i)
+          val[[i]] = isolate(input[[inpid]])
         }
-        
+
         if(isInc){
-          vals <- c(vals, "")
+          val[[n]] <- ""
         }
-        
+
         lapply(seq_len(n), function(i) {
-          fluidRow(
-              column(4, selectInput(paste0("col", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] )),
-              column(8 ,textInput(inputId = paste0("Regex", i),label = NULL, width = "100%",value = vals[i])))
+          
+            fluidRow(
+              div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] ))),
+              column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
+            )
         })
+        
+        # for(i in 1:n){
+        #   if(length(length(val[[i]])) == 2){
+        #     updateSliderInput(session,paste0("FilterUiElement_",i),value = val[[i]])
+        #   } else {
+        #     updateTextInput(session,paste0("FilterUiElement_",i),value = val[[i]])
+        #   }
+        # }
         
       }else{
         lapply(seq_len(n), function(i) {
           fluidRow(
-               column(4,selectInput(paste0("col", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB))),
-               column(8,textInput(inputId = paste0("Regex", i),label = NULL, width = "100%", placeholder = "a regex expression"))
+                   div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB)))),
+               column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
           )
         }) 
       }
       
     }
     
+  })
+
+  
+  
+  observe({
+    input$lastSelect
+    isolate({
+      if (!is.null(input$last_SI)) {
+        id = unlist(strsplit({input$last_SI}, "_"))[2]
+        inter = PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",id)))]
+        inter = inter[!is.na(inter)]
+        inter = inter[inter!=""]
+        inter = inter[!is.null(inter)]
+        
+        if(!is.na(as.numeric(inter[1]))){
+          data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",id)))]))
+          output[[paste0("FilterUi_", id)]] <- renderUI({
+            sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
+                        min = min(data,na.rm = T), max = max(data,na.rm = T),
+                        value = c(min(data,na.rm = T), max(data,na.rm = T)))
+          })
+        } else {
+          output[[paste0("FilterUi_", id)]] <- renderUI({
+            textInput(inputId = paste0("FilterUiElement_", id),label = NULL, width = "100%", placeholder = "a regex expression")
+          })
+          
+        }
+        
+      }
+    })
   })
   
   output$textbox_ui <- renderUI({ textboxes() })
@@ -3778,8 +3827,18 @@ server <- function(input, output, session) {
     if(counter$n > 0){
       filterlist = NULL
       for (i in 1:counter$n){
-        filterlist = c(filterlist,
-                       PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$Regex",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col",i)))] , ignore.case = T, value = F),1])
+        if(length(eval(parse(text = paste0("input$FilterUiElement_",i)))) == 2){
+          min = min(eval(parse(text = paste0("input$FilterUiElement_",i))))
+          max = max(eval(parse(text = paste0("input$FilterUiElement_",i))))
+          data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",i)))]))
+          pos = which(data >= min & data <= max )
+          filterlist = c(filterlist,
+                         PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][pos,1])
+        } else{
+          filterlist = c(filterlist,
+                         PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$FilterUiElement_",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col_",i)))] , ignore.case = T, value = F),1])
+        }
+        
       } 
       filterlist = paste(unique(filterlist), collapse = " ; ")
       updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = filterlist)
@@ -3804,6 +3863,12 @@ server <- function(input, output, session) {
     }
     }
   )
+  
+  observeEvent(input$filter_clear_btn, {
+    updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
+    PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+  })
+  
   
   
   #-----------------------------------------------------------------------------
