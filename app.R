@@ -257,8 +257,6 @@ server <- function(input, output, session) {
                                menuSubItem("Search by PixelSets", tabName = "PixelSetList"),
                                menuSubItem("Search by submissions", tabName = "submissionFolder")
                       ),
-                      
-                      
                       menuItem("Data integration", tabName = "PixelSetExplo", icon = icon("align-justify")),
                       
                       menuItem("Manage PixelSets", tabName = "ManagePixelSets", icon = icon("folder"),
@@ -298,12 +296,30 @@ server <- function(input, output, session) {
             isolate(input$USER),
             subtitle = a(icon("sign-out"), "Logout", href = login.page)
           ),
-          sidebarMenu("tabMenu",
+          sidebarMenu(id = "tabs",
                       menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard"), selected = T),
-                      menuItem("PixelSet", tabName = "PixelSet", icon = icon("search")), 
-                      menuItem("Dat", tabName = "Explorer", icon = icon("signal")),
-                      menuItem("Profile", tabName = "Profile", icon = icon("user")),
-                      sidebarSearchForm(textId = "searchText", buttonId = "searchButton",label = "Search...")
+                      menuItem("Information", tabName = "Information", icon = icon("info-circle"),
+                               startExpanded = F,
+                               menuSubItem("A PixelSet", tabName = "PixelSet"),
+                               menuSubItem("A chromosomal feature", tabName = "CF_item"),
+                               menuSubItem("A tag", tabName = "Tags")
+                      ),
+                      
+                      menuItem("Database exploration", tabName = "Explorer", icon = icon("search"),
+                               startExpanded = F,
+                               menuSubItem("Search by PixelSets", tabName = "PixelSetList"),
+                               menuSubItem("Search by submissions", tabName = "submissionFolder")
+                      ),
+                      menuItem("Data integration", tabName = "PixelSetExplo", icon = icon("align-justify")),
+                      menuItem("Pixeler information", tabName = "Profile", icon = icon("user")),
+                      h4(class ='sideBar',"Quick searches"),
+                      tags$hr(class= "sideBar"),
+                      h5(class= "sideBar", "Chromosomal feature"),
+                      sidebarSearchForm(textId = "searchCF", buttonId = "searchButtonCF",label = "CAGL0A01243g..."),
+                      h5(class= "sideBar", "Tag"),
+                      sidebarSearchForm(textId = "searchTag", buttonId = "searchButtonTag",label = "Limma"),
+                      h5(class= "sideBar", "PixelSet"),
+                      sidebarSearchForm(textId = "searchPS", buttonId = "searchButtonPS",label = "PixelSet_2018-10-22_09-36-37_1...")
           )
         )
       }
@@ -3289,7 +3305,7 @@ server <- function(input, output, session) {
     posGO = which(CF$PIXELSET_qualitative[,"name"] ==  "GO terms")
     if (length(posGO) != 0){
       table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"value"]," # ")), ncol = 3, byrow = T)
-      table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "'>", table[,1], "</a>" )
+      table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
       table = apply(table, 1, paste, collapse= "</td><td>")
       table = paste(table, collapse = "</td></tr><tr><td>")
       
