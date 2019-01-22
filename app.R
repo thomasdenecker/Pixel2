@@ -91,6 +91,7 @@ server <- function(input, output, session) {
   TAG$MODIF_PIXELSET_TABLE_SELECTED = cbind(row = NA, col = NA)
   MAJ <- reactiveValues()
   file <- reactiveValues()
+  file$extract = F
   
   MAJ$value = 0
   
@@ -429,7 +430,7 @@ server <- function(input, output, session) {
                       fileInput("zip",NULL,
                                 multiple = FALSE,
                                 accept = ".zip"),
-                      actionButton("extractZip",label = "Extract",icon = icon('unlock'))
+                      disabled(actionButton("extractZip",label = "Extract",icon = icon('unlock')))
                     )
           ),
           fluidRow( class="box-submission",
@@ -1820,7 +1821,7 @@ server <- function(input, output, session) {
       meta = rbind(meta,
                    c(paste0("PixelSet",i,"_name"),Info_inter[i,11]	),
                    c(paste0("PixelSet",i,"_description"),Info_inter[i,12]	),
-                   c(paste0("PixelSet",i,"_file"),Info_inter[i,13]	)
+                   c(paste0("PixelSet",i,"_file"),unlist(strsplit(Info_inter[i,13], "/"))[3])
       )          
     }
     
@@ -5148,17 +5149,24 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  observeEvent(input$zip,{
+    if(is.null(input$zip)){
+      disable("extractZip")
+    } else{
+      enable("extractZip")
+    }
+  })
   
   observeEvent(input$extractZip,{
     # Create tmp folder
     file$address = paste0("www/Submissions/tmp_",isolate(input$USER))
-    dir.create( file$address)
+    dir.create(file$address)
     setwd(file$address)
-    
-    # copy zip folder in tmp and unzip
+  
+    # Copy zip folder in tmp and unzip
     file.copy(input$zip$datapath,"tmp.zip", overwrite = T )
     unzip("tmp.zip")
+    file$addressFolder = paste0("www/Submissions/tmp_",isolate(input$USER), "/",list.dirs("./", recursive = F, full.names = F)[1] )
     setwd(list.dirs("./", recursive = F, full.names = F)[1])
     
     # Read most recent metafile
@@ -5179,16 +5187,6 @@ server <- function(input, output, session) {
     updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
                       selected = nbrPS)
     
-    for (i in 1:nbrPS){
-      # paste0("input$submission_pixelSet_name_",i) paste0("input$submission_pixelSet_description_",i) paste0("input$submission_pixelSet_file",i,"$name")
-      
-      cat(paste0("submission_pixelSet_name_",i), file = stderr())
-      cat(metadata[(10 + 3*(i-1)),2], file = stderr())
-      updateTextInput(session = session, inputId = paste0("submission_pixelSet_name_",i), value = metadata[(12 + 3*(i-1)),2])
-      updateTextAreaInput(session = session, inputId = paste0("submission_pixelSet_description_",i), value = metadata[(13 + 3*(i-1)),2])
-      # updateSelectInput(session = session, inputId = paste0("input$submission_pixelSet_name_",i), selected = metadata[(10 + 3*(i-1)),2])
-    }
-    
     shinyjs::hide(id = "submission_Analysis_notebook")
     shinyjs::hide(id = "submission_Analysis_secondary_data")
     shinyjs::show(id = "submission_Analysis_notebook_name")
@@ -5200,6 +5198,43 @@ server <- function(input, output, session) {
 
     file$SD_name = metadata[11,2]
     file$SD_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[11,2]")
+    
+    # Multitable preparation
+    
+    if(!is.null(submissionRV$nbrPixelSet)){
+      for(i in 1: submissionRV$nbrPixelSet){
+        removeTab("tab_PixelSets", paste("PixelSet",i))
+      }
+    }
+    
+    submissionRV$nbrPixelSet = nbrPS
+    
+    for(i in 1:nbrPS){
+      if(i == 1){
+        appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
+                                            h4("Name") ,
+                                            textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(12 + 3*(i-1)),2]),
+                                            h4("Description"),
+                                            textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
+                                            disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(14 + 3*(i-1)),2]))
+                                            
+        ),select = T)
+        
+      }else{
+        appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
+                                             h4("Name") ,
+                                             textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(12 + 3*(i-1)),2]),
+                                             h4("Description"),
+                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
+                                             h4("File"),
+                                             disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(14 + 3*(i-1)),2]))
+                                             
+        ),select = F)
+        
+      }
+    }
+    
+    file$extract = T
     
     setwd("../../../..")
     
@@ -5378,6 +5413,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$SubmissionClear,{
+    file$extract = F
     reset('submission_Analysis_notebook')
     reset('submission_Analysis_secondary_data')
     updateTextAreaInput(session, "submission_Exp_description", value = "")
@@ -5394,6 +5430,7 @@ server <- function(input, output, session) {
     shinyjs::hide(id = "submission_Analysis_secondary_data_name")
     
     reset('zip')
+    disable(id='extractZip')
     unlink(file$address, recursive = T, force = T)
     file$notebook_name = NULL
     file$SD_name = NULL
@@ -5406,7 +5443,11 @@ server <- function(input, output, session) {
     
     filename = NULL 
     for(i in 1:input$submission_pixelSet_nbr){
-      filename = c(filename, eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))))
+      if(!is.null(file$extract) && file$extract == T){
+        filename = c(filename, eval(parse(text = paste0("input$submission_pixelSet_file",i))))
+      } else {
+        filename = c(filename, eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))))
+      }
     }
     
     if(nrow(AddRV$DataSource) == 0 ){
@@ -5449,11 +5490,20 @@ server <- function(input, output, session) {
         allCF = 0
         refusedCF = 0
         for( i in 1:input$submission_pixelSet_nbr){
-          inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                                     header = as.logical(input$header_PS),
-                                     sep = input$sep_PS,
-                                     quote = input$quote_PS
-          )
+          if(!is.null(file$extract) && file$extract == T){
+            inter_warning <- read.csv2(paste0(file$addressFolder,"/",eval(parse(text = paste0("input$submission_pixelSet_file",i)))),
+                                       header = as.logical(input$header_PS),
+                                       sep = input$sep_PS,
+                                       quote = input$quote_PS
+            )
+          } else {
+            inter_warning <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                                       header = as.logical(input$header_PS),
+                                       sep = input$sep_PS,
+                                       quote = input$quote_PS
+            )
+          }
+          
           pos = !(inter_warning[,1] %in% CF_Temp[,1])
           refused = inter_warning[pos,1]
           
@@ -5628,28 +5678,48 @@ server <- function(input, output, session) {
           incProgress(1/m, detail = paste0("Imported :", floor(i/m*100),"%"))
           
           id_PixelSets = paste0("PixelSet_",time,"_",i)
-          
           adresse_PixelSet = paste0("Submissions/",id_Submission,"/")
           
-          adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
-          
-          file.copy(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))), paste0("www/", adresse_analysis_file))   
+          if(!is.null(file$extract) && file$extract == T){
+            adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i))))
+            file.copy(paste0(file$addressFolder,"/", eval(parse(text = paste0("input$submission_pixelSet_file",i)))), paste0("www/", adresse_analysis_file)) 
+          } else {
+            adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
+            file.copy(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))), paste0("www/", adresse_analysis_file)) 
+          }
+
           
           REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
           dbGetQuery(con, REQUEST_PixelSet)
           
-          inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
-                             header = as.logical(input$header_PS),
-                             sep = input$sep_PS,
-                             quote = input$quote_PS
-          )
+          if(!is.null(file$extract) && file$extract == T){
+            inter <- read.csv2(paste0(file$addressFolder,"/",eval(parse(text = paste0("input$submission_pixelSet_file",i)))),
+                               header = as.logical(input$header_PS),
+                               sep = input$sep_PS,
+                               quote = input$quote_PS
+            )
+            submissionRV$META = rbind(submissionRV$META,
+                                      c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
+                                      c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
+                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i))))
+                                      
+            )
+          } else {
+            inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
+                               header = as.logical(input$header_PS),
+                               sep = input$sep_PS,
+                               quote = input$quote_PS
+            ) 
+            
+            submissionRV$META = rbind(submissionRV$META,
+                                      c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
+                                      c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
+                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
+                                      
+            )
+          }
           
-          submissionRV$META = rbind(submissionRV$META,
-                                    c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
-                                    c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
-                                    c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
-                                    
-          )
+          
           
           #---------------------------------------------------------------------
           # PIXEL
@@ -5692,6 +5762,7 @@ server <- function(input, output, session) {
       # CLEAR AFTER SUBMISSION
       #-------------------------------------------------------------------------
       
+      file$extract = F
       reset('submission_Analysis_notebook')
       reset('submission_Analysis_secondary_data')
       updateTextAreaInput(session, "submission_Exp_description", value = "")
@@ -5701,6 +5772,7 @@ server <- function(input, output, session) {
       updateSelectInput(session, "submission_pixelSet_nbr", selected = 2)
       updateSelectInput(session, "submission_pixelSet_nbr", selected = 1)
       submissionRV$Read = F
+      
       
       shinyjs::show(id = "submission_Analysis_notebook")
       shinyjs::show(id = "submission_Analysis_secondary_data")
@@ -5712,6 +5784,7 @@ server <- function(input, output, session) {
       }
       
       reset('zip')
+      disable(id='extractZip')
       file$notebook_name = NULL
       file$SD_name = NULL
       file$address = NULL
@@ -5760,49 +5833,52 @@ server <- function(input, output, session) {
   
   observeEvent(input$submission_pixelSet_nbr,{
     
-    if(!is.null(submissionRV$nbrPixelSet)){
+    if(!is.null(file$extract) && file$extract == F){
+      if(!is.null(submissionRV$nbrPixelSet)){
+        
+        for(i in 1: submissionRV$nbrPixelSet){
+          removeTab("tab_PixelSets", paste("PixelSet",i))
+        }
+      }
       
-      for(i in 1: submissionRV$nbrPixelSet){
-        removeTab("tab_PixelSets", paste("PixelSet",i))
+      submissionRV$nbrPixelSet = input$submission_pixelSet_nbr
+      
+      choices = AddRV$OUT[,1]
+      names(choices) = AddRV$OUT[,2]
+      
+      for(i in 1:input$submission_pixelSet_nbr){
+        if(i == 1){
+          appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
+                                              h4("Name") ,
+                                              textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                              actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                              actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
+                                              h4("Description"),
+                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
+                                              fileInput(paste0("submission_pixelSet_file",i),label = NULL,
+                                                        buttonLabel = "Browse...",
+                                                        placeholder = "No file selected")
+                                              
+          ),select = T)
+          
+        }else{
+          appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
+                                               h4("Name") ,
+                                               textInput(paste0('submission_pixelSet_name_',i), NULL),
+                                               actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                               actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
+                                               h4("Description"),
+                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
+                                               fileInput(paste0("submission_pixelSet_file",i),label = NULL,
+                                                         buttonLabel = "Browse...",
+                                                         placeholder = "No file selected")
+          ),select = F)
+          
+        }
+        
       }
     }
     
-    submissionRV$nbrPixelSet = input$submission_pixelSet_nbr
-    
-    choices = AddRV$OUT[,1]
-    names(choices) = AddRV$OUT[,2]
-    
-    for(i in 1:input$submission_pixelSet_nbr){
-      if(i == 1){
-        appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
-                                            h4("Name") ,
-                                            textInput(paste0('submission_pixelSet_name_',i), NULL),
-                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
-                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
-                                            h4("Description"),
-                                            textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
-                                            fileInput(paste0("submission_pixelSet_file",i),label = NULL,
-                                                      buttonLabel = "Browse...",
-                                                      placeholder = "No file selected")
-                                            
-        ),select = T)
-        
-      }else{
-        appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
-                                             h4("Name") ,
-                                             textInput(paste0('submission_pixelSet_name_',i), NULL),
-                                             actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
-                                             actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
-                                             h4("Description"),
-                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
-                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
-                                                       buttonLabel = "Browse...",
-                                                       placeholder = "No file selected")
-        ),select = F)
-        
-      }
-      
-    }
     
   })
   
@@ -5829,8 +5905,13 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$submission_pixelSet_file1,{
-    if(input$submission_pixelSet_file1$datapath != ""){
+    
+    if (file$extract){
       submissionRV$Read = T
+      submissionRV$PS1 = paste0(file$addressFolder,"/", input$submission_pixelSet_file1)
+    } else if (!is.null(input$submission_pixelSet_file1) && input$submission_pixelSet_file1$datapath != ""){
+      submissionRV$Read = T
+      submissionRV$PS1 = input$submission_pixelSet_file1$datapath
     } else {
       submissionRV$Read = F
     }
@@ -5841,7 +5922,7 @@ server <- function(input, output, session) {
     req(input$submission_pixelSet_file1)
     
     if(submissionRV$Read){
-      df <- read.csv2(input$submission_pixelSet_file1$datapath,
+      df <- read.csv2(submissionRV$PS1,
                       header = as.logical(input$header_PS),
                       sep = input$sep_PS,
                       quote = input$quote_PS,
