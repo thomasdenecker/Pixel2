@@ -1818,9 +1818,9 @@ server <- function(input, output, session) {
     
     for(i in 1:nrow(Info_inter)){
       meta = rbind(meta,
-                   c("PixelSet1_name",Info_inter[i,11]	),
-                   c("PixelSet1_description",Info_inter[i,12]	),
-                   c("PixelSet1_file",Info_inter[i,13]	)
+                   c(paste0("PixelSet",i,"_name"),Info_inter[i,11]	),
+                   c(paste0("PixelSet",i,"_description"),Info_inter[i,12]	),
+                   c(paste0("PixelSet",i,"_file"),Info_inter[i,13]	)
       )          
     }
     
@@ -1917,9 +1917,6 @@ server <- function(input, output, session) {
                                               and Analysis_Experiment.id_analysis = pixelset.id_analysis;"))
         idAnalysis = dbGetQuery(con, paste0("select DISTINCT id_analysis from pixelset
                                             where id_Submission = '",idSubmission,"'"))
-        
-        cat(paste(idSubmission,idExperience, idAnalysis,"\n" ), file= stderr())
-        
         
         dbGetQuery(con, paste0("delete from Tag_Experiment where id_experiment = '",idExperience,"';"))
         dbGetQuery(con, paste0("delete from Tag_Analysis where id_analysis = '",idAnalysis,"';"))
@@ -2915,10 +2912,10 @@ server <- function(input, output, session) {
           if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
             REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
                                    "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
-                                   "',description ='",gsub("\'"," Prime",database[i,7]),"',species_id ='",species_id, "', url ='",database[i,9] ,"',default_db_id ='",default_db_id 
+                                   "',description ='",gsub("\'","\'\'",database[i,7]),"',species_id ='",species_id, "', url ='",database[i,9] ,"',default_db_id ='",default_db_id 
                                    ,"' WHERE Feature_name = '",database[i,1],"';" );
           } else {
-            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'"," Prime",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
+            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'","\'\'",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
                                    ");")
           }
           
@@ -2967,98 +2964,6 @@ server <- function(input, output, session) {
           type = "error"
         )
       }
-      # } 
-      # else {
-      #   
-      #   # TABLE CREATION
-      #   newTableName <- input$sup_name
-      #   columnNewTable <- colnames(database)[-1]
-      #   
-      #   REQUEST = paste("CREATE TABLE", newTableName, "(id SERIAL PRIMARY KEY, feature_name TEXT,",
-      #                   paste(paste( columnNewTable, "TEXT"), collapse = ",")
-      #                   ,", cfsource_id INTEGER, CONSTRAINT fkcfsource FOREIGN KEY (cfsource_id) REFERENCES CFSource (id), CONSTRAINT fkCF FOREIGN KEY (feature_name) REFERENCES ChromosomalFeature (feature_name));")
-      #   
-      #   
-      #   
-      #   tryCatch(dbSendQuery(con, REQUEST)
-      #            , error = function(c) {
-      #              
-      #              sendSweetAlert(
-      #                session = session,
-      #                title = "Error : Table creation",
-      #                text = paste0(c,"\n The chevron shows you where the error is."),
-      #                type = "error"
-      #              )
-      #              
-      #              rv$ERROR = T
-      #              
-      #            },warning = function(c) {
-      #              sendSweetAlert(
-      #                session = session,
-      #                title = "Error : Table creation",
-      #                text = paste0(c,"\n The chevron shows you where the error is."),
-      #                type = "warning"
-      #              )
-      #              
-      #              rv$ERROR = T
-      #              
-      #            }
-      #   )
-      #   
-      #   # insert in new table
-      #   n <- nrow(database)
-      #   rv$ERROR = F
-      #   for(i in 1:nrow(database)){
-      #     
-      #     incProgress(1/n, detail = paste("Doing part", i))
-      #     
-      #     if(nrow(dbGetQuery(con,paste0("select * from chromosomalfeature where feature_name ='",gsub("\'"," Prime", database[i,1]),"';")))!=0){
-      #       
-      #       REQUEST_ANNOT = paste0("INSERT INTO ",newTableName," (feature_name ,",paste(columnNewTable, collapse = ","),",cfsource_id ) VALUES ( ", paste0("'", gsub("\'"," Prime", database[i,]),"'",collapse = ","),",'",default_db_id,"');")
-      #       
-      #       tryCatch(dbSendQuery(con, REQUEST_ANNOT)
-      #                , error = function(c) {
-      #                  sendSweetAlert(
-      #                    session = session,
-      #                    title = "Error : Table creation",
-      #                    text = paste0(c,"\n The chevron shows you where the error is."),
-      #                    type = "error"
-      #                  )
-      #                  
-      #                  
-      #                  rv$ERROR = T
-      #                  rv$ERROR_ALL = T
-      #                  rv$linesNotSaved = c(rv$linesNotSaved , i)
-      #                },warning = function(c) {
-      #                  sendSweetAlert(
-      #                    session = session,
-      #                    title = "Error : Table creation",
-      #                    text = paste0(c,"\n The chevron shows you where the error is."),
-      #                    type = "warning"
-      #                  )
-      #                  
-      #                  rv$ERROR = T
-      #                  rv$ERROR_ALL = T
-      #                  rv$linesNotSaved = c(rv$linesNotSaved , i)
-      #                }
-      #       )
-      #       
-      #       REQUEST_ANNOT = paste0("INSERT INTO annotation (feature_name , annot_table) VALUES ('",gsub("\'"," Prime", database[i,1]), "','",newTableName, "');")
-      #       
-      #       dbSendQuery(con, REQUEST_ANNOT)
-      #       
-      #     }
-      #   }
-      #   
-      #   if(rv$ERROR == F){
-      #     sendSweetAlert(
-      #       session = session,
-      #       title = "Congratulations!",
-      #       text = "The import was successful!",
-      #       type = "success"
-      #     )
-      #   }
-      # }  
     })
     MAJ$value = MAJ$value + 1
     dbDisconnect(con)
@@ -3325,10 +3230,6 @@ server <- function(input, output, session) {
       table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
       table = apply(table, 1, paste, collapse= "</td><td>")
       table = paste(table, collapse = "</td></tr><tr><td>")
-      
-      cat(paste( '<table class="table table-striped"><thead>
-                                        <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
-                 </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>'"), file = stderr())
       
       CF$Sup_tab = c(CF$Sup_tab, paste( '<h3>Go terms</h3><table class="table table-striped"><thead>
                                         <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
@@ -3767,8 +3668,6 @@ server <- function(input, output, session) {
     
     if (n > 0) {
       
-      cat("encore", file = stderr())
-      cat(n, file = stderr())
       # If the no. of textboxes previously where more than zero, then 
       # save the text inputs in those text boxes 
       if(prevcount$n > 0){
@@ -5276,6 +5175,20 @@ server <- function(input, output, session) {
     updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
     updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
     
+    nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_file",metadata[nrow(metadata),1]))[[1]][2])
+    updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
+                      selected = nbrPS)
+    
+    for (i in 1:nbrPS){
+      # paste0("input$submission_pixelSet_name_",i) paste0("input$submission_pixelSet_description_",i) paste0("input$submission_pixelSet_file",i,"$name")
+      
+      cat(paste0("submission_pixelSet_name_",i), file = stderr())
+      cat(metadata[(10 + 3*(i-1)),2], file = stderr())
+      updateTextInput(session = session, inputId = paste0("submission_pixelSet_name_",i), value = metadata[(12 + 3*(i-1)),2])
+      updateTextAreaInput(session = session, inputId = paste0("submission_pixelSet_description_",i), value = metadata[(13 + 3*(i-1)),2])
+      # updateSelectInput(session = session, inputId = paste0("input$submission_pixelSet_name_",i), selected = metadata[(10 + 3*(i-1)),2])
+    }
+    
     shinyjs::hide(id = "submission_Analysis_notebook")
     shinyjs::hide(id = "submission_Analysis_secondary_data")
     shinyjs::show(id = "submission_Analysis_notebook_name")
@@ -5284,16 +5197,11 @@ server <- function(input, output, session) {
     
     file$notebook_name = metadata[10,2]
     file$notebook_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[10,2]")
-    
-    ## test si vide
-    
+
     file$SD_name = metadata[11,2]
     file$SD_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[11,2]")
     
-    # submission_Analysis_notebook submission_Analysis_secondary_data
-    
     setwd("../../../..")
-    
     
   })
   
@@ -5486,6 +5394,7 @@ server <- function(input, output, session) {
     shinyjs::hide(id = "submission_Analysis_secondary_data_name")
     
     reset('zip')
+    unlink(file$address, recursive = T, force = T)
     file$notebook_name = NULL
     file$SD_name = NULL
     file$address = NULL
@@ -5750,7 +5659,7 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",inter[j,2],"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",gsub("\'","\'\'",inter[j,2]),"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })
@@ -5797,15 +5706,15 @@ server <- function(input, output, session) {
       shinyjs::show(id = "submission_Analysis_secondary_data")
       shinyjs::hide(id = "submission_Analysis_notebook_name")
       shinyjs::hide(id = "submission_Analysis_secondary_data_name")
+
+      if(!is.null(file$address) && dir.exists(file$address)){
+        unlink( file$address, recursive = T, force = T)
+      }
       
       reset('zip')
       file$notebook_name = NULL
       file$SD_name = NULL
       file$address = NULL
-      
-      if(dir.exists(file$address)){
-        unlink(file$address, recursive = T, force = T)
-      }
       
       #-------------------------------------------------------------------------
       # MESSAGE
@@ -5869,7 +5778,7 @@ server <- function(input, output, session) {
                                             h4("Name") ,
                                             textInput(paste0('submission_pixelSet_name_',i), NULL),
                                             actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
-                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO term", class="autoname"), 
+                                            actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
                                             h4("Description"),
                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                             fileInput(paste0("submission_pixelSet_file",i),label = NULL,
