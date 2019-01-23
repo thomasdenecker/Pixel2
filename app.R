@@ -5261,21 +5261,17 @@ server <- function(input, output, session) {
       file$SD_address = paste0(file$addressFolder , "/", metadata[12,2])
       
       # Check md5
-      if(md5sum(metadata[10,2]) != metadata[11,2]){
-        file$extractMD5 = c(file$extractMD5,"<b>Notebook</b>"  )
+      if(metadata[10,2] != ""){
+        if(md5sum(metadata[10,2]) != metadata[11,2]){
+          file$extractMD5 = c(file$extractMD5,"<b>Notebook</b>"  )
+        }
       }
-      cat(md5sum(metadata[10,2]), file = stderr())
-      cat("\n", file = stderr())
-      cat(paste(file$extractMD5, collapse = " "), file = stderr())
-      cat("\n", file = stderr())
       
-      if(md5sum(metadata[12,2]) != metadata[13,2]){
-        file$extractMD5 = c(file$extractMD5,"<b>Secondary data file</b>"  )
+      if(metadata[12,2] != ""){
+        if(md5sum(metadata[12,2]) != metadata[13,2]){
+          file$extractMD5 = c(file$extractMD5,"<b>Secondary data file</b>"  )
+        }
       }
-      cat(md5sum(metadata[12,2]), file = stderr())
-      cat("\n", file = stderr())
-      cat(paste(file$extractMD5, collapse = " "), file = stderr())
-      cat("\n", file = stderr())
       
       # Multitable preparation
       
@@ -5909,12 +5905,6 @@ server <- function(input, output, session) {
       if(!is.null(file$address) && dir.exists(file$address)){
         unlink( file$address, recursive = T, force = T)
       }
-      
-      cat(getwd(), file = stderr())
-      cat("\n", file = stderr())
-      cat(file$notebook_address, file = stderr())
-      cat("\n", file = stderr())
-      cat(file$SD_address, file = stderr())
       
       reset('zip')
       disable(id='extractZip')
