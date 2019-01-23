@@ -1803,6 +1803,12 @@ server <- function(input, output, session) {
       fileSD = ""
     }
     
+    md5_notebook = md5sum(paste0("www/",idSubmission,"/", fileNB))
+    md5_notebook[is.na(md5_notebook)] = ""
+    
+    md5_SD = md5sum(paste0("www/",idSubmission,"/", fileSD))
+    md5_SD[is.na(md5_SD)] = ""
+    
     meta = rbind(
       c("Experiment_description", Info_inter[1,1]),
       c("Experiment_completionDate",Info_inter[1,2]	),
@@ -1813,15 +1819,18 @@ server <- function(input, output, session) {
       c("Experiment_strain",Info_inter[1,6]	),
       c("Analysis_description",Info_inter[1,7]	),
       c("Analysis_completionDate",Info_inter[1,8]	),
-      c("Analysis_notebookFile",fileNB	),
-      c("Analysis_secondaryDataFile",	fileSD)
+      c("Analysis_notebookFile",fileNB),
+      c("md5_notebook", md5_notebook),
+      c("Analysis_secondaryDataFile",	fileSD),
+      c("md5_secondaryDataFile", md5_SD)
     )
     
     for(i in 1:nrow(Info_inter)){
       meta = rbind(meta,
                    c(paste0("PixelSet",i,"_name"),Info_inter[i,11]	),
                    c(paste0("PixelSet",i,"_description"),Info_inter[i,12]	),
-                   c(paste0("PixelSet",i,"_file"),unlist(strsplit(Info_inter[i,13], "/"))[3])
+                   c(paste0("PixelSet",i,"_file"),unlist(strsplit(Info_inter[i,13], "/"))[3]),
+                   c(paste0("PixelSet",i,"_md5"),md5sum(paste0("www/",Info_inter[i,13])))
       )          
     }
     
@@ -4366,7 +4375,8 @@ server <- function(input, output, session) {
                                               AND A.id = AE.id_analysis
                                               AND AE.id_experiment = E.id
                                               AND E.strainId = strain.id
-                                              AND strain.species_id = species.id;")) 
+                                              AND strain.species_id = species.id
+                                              ORDER BY PS.name;")) 
       
       SubFolder$infoAnalysis = SubFolder$infoG[1,1]
       SubFolder$infoExperiment = SubFolder$infoG[1,2]
@@ -5159,6 +5169,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$extractZip,{
     file$extractError = NULL
+    file$extractMD5 = NULL
+    
     if(dir.exists(paste0("www/Submissions/tmp_",isolate(input$USER)))){
       unlink(paste0("www/Submissions/tmp_",isolate(input$USER)), recursive = T, force = T)
     }
@@ -5193,13 +5205,12 @@ server <- function(input, output, session) {
     }
     
     if(! metadata[6,2] %in% AddRV$StrainSpecies[,"species"]){
-      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[6,2] ))
+      file$extractError = c(file$extractError, paste("<b>Species</b> :",metadata[6,2] ))
     }
     
     if(! metadata[7,2] %in% AddRV$StrainSpecies[,"strain"]){
-      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[7,2] ))
+      file$extractError = c(file$extractError, paste("<b>Strain</b> :",metadata[7,2] ))
     }
-    
     
     if(!is.null(file$extractError)){
       sendSweetAlert(
@@ -5218,6 +5229,8 @@ server <- function(input, output, session) {
       file$notebook_name = NULL
       file$SD_name = NULL
       file$address = NULL
+      file$SD_address = NULL
+      file$notebook_address = NULL
       
     } else {
       
@@ -5231,7 +5244,7 @@ server <- function(input, output, session) {
       updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
       updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
       
-      nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_file",metadata[nrow(metadata),1]))[[1]][2])
+      nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_md5",metadata[nrow(metadata),1]))[[1]][2])
       updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
                         selected = nbrPS)
       
@@ -5242,10 +5255,27 @@ server <- function(input, output, session) {
       
       
       file$notebook_name = metadata[10,2]
-      file$notebook_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[10,2]")
+      file$notebook_address = paste0(file$addressFolder, "/", metadata[10,2])
       
-      file$SD_name = metadata[11,2]
-      file$SD_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[11,2]")
+      file$SD_name = metadata[12,2]
+      file$SD_address = paste0(file$addressFolder , "/", metadata[12,2])
+      
+      # Check md5
+      if(md5sum(metadata[10,2]) != metadata[11,2]){
+        file$extractMD5 = c(file$extractMD5,"<b>Notebook</b>"  )
+      }
+      cat(md5sum(metadata[10,2]), file = stderr())
+      cat("\n", file = stderr())
+      cat(paste(file$extractMD5, collapse = " "), file = stderr())
+      cat("\n", file = stderr())
+      
+      if(md5sum(metadata[12,2]) != metadata[13,2]){
+        file$extractMD5 = c(file$extractMD5,"<b>Secondary data file</b>"  )
+      }
+      cat(md5sum(metadata[12,2]), file = stderr())
+      cat("\n", file = stderr())
+      cat(paste(file$extractMD5, collapse = " "), file = stderr())
+      cat("\n", file = stderr())
       
       # Multitable preparation
       
@@ -5261,26 +5291,53 @@ server <- function(input, output, session) {
         if(i == 1){
           appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
                                               h4("Name") ,
-                                              textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(12 + 3*(i-1)),2]),
+                                              textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(14 + 4*(i-1)),2]),
                                               h4("Description"),
-                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
-                                              disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(14 + 3*(i-1)),2]))
+                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
+                                              h4("File"),
+                                              disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(16 + 4*(i-1)),2]))
                                               
           ),select = T)
           
         }else{
           appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
                                                h4("Name") ,
-                                               textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(12 + 3*(i-1)),2]),
+                                               textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(14 + 4*(i-1)),2]),
                                                h4("Description"),
-                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
+                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
                                                h4("File"),
-                                               disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(14 + 3*(i-1)),2]))
+                                               disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(16 + 4*(i-1)),2]))
                                                
           ),select = F)
           
         }
+        
+        if(md5sum(metadata[(16 + 4*(i-1)),2]) != metadata[(17 + 4*(i-1)),2]){
+          file$extractMD5 = c(file$extractMD5,paste0("<b>Pixelset",i,"</b>")  )
+        }
+        
       }
+      
+      if(!is.null(file$extractMD5)){
+        sendSweetAlert(
+          session = session,
+          title = "Missing information!",
+          text =HTML("<p>The files were corrupted by the copy:</p>",
+                     paste("<p>",file$extractMD5,"</p>", collapse = "<br/>"),
+                     "<p>If you have made any changes, this message is not blocking. Otherwise, we advise you not to 
+                     import this data into Pixel2 because it is different from the expected data. </p>"),
+          type = "warning", html = TRUE
+          )
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = "md5 checked",
+          text =HTML("The files were not corrupted by the copy"),
+          type = "success", html = TRUE
+        )
+      }
+      
+      file$extractMD5 = NULL
       
       file$extract = T
       setwd("../../../..")
@@ -5485,6 +5542,8 @@ server <- function(input, output, session) {
     file$notebook_name = NULL
     file$SD_name = NULL
     file$address = NULL
+    file$SD_address = NULL
+    file$notebook_address = NULL
     
     shinyjs::runjs("window.scrollTo(0, 0)")
   })
@@ -5664,13 +5723,6 @@ server <- function(input, output, session) {
         file$SD_name = input$submission_Analysis_secondary_data$name
       }
       
-      submissionRV$META = rbind(submissionRV$META,
-                                c("Analysis_description",input$submission_Analysis_description),
-                                c("Analysis_completionDate",input$submission_Exp_completionDate),
-                                c("Analysis_notebookFile",file$notebook_name),
-                                c("Analysis_secondaryDataFile",file$SD_name)
-                                
-      )
       
       # Add analysis
       id_analysis = paste0("Analysis_",time)
@@ -5679,22 +5731,45 @@ server <- function(input, output, session) {
       if(file$notebook_name == ""){
         adresse_analysis_notebook = ""
       } else {
-        adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
-        file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
+        if(!is.null(input$submission_Analysis_secondary_data$name)){
+          adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
+          file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
+        } else {
+          adresse_analysis_notebook = paste0(adresse_analysis,file$notebook_name)
+          file.copy(file$notebook_address,paste0("www/",adresse_analysis_notebook) )
+        }
       }
       
-      if(file$SD_name == ""){
+    if(file$SD_name == ""){
         adresse_analysis_SD = ""
       } else {
-        adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
-        file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
+        if(!is.null(input$submission_Analysis_secondary_data$name)){
+          adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
+          file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
+        } else {
+          adresse_analysis_SD = paste0(adresse_analysis,file$SD_name)
+          file.copy(file$SD_address,  paste0("www/",adresse_analysis_SD) )
+        }
+        
       }
-      # 
-      # adresse_analysis_notebook = paste0(adresse_analysis,input$submission_Analysis_notebook$name)
-      # adresse_analysis_SD = paste0(adresse_analysis,input$submission_Analysis_secondary_data$name)
-      # 
-      # file.copy(input$submission_Analysis_notebook$datapath, paste0("www/", adresse_analysis_notebook))
-      # file.copy(input$submission_Analysis_secondary_data$datapath, paste0("www/",adresse_analysis_SD))
+      
+      
+      md5_notebook = md5sum(paste0("www/",adresse_analysis_notebook))
+      md5_notebook[is.na(md5_notebook)] = ""
+      
+      md5_SD = md5sum(paste0("www/",adresse_analysis_SD))
+      md5_SD[is.na(md5_SD)] = ""
+      
+      submissionRV$META = rbind(submissionRV$META,
+                                c("Analysis_description",input$submission_Analysis_description),
+                                c("Analysis_completionDate",input$submission_Exp_completionDate),
+                                c("Analysis_notebookFile",file$notebook_name),
+                                c("md5_notebook", md5_notebook),
+                                c("Analysis_secondaryDataFile",file$SD_name),
+                                c("md5_secondaryDataFile", md5_SD)
+                                
+      )
+      
       
       REQUEST_Analysis =  paste0("insert into analysis (id, description, completionDate, notebook_file,secondary_data_file) values ('",id_analysis,"','",input$submission_Analysis_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",adresse_analysis_notebook,"','",adresse_analysis_SD,"');")
       dbGetQuery(con, REQUEST_Analysis)
@@ -5751,8 +5826,9 @@ server <- function(input, output, session) {
             submissionRV$META = rbind(submissionRV$META,
                                       c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
                                       c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
-                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i))))
-                                      
+                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i)))),
+                                      c(paste0("PixelSet",i,"_md5"),md5sum(paste0(paste0("www/", adresse_analysis_file))))
+                                              
             )
           } else {
             inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
@@ -5764,7 +5840,8 @@ server <- function(input, output, session) {
             submissionRV$META = rbind(submissionRV$META,
                                       c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
                                       c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
-                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
+                                      c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name")))),
+                                      c(paste0("PixelSet",i,"_md5"),md5sum(paste0(paste0("www/", adresse_analysis_file))))
                                       
             )
           }
@@ -5833,11 +5910,19 @@ server <- function(input, output, session) {
         unlink( file$address, recursive = T, force = T)
       }
       
+      cat(getwd(), file = stderr())
+      cat("\n", file = stderr())
+      cat(file$notebook_address, file = stderr())
+      cat("\n", file = stderr())
+      cat(file$SD_address, file = stderr())
+      
       reset('zip')
       disable(id='extractZip')
       file$notebook_name = NULL
       file$SD_name = NULL
       file$address = NULL
+      file$SD_address = NULL
+      file$notebook_address = NULL
       
       #-------------------------------------------------------------------------
       # MESSAGE
