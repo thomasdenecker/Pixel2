@@ -951,7 +951,7 @@ server <- function(input, output, session) {
                 ),
                 fluidRow(
                   column(3,div(class = "inputNew",uiOutput("Delete_branch_OmicsArea"))),
-                  column(3,div(class = "inputNew",actionButton('Delete_branch_OmicsArea_btn','Modify OmicsArea', icon = icon("minus")))),
+                  column(3,div(class = "inputNew",actionButton('Delete_branch_OmicsArea_btn','Remove OmicsArea', icon = icon("minus")))),
                   column(3,""),
                   column(3,"")
                 ) ,
@@ -5158,6 +5158,11 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$extractZip,{
+    file$extractError = NULL
+    if(dir.exists(paste0("www/Submissions/tmp_",isolate(input$USER)))){
+      unlink(paste0("www/Submissions/tmp_",isolate(input$USER)), recursive = T, force = T)
+    }
+
     # Create tmp folder
     file$address = paste0("www/Submissions/tmp_",isolate(input$USER))
     dir.create(file$address)
@@ -5173,70 +5178,115 @@ server <- function(input, output, session) {
     metaDate = max(unlist(lapply(list.files("./", pattern = "meta_*"), function(x){regmatches(x,regexec("meta_(.*?).txt",x))[[1]][2]})))
     metadata = read.table(paste0("meta_",metaDate,".txt"), sep = "\t", header = F, stringsAsFactors = F)
     
-    updateTextAreaInput(session = session, inputId = "submission_Exp_description", value = metadata[1,2])
-    updateSelectInput(session = session, inputId = "submission_Exp_completionDate", selected = metadata[2,2])
-    updateSelectInput(session = session, inputId = "Submission_Exp_omicsArea", selected = metadata[3,2])
-    updateSelectInput(session = session, inputId = "submission_pixelSet_OUT", selected = AddRV$OUT[which(AddRV$OUT[,2] == metadata[4,2]),1]  )
-    updateSelectInput(session = session, inputId = "Submission_Exp_dataSource", selected = metadata[5,2])
-    updateSelectInput(session = session, inputId = "Submission_Exp_Species", selected = metadata[6,2])
-    updateSelectInput(session = session, inputId = "Submission_Exp_Strain", selected = metadata[7,2])
-    updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
-    updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
+    # information controls 
     
-    nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_file",metadata[nrow(metadata),1]))[[1]][2])
-    updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
-                      selected = nbrPS)
+    if(! metadata[3,2] %in% AddRV$OmicsArea[,'name']){
+      file$extractError = c(file$extractError, paste("<b>Omics area</b> :",metadata[3,2] ))
+    }
     
-    shinyjs::hide(id = "submission_Analysis_notebook")
-    shinyjs::hide(id = "submission_Analysis_secondary_data")
-    shinyjs::show(id = "submission_Analysis_notebook_name")
-    shinyjs::show(id = "submission_Analysis_secondary_data_name")
+    if(! metadata[4,2] %in% AddRV$OUT[,2]){
+      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[4,2] ))
+    }
+    
+    if(! metadata[5,2] %in% AddRV$DataSource[,'name']){
+      file$extractError = c(file$extractError, paste("<b>Data source</b> :",metadata[5,2] ))
+    }
+    
+    if(! metadata[6,2] %in% AddRV$StrainSpecies[,"species"]){
+      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[6,2] ))
+    }
+    
+    if(! metadata[7,2] %in% AddRV$StrainSpecies[,"strain"]){
+      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[7,2] ))
+    }
     
     
-    file$notebook_name = metadata[10,2]
-    file$notebook_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[10,2]")
+    if(!is.null(file$extractError)){
+      sendSweetAlert(
+        session = session,
+        title = "Missing information!",
+        text =HTML("<p>Some information is not known in the database. You will find the list below:</p>",
+             paste("<p>",file$extractError,"</p>", collapse = "<br/>"),
+             "<p>No information was imported into the database. Once the information has been saved, you can import this zip again. </p>"),
+        type = "error", html = TRUE
+      )
+      
+      setwd("../../../..")
+      reset('zip')
+      disable(id='extractZip')
+      unlink(file$address, recursive = T, force = T)
+      file$notebook_name = NULL
+      file$SD_name = NULL
+      file$address = NULL
+      
+    } else {
+      
+      updateTextAreaInput(session = session, inputId = "submission_Exp_description", value = metadata[1,2])
+      updateSelectInput(session = session, inputId = "submission_Exp_completionDate", selected = metadata[2,2])
+      updateSelectInput(session = session, inputId = "Submission_Exp_omicsArea_SI", selected = metadata[3,2])
+      updateSelectInput(session = session, inputId = "submission_pixelSet_OUT", selected = AddRV$OUT[which(AddRV$OUT[,2] == metadata[4,2]),1]  )
+      updateSelectInput(session = session, inputId = "Submission_Exp_dataSource_SI", selected = metadata[5,2])
+      updateSelectInput(session = session, inputId = "Submission_Exp_Species_SI", selected = metadata[6,2])
+      updateSelectInput(session = session, inputId = "Submission_Exp_Strain_SI", selected = metadata[7,2])
+      updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
+      updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
+      
+      nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_file",metadata[nrow(metadata),1]))[[1]][2])
+      updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
+                        selected = nbrPS)
+      
+      shinyjs::hide(id = "submission_Analysis_notebook")
+      shinyjs::hide(id = "submission_Analysis_secondary_data")
+      shinyjs::show(id = "submission_Analysis_notebook_name")
+      shinyjs::show(id = "submission_Analysis_secondary_data_name")
+      
+      
+      file$notebook_name = metadata[10,2]
+      file$notebook_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[10,2]")
+      
+      file$SD_name = metadata[11,2]
+      file$SD_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[11,2]")
+      
+      # Multitable preparation
+      
+      if(!is.null(submissionRV$nbrPixelSet)){
+        for(i in 1: submissionRV$nbrPixelSet){
+          removeTab("tab_PixelSets", paste("PixelSet",i))
+        }
+      }
 
-    file$SD_name = metadata[11,2]
-    file$SD_address = paste0("www/Submissions/tmp_",isolate(input$USER),"/", list.dirs("./", recursive = F, full.names = F)[1] , "metadata[11,2]")
-    
-    # Multitable preparation
-    
-    if(!is.null(submissionRV$nbrPixelSet)){
-      for(i in 1: submissionRV$nbrPixelSet){
-        removeTab("tab_PixelSets", paste("PixelSet",i))
+      submissionRV$nbrPixelSet = nbrPS
+      
+      for(i in 1:nbrPS){
+        if(i == 1){
+          appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
+                                              h4("Name") ,
+                                              textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(12 + 3*(i-1)),2]),
+                                              h4("Description"),
+                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
+                                              disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(14 + 3*(i-1)),2]))
+                                              
+          ),select = T)
+          
+        }else{
+          appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
+                                               h4("Name") ,
+                                               textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(12 + 3*(i-1)),2]),
+                                               h4("Description"),
+                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
+                                               h4("File"),
+                                               disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(14 + 3*(i-1)),2]))
+                                               
+          ),select = F)
+          
+        }
       }
+      
+      file$extract = T
+      setwd("../../../..")
     }
+
     
-    submissionRV$nbrPixelSet = nbrPS
-    
-    for(i in 1:nbrPS){
-      if(i == 1){
-        appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
-                                            h4("Name") ,
-                                            textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(12 + 3*(i-1)),2]),
-                                            h4("Description"),
-                                            textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
-                                            disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(14 + 3*(i-1)),2]))
-                                            
-        ),select = T)
-        
-      }else{
-        appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
-                                             h4("Name") ,
-                                             textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(12 + 3*(i-1)),2]),
-                                             h4("Description"),
-                                             textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(13 + 3*(i-1)),2]),
-                                             h4("File"),
-                                             disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(14 + 3*(i-1)),2]))
-                                             
-        ),select = F)
-        
-      }
-    }
-    
-    file$extract = T
-    
-    setwd("../../../..")
     
   })
   
