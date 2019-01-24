@@ -1085,7 +1085,22 @@ server <- function(input, output, session) {
                   column(6,div(class = "inputNew",actionButton('addSpecies_btn','Add species', icon = icon("plus-circle"))))
                 ),
                 h3(class ="h3-style","Modify existing species"),
-                DTOutput('DT_AddSpecies'))
+                DTOutput('DT_AddSpecies'),
+                
+                h3(class ="h3-style", "Delete species"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Species to be deleted"), 
+                         column(3, ""), 
+                         column(3, ""),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Delete_species"))),
+                  column(3,div(class = "inputNew",actionButton('Delete_species_btn','Remove species', icon = icon("minus")))),
+                  column(3,""),
+                  column(3,"")
+                )
+                )
             
           ),
           
@@ -4645,14 +4660,9 @@ server <- function(input, output, session) {
     }
   })
   
-  
   output$Delete_OUT = renderUI({
     selectInput('Delete_OUT_SI', NULL, AddRV$OUT[,'name'])
   })
-  
-  
-  
-  
   
   #-----------------------------------------------------------------------------
   # Add Datasource
@@ -5113,6 +5123,72 @@ server <- function(input, output, session) {
       updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
     }
   })
+  
+  
+  #-----------------------------------------------------------------------------
+  # Remove species
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$Delete_species_btn,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    Used = dbGetQuery(con,paste0("SELECT distinct strain.name from strain, species
+                                 WHERE strain.species_id = species.id
+                                 AND species.name ='",input$Delete_species_SI,"';"))
+    dbDisconnect(con)
+    
+    if(nrow(Used) != 0){
+      sendSweetAlert(
+        session = session,
+        title = "Species used",
+        text = paste("This species is used for this/these strain(s) :", paste(Used[,1], collapse = ", ")),
+        type = "error"
+      )
+    }else {
+      confirmSweetAlert(
+        session = session,
+        inputId = "confirm_delete_species",
+        type = "warning",
+        title = "Want to confirm ?",
+        text = paste("Delete species  :",input$Delete_species_SI , "?" ),
+        danger_mode = TRUE
+      )
+    }
+  }
+    )
+  
+  observeEvent(input$confirm_delete_species, {
+    if (isTRUE(input$confirm_delete_species)) {
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("delete from species where species.name ='",input$Delete_species_SI,"';"))
+      
+      REQUEST = "SELECT * FROM species;"
+      AddRV$Species = dbGetQuery(con, REQUEST)
+      updateSelectInput(session, 'Delete_species_SI', choices = AddRV$Species[,'name'])
+      updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
+      dbDisconnect(con)
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "Deletion cancelled !",
+        type = "warning"
+      )
+    }
+  })
+  
+  output$Delete_species = renderUI({
+    selectInput('Delete_species_SI', NULL, AddRV$Species[,'name'])
+  })
+  
   
   
   
