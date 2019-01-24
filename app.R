@@ -724,7 +724,7 @@ server <- function(input, output, session) {
                    textOutput('geneListMPS'),
                    tags$br(),
                    htmlOutput('geneListSizeMPS')
-                   )
+            )
           )
           
         ),
@@ -883,7 +883,7 @@ server <- function(input, output, session) {
                   column(3,""),
                   column(3,"")
                 ) 
-                )
+            )
           )),
         
         #=======================================================================
@@ -1100,7 +1100,7 @@ server <- function(input, output, session) {
                   column(3,""),
                   column(3,"")
                 )
-                )
+            )
             
           ),
           
@@ -1123,7 +1123,23 @@ server <- function(input, output, session) {
                   column(4,div(class = "inputNew",actionButton('addStrain_btn','Add strain', icon = icon("plus-circle"))))
                 ),
                 h3(class ="h3-style","Modify existing strains"),
-                DTOutput('DT_AddStrain'))
+                DTOutput('DT_AddStrain'),
+                
+                h3(class ="h3-style", "Delete strain"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Strain to be deleted"), 
+                         column(3, ""), 
+                         column(3, ""),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Delete_strain"))),
+                  column(3,div(class = "inputNew",actionButton('Delete_strain_btn','Remove strain', icon = icon("minus")))),
+                  column(3,""),
+                  column(3,"")
+                )
+                
+            )
             
           )
           
@@ -3613,7 +3629,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   # MultiPixelSets : Histogram
   #-----------------------------------------------------------------------------
-
+  
   observeEvent(PixelSetExploRV$PixelSetID,{
     
     lapply(1:length(PixelSetExploRV$PixelSetID), function(i) {
@@ -3648,7 +3664,7 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   # MultiPixelSets : extract gene list
   #-----------------------------------------------------------------------------
-
+  
   
   output$geneListMPS = renderText({
     if(!is.null(input$PSExploTab_rows_all) && length(input$PSExploTab_rows_all) != nrow(PixelSetExploRV$TAB)){
@@ -3674,7 +3690,7 @@ server <- function(input, output, session) {
     }
     
   })
-
+  
   
   #-----------------------------------------------------------------------------
   # MultiPixelSets : FILTERS
@@ -3723,21 +3739,21 @@ server <- function(input, output, session) {
         for(i in 1:lesscnt){
           inpid = paste0("col_",i)
           choice[i] = input[[inpid]] 
-
+          
           inpid = paste0("FilterUiElement_",i)
           val[[i]] = isolate(input[[inpid]])
         }
-
+        
         if(isInc){
           val[[n]] <- ""
         }
-
+        
         lapply(seq_len(n), function(i) {
           
-            fluidRow(
-              div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] ))),
-              column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
-            )
+          fluidRow(
+            div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] ))),
+            column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
+          )
         })
         
         # for(i in 1:n){
@@ -3751,8 +3767,8 @@ server <- function(input, output, session) {
       }else{
         lapply(seq_len(n), function(i) {
           fluidRow(
-                   div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB)))),
-               column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
+            div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB)))),
+            column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
           )
         }) 
       }
@@ -3760,7 +3776,7 @@ server <- function(input, output, session) {
     }
     
   })
-
+  
   
   
   observe({
@@ -3831,7 +3847,7 @@ server <- function(input, output, session) {
         type = "warning"
       )
     }
-    }
+  }
   )
   
   observeEvent(input$filter_clear_btn, {
@@ -5158,7 +5174,7 @@ server <- function(input, output, session) {
       )
     }
   }
-    )
+  )
   
   observeEvent(input$confirm_delete_species, {
     if (isTRUE(input$confirm_delete_species)) {
@@ -5188,9 +5204,6 @@ server <- function(input, output, session) {
   output$Delete_species = renderUI({
     selectInput('Delete_species_SI', NULL, AddRV$Species[,'name'])
   })
-  
-  
-  
   
   #-----------------------------------------------------------------------------
   # Add Strain
@@ -5301,6 +5314,75 @@ server <- function(input, output, session) {
     selectInput('Species_Strain_SI', NULL, AddRV$Species[,'name'])
   })
   
+  #-----------------------------------------------------------------------------
+  # Remove strain
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$Delete_strain_btn,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    Used = dbGetQuery(con,paste0("SELECT distinct pixelset.id from strain, experiment, Analysis_Experiment, pixelset
+                                 WHERE strain.id = experiment.strainId
+                                 AND experiment.id = Analysis_Experiment.id_experiment
+                                 AND Analysis_Experiment.id_analysis = pixelset.id_analysis
+                                 AND strain.name ='",input$Delete_strain_SI,"';"))
+    dbDisconnect(con)
+    
+    if(nrow(Used) != 0){
+      sendSweetAlert(
+        session = session,
+        title = "Strain  used",
+        text = paste("This Strain is used for this/these Pixelset(s) :", paste(Used[,1], collapse = ", ")),
+        type = "error"
+      )
+    }else {
+      confirmSweetAlert(
+        session = session,
+        inputId = "confirm_delete_strain",
+        type = "warning",
+        title = "Want to confirm ?",
+        text = paste("Delete strain  :",input$Delete_strain_SI , "?" ),
+        danger_mode = TRUE
+      )
+    }
+  }
+  )
+  
+  observeEvent(input$confirm_delete_strain, {
+    if (isTRUE(input$confirm_delete_strain)) {
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("delete from strain where strain.name ='",input$Delete_strain_SI,"';"))
+      
+      REQUEST = "SELECT * FROM strain;"
+      AddRV$Strain = dbGetQuery(con, REQUEST)
+      AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
+      updateSelectInput(session, 'Delete_strain_SI', choices = AddRV$Strain[,'name'])
+      dbDisconnect(con)
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "Deletion cancelled !",
+        type = "warning"
+      )
+    }
+  })
+  
+  output$Delete_strain = renderUI({
+    selectInput('Delete_strain_SI', NULL, AddRV$Strain[,'name'])
+  })
+  
+  
+  
+  
   #=============================================================================
   # Submission
   #=============================================================================
@@ -5331,12 +5413,12 @@ server <- function(input, output, session) {
     if(dir.exists(paste0("www/Submissions/tmp_",isolate(input$USER)))){
       unlink(paste0("www/Submissions/tmp_",isolate(input$USER)), recursive = T, force = T)
     }
-
+    
     # Create tmp folder
     file$address = paste0("www/Submissions/tmp_",isolate(input$USER))
     dir.create(file$address)
     setwd(file$address)
-  
+    
     # Copy zip folder in tmp and unzip
     file.copy(input$zip$datapath,"tmp.zip", overwrite = T )
     unzip("tmp.zip")
@@ -5374,8 +5456,8 @@ server <- function(input, output, session) {
         session = session,
         title = "Missing information!",
         text =HTML("<p>Some information is not known in the database. You will find the list below:</p>",
-             paste("<p>",file$extractError,"</p>", collapse = "<br/>"),
-             "<p>No information was imported into the database. Once the information has been saved, you can import this zip again. </p>"),
+                   paste("<p>",file$extractError,"</p>", collapse = "<br/>"),
+                   "<p>No information was imported into the database. Once the information has been saved, you can import this zip again. </p>"),
         type = "error", html = TRUE
       )
       
@@ -5437,7 +5519,7 @@ server <- function(input, output, session) {
           removeTab("tab_PixelSets", paste("PixelSet",i))
         }
       }
-
+      
       submissionRV$nbrPixelSet = nbrPS
       
       for(i in 1:nbrPS){
@@ -5480,7 +5562,7 @@ server <- function(input, output, session) {
                      "<p>If you have made any changes, this message is not blocking. Otherwise, we advise you not to 
                      import this data into Pixel2 because it is different from the expected data. </p>"),
           type = "warning", html = TRUE
-          )
+        )
       } else {
         sendSweetAlert(
           session = session,
@@ -5495,7 +5577,7 @@ server <- function(input, output, session) {
       file$extract = T
       setwd("../../../..")
     }
-
+    
     
     
   })
@@ -5507,7 +5589,7 @@ server <- function(input, output, session) {
   output$submission_Analysis_secondary_data_name = renderText(
     file$SD_name
   )
-    
+  
   
   #-----------------------------------------------------------------------------
   # Experiment
@@ -5893,7 +5975,7 @@ server <- function(input, output, session) {
         }
       }
       
-    if(file$SD_name == ""){
+      if(file$SD_name == ""){
         adresse_analysis_SD = ""
       } else {
         if(!is.null(input$submission_Analysis_secondary_data$name)){
@@ -5965,7 +6047,7 @@ server <- function(input, output, session) {
             adresse_analysis_file = paste0(adresse_PixelSet,eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name"))))
             file.copy(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))), paste0("www/", adresse_analysis_file)) 
           }
-
+          
           
           REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
           dbGetQuery(con, REQUEST_PixelSet)
@@ -5981,7 +6063,7 @@ server <- function(input, output, session) {
                                       c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
                                       c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i)))),
                                       c(paste0("PixelSet",i,"_md5"),md5sum(paste0(paste0("www/", adresse_analysis_file))))
-                                              
+                                      
             )
           } else {
             inter <- read.csv2(eval(parse(text = paste0("input$submission_pixelSet_file",i,"$datapath"))),
@@ -6058,7 +6140,7 @@ server <- function(input, output, session) {
       shinyjs::show(id = "submission_Analysis_secondary_data")
       shinyjs::hide(id = "submission_Analysis_notebook_name")
       shinyjs::hide(id = "submission_Analysis_secondary_data_name")
-
+      
       if(!is.null(file$address) && dir.exists(file$address)){
         unlink( file$address, recursive = T, force = T)
       }
