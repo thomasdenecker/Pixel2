@@ -867,9 +867,23 @@ server <- function(input, output, session) {
                   column(2,div(class = "inputNew",textInput("Description_OUT", NULL, placeholder = "Description"))),
                   column(8,div(class = "inputNew",actionButton('addOUT_btn','Add OmicsUnitType', icon = icon("plus-circle"))))
                 ),
+                
                 h3(class ="h3-style","Modify existing types of omics units"),
-                DTOutput('DT_AddOUT'))
-            
+                DTOutput('DT_AddOUT'),
+                h3(class ="h3-style", "Delete omics unit types"),
+                fluidRow(class= "tableTitle-left",
+                         column(3, "Omics unit types to be deleted"), 
+                         column(3, ""), 
+                         column(3, ""),
+                         column(3, "")
+                ),
+                fluidRow(
+                  column(3,div(class = "inputNew",uiOutput("Delete_OUT"))),
+                  column(3,div(class = "inputNew",actionButton('Delete_OUT_btn','Remove Omics unit type', icon = icon("minus")))),
+                  column(3,""),
+                  column(3,"")
+                ) 
+                )
           )),
         
         #=======================================================================
@@ -2164,7 +2178,6 @@ server <- function(input, output, session) {
   #.............................................................................
   # Remove  Tag
   #.............................................................................
-  # AdminTag_delete_btn tagDeleteUi
   
   output$tagDeleteUi <- renderUI({
     if(!is.null(TAG$table) && nrow(TAG$table) != 0){
@@ -4574,6 +4587,74 @@ server <- function(input, output, session) {
   })
   
   #-----------------------------------------------------------------------------
+  # Remove OUT
+  #-----------------------------------------------------------------------------
+  
+  observeEvent(input$Delete_OUT_btn,{
+    pg <- dbDriver("PostgreSQL")
+    con <- dbConnect(pg, user="docker", password="docker",
+                     host=ipDB, port=5432)
+    on.exit(dbDisconnect(con))
+    
+    Used = dbGetQuery(con,paste0("SELECT distinct pixelSet_id from Pixel , OmicsUnitType 
+                                 WHERE pixel.OmicsUnitType_id = OmicsUnitType.id 
+                                 AND OmicsUnitType.name ='",input$Delete_OUT_SI,"';"))
+    dbDisconnect(con)
+    
+    if(nrow(Used) != 0){
+      sendSweetAlert(
+        session = session,
+        title = "Omics unit type used",
+        text = paste("This Omics unit type is used (", paste(Used[,1], collapse = ", "),")"),
+        type = "error"
+      )
+    }else {
+      confirmSweetAlert(
+        session = session,
+        inputId = "confirm_delete_OUT",
+        type = "warning",
+        title = "Want to confirm ?",
+        text = paste("Delete Omics unit type  :",input$Delete_OUT_SI , "?" ),
+        danger_mode = TRUE
+      )
+    }
+  }
+  )
+  
+  observeEvent(input$confirm_delete_OUT, {
+    if (isTRUE(input$confirm_delete_OUT)) {
+      
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      dbGetQuery(con,paste0("delete from OmicsUnitType where OmicsUnitType.name ='",input$Delete_OUT_SI,"';"))
+      
+      REQUEST = "SELECT * FROM OmicsUnitType;"
+      AddRV$OUT = dbGetQuery(con, REQUEST)
+      updateSelectInput(session, 'Delete_OUT_SI', choices = AddRV$OUT[,'name'])
+      dbDisconnect(con)
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "Cancellation...",
+        text = "Deletion cancelled !",
+        type = "warning"
+      )
+    }
+  })
+  
+  
+  output$Delete_OUT = renderUI({
+    selectInput('Delete_OUT_SI', NULL, AddRV$OUT[,'name'])
+  })
+  
+  
+  
+  
+  
+  #-----------------------------------------------------------------------------
   # Add Datasource
   #-----------------------------------------------------------------------------
   
@@ -4849,7 +4930,7 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "OmicArea used",
-        text = paste("This OmicsArea is used (", paste(Used, collapse = ",",")")),
+        text = paste("This OmicsArea is used (", paste(Used[,1], collapse = ","),")"),
         type = "error"
       )
     }else {
