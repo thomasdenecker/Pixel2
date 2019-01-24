@@ -85,6 +85,7 @@ server <- function(input, output, session) {
   # Reactive values 
   #=============================================================================
   USERS <- reactiveValues()
+  datasourceRV = reactiveValues()
   rv <- reactiveValues()
   SEARCH_RV <- reactiveValues()
   TAG <- reactiveValues()
@@ -121,6 +122,14 @@ server <- function(input, output, session) {
                           ;")
     
     PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+    datasourceRV$tab = dbGetQuery(con, "SELECT DataSource.name, DataSource.description, DataSource.published, DataSource.url,
+                                      pixelset.id, pixelset.name, PixelSet.description, omicsarea.name
+                                FROM Datasource, experiment, analysis_experiment,pixelset, OmicsArea
+                                WHERE experiment.omicsareaid = OmicsArea.id 
+                                AND experiment.DataSourceId = DataSource.id
+                                AND analysis_experiment.id_experiment = experiment.id
+                                AND analysis_experiment.id_analysis = pixelset.id_analysis
+                                ;")
     
     DASHBOARD_RV$PIXELSET = dbGetQuery(con,"SELECT count(*) from pixelset;")[1,1]
     DASHBOARD_RV$PIXEL = dbGetQuery(con,"SELECT count(*) from pixel;")[1,1]
@@ -257,7 +266,8 @@ server <- function(input, output, session) {
                       menuItem("Database exploration", tabName = "Explorer", icon = icon("search"),
                                startExpanded = F,
                                menuSubItem("Search by PixelSets", tabName = "PixelSetList"),
-                               menuSubItem("Search by submissions", tabName = "submissionFolder")
+                               menuSubItem("Search by submissions", tabName = "submissionFolder"),
+                               menuSubItem("Search by datasource", tabName = "datasourceList")
                       ),
                       menuItem("Data integration", tabName = "PixelSetExplo", icon = icon("align-justify")),
                       
@@ -741,8 +751,23 @@ server <- function(input, output, session) {
         # Tab content : Submission folder
         #=======================================================================
         tabItem(
+          tabName = "datasourceList", 
+          h2("Datasource list"),
+          h3(class = "h3-style","Datasource overview"), 
+          div( class = "margeProfile",
+               fluidRow(
+                 DTOutput("DatasourceTab")
+               )
+          )
+        ),
+
+        
+        #=======================================================================
+        # Tab content : Submission folder
+        #=======================================================================
+        tabItem(
           tabName = "submissionFolder", 
-          h2("Submission"),
+          h2("Submission list"),
           h3(class = "h3-style","Submission overview"), 
           div( class = "margeProfile",
                fluidRow(
@@ -2611,6 +2636,15 @@ server <- function(input, output, session) {
                             ;")
       
       PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+      datasourceRV$tab = dbGetQuery(con, "SELECT DataSource.name, DataSource.description, DataSource.published, DataSource.url,
+                                      pixelset.id, pixelset.name, PixelSet.description, omicsarea.name
+                                    FROM Datasource, experiment, analysis_experiment,pixelset, OmicsArea
+                                    WHERE experiment.omicsareaid = OmicsArea.id 
+                                    AND experiment.DataSourceId = DataSource.id
+                                    AND analysis_experiment.id_experiment = experiment.id
+                                    AND analysis_experiment.id_analysis = pixelset.id_analysis
+                                    ;")
+      
       updateMeta(dbGetQuery(con,paste0("Select id_submission from pixelset where id = '",pixelsetModify$id,"'"))[1,1])
       sendSweetAlert(
         session = session,
@@ -3440,6 +3474,14 @@ server <- function(input, output, session) {
                           ;")
   
   PIXELSETLIST_RV$info=dbGetQuery(con,REQUEST_Info)
+  datasourceRV$tab = dbGetQuery(con, "SELECT DataSource.name, DataSource.description, DataSource.published, DataSource.url,
+                                      pixelset.id, pixelset.name, PixelSet.description, omicsarea.name
+                                FROM Datasource, experiment, analysis_experiment,pixelset, OmicsArea
+                                WHERE experiment.omicsareaid = OmicsArea.id 
+                                AND experiment.DataSourceId = DataSource.id
+                                AND analysis_experiment.id_experiment = experiment.id
+                                AND analysis_experiment.id_analysis = pixelset.id_analysis
+                                ;")
   
   dbDisconnect(con)
   
@@ -4519,6 +4561,25 @@ server <- function(input, output, session) {
   # END SUBMISSION FOLDER
   #=============================================================================
   
+  output$DatasourceTab <- renderDT({
+    colnames(datasourceRV$tab) = c("Datasource name", "Datasource description", "Published?", "Datasource URL","Pixelset ID",
+                                   "Pixelset name", "Pixelset description", "Omics area")
+    
+    datasourceRV$tab[,"Datasource name"] = as.factor(datasourceRV$tab[,"Datasource name"])
+    datasourceRV$tab[,"Published?"] = as.factor(datasourceRV$tab[,"Published?"])
+    datasourceRV$tab[,"Omics area"] = as.factor(datasourceRV$tab[,"Omics area"])
+    datasourceRV$tab
+  }, 
+  selection = 'single', 
+  editable = F,  server = TRUE,
+  filter = 'top',
+  options = list(scrollX = TRUE, searchHighlight = TRUE))
+  
+  observeEvent(input$DatasourceTab_rows_selected,{
+    SEARCH_RV$PIXELSET = datasourceRV$tab[input$DatasourceTab_rows_selected,"Pixelset ID"]
+    proxy = dataTableProxy('DatasourceTab')
+    proxy %>% selectRows(NULL)
+  })
   
   #=============================================================================
   # Add information
@@ -4532,6 +4593,15 @@ server <- function(input, output, session) {
   AddRV$OUT = dbGetQuery(con,"SELECT * from omicsunittype;")
   
   AddRV$DataSource = dbGetQuery(con,"SELECT * from DataSource;")
+  datasourceRV$tab = dbGetQuery(con, "SELECT DataSource.name, DataSource.description, DataSource.published, DataSource.url,
+                                      pixelset.id, pixelset.name, PixelSet.description, omicsarea.name
+                                FROM Datasource, experiment, analysis_experiment,pixelset, OmicsArea
+                                WHERE experiment.omicsareaid = OmicsArea.id 
+                                AND experiment.DataSourceId = DataSource.id
+                                AND analysis_experiment.id_experiment = experiment.id
+                                AND analysis_experiment.id_analysis = pixelset.id_analysis
+                                ;")
+  
   AddRV$OmicsArea = dbGetQuery(con,"SELECT * from OmicsArea ORDER BY path;")
   AddRV$Species = dbGetQuery(con,"SELECT * from species;")
   AddRV$Strain = dbGetQuery(con,"SELECT * from strain;")
@@ -4793,6 +4863,15 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       AddRV$DataSource = dbGetQuery(con, REQUEST)
+      datasourceRV$tab = dbGetQuery(con, "SELECT DataSource.name, DataSource.description, DataSource.published, DataSource.url,
+                                      pixelset.id, pixelset.name, PixelSet.description, omicsarea.name
+                                    FROM Datasource, experiment, analysis_experiment,pixelset, OmicsArea
+                                    WHERE experiment.omicsareaid = OmicsArea.id 
+                                    AND experiment.DataSourceId = DataSource.id
+                                    AND analysis_experiment.id_experiment = experiment.id
+                                    AND analysis_experiment.id_analysis = pixelset.id_analysis
+                                    ;")
+      
       dbDisconnect(con)
       
       updateTextInput(session, "Name_DataSource", value = "")
