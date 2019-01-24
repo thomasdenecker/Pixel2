@@ -73,8 +73,10 @@ CREATE TABLE OmicsUnitType (
   description TEXT NOT NULL
 );
 
+INSERT INTO OmicsUnitType (name, description) VALUES ('gene', 'Base unit');
 INSERT INTO OmicsUnitType (name, description) VALUES ('mRNA', 'This is the (polyadenylated) mRNA transcribed from a gene');
 INSERT INTO OmicsUnitType (name, description) VALUES ('protein', 'This is the protein encoded by a gene');
+
 
 /*------------------------------------------------------------------------------
 CFSource
@@ -186,9 +188,13 @@ CREATE TABLE temporaire(
 insert into temporaire (id, name, description) values ('Area','Area', 'Area');
 insert into temporaire (id, name, description, idOmicsAreaPere) values ('Proteomic', 'Proteomic', 'Proteomics is the large-scale study of proteins.', 'Area');
 insert into temporaire (id, name, description, idOmicsAreaPere) values ('Massspectrometry','Mass spectrometry', 'Mass spectrometry (MS) is an analytical technique that ionizes chemical species and sorts the ions based on their mass-to-charge ratio.', 'Proteomic');
+  insert into temporaire (id, name, description, idOmicsAreaPere) values ('Labelfree','Label free', 'Unlike other methods for protein quantification, label-free quantification does not use a stable isotope containing compound to chemically bind to and thus label the protein', 'Massspectrometry');
 insert into temporaire (id, name, description, idOmicsAreaPere) values ('Transcriptomic','Transcriptomic', 'Transcriptomics technologies are the techniques used to study an organism s transcriptome, the sum of all of its RNA transcripts.', 'Area');
 insert into temporaire (id, name, description, idOmicsAreaPere) values ('Microarray', 'Microarray', 'A DNA microarray is a collection of microscopic DNA spots attached to a solid surface.', 'Transcriptomic');
 insert into temporaire (id, name, description, idOmicsAreaPere) values ('RNAseq', 'RNAseq', 'RNA-Seq (RNA sequencing), also called whole transcriptome shotgun sequencing (WTSS), uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample at a given moment.', 'Transcriptomic');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Annotation', 'Annotation', 'Information about chromosomal feature.', 'Area');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('GOTerms', 'GO Terms', 'The GO defines concepts/classes used to describe gene function, and relationships between these concepts.', 'Annotation');
+insert into temporaire (id, name, description, idOmicsAreaPere) values ('Sequence', 'Sequence', 'Sequence of chromosomal feature', 'Annotation');
 
 insert into OmicsArea WITH RECURSIVE nodes_cte(id, name, description, path) AS (
  SELECT tn.id, tn.name,tn.description, tn.id::TEXT AS path
@@ -201,22 +207,7 @@ UNION ALL
 )
 SELECT id, name, description, text2ltree(path) FROM nodes_cte AS n ORDER BY n.id ASC;
 
-delete from temporaire;
-
-
- /* Move branch */
- /*
-update OmicsArea set path = DESTINATION_PATH || subpath(path, nlevel(SOURCE_PATH)-1)
-where path <@ SOURCE_PATH;
-
-
-update OmicsArea set path = 'Area.Proteomic.Massspectrometry' || subpath(path, nlevel('Area.Transcriptomic')-1)
-where path <@ 'Area.Transcriptomic';
-
-*/
-
- /* Remove branch */
- delete from OmicsArea where 'Area.Transcriptomic.Microarray' @> path;
+DROP TABLE temporaire;
 
 
 /*------------------------------------------------------------------------------

@@ -3187,6 +3187,11 @@ server <- function(input, output, session) {
       CF$sup_id = NULL 
     }
     
+    CF$PIXEL_quantitative = NULL
+    CF$PIXEL_qualitative = NULL
+    CF$PIXELSET_qualitative = NULL 
+    CF$PIXELSET_quantitative= NULL
+    
     updateTabItems (session, "tabs", selected = "CF_item")
     shinyjs::runjs("window.scrollTo(0, 0)")
     
@@ -3202,98 +3207,114 @@ server <- function(input, output, session) {
     CF$main_annotation = paste(CF$main_annotation, collapse = "<br>")
     
     
-    CF$PIXELSET =  dbGetQuery(con, paste0("select * from pixel, pixelset where pixel.cf_feature_name = '",CF$name,"' and pixel.pixelset_id = pixelset.id;"))
-    CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
-                                       from pixel,OmicsUnitType 
-                                       where cf_feature_name = '",CF$name,"'
-                                       and omicsunittype_id = OmicsUnitType.id;"))
-    
-    
-    CF$PIXEL_quantitative = CF$PIXEL[!is.na(as.numeric(CF$PIXEL[,1])), ]
-    CF$PIXEL_qualitative = CF$PIXEL[is.na(as.numeric(CF$PIXEL[,1])), ]
-    CF$PIXELSET_quantitative = CF$PIXELSET[!is.na(as.numeric(CF$PIXELSET[,3])),]
-    CF$PIXELSET_qualitative = CF$PIXELSET[is.na(as.numeric(CF$PIXELSET[,3])),]
-    
-    
     CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
                                                   where pixel.cf_feature_name ='",CF$name,"' and
-                                                  pixel.pixelset_id = PS.id 
-                                                  and ps.id_analysis = analysis.id 
-                                                  and Tag_Analysis.id_analysis = analysis.id 
-                                                  and tag.id = Tag_Analysis.id_tag;"))
+                                                pixel.pixelset_id = PS.id 
+                                                and ps.id_analysis = analysis.id 
+                                                and Tag_Analysis.id_analysis = analysis.id 
+                                                and tag.id = Tag_Analysis.id_tag;"))
     
     CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                  where pixel.cf_feature_name ='",CF$name,"'
-                                                and pixel.pixelset_id = PS.id 
-                                                and ps.id_analysis = analysis.id
-                                                and Analysis_Experiment.id_analysis = analysis.id
-                                                and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                                and tag.id = Tag_experiment.id_tag;"))
+                                                   where pixel.cf_feature_name ='",CF$name,"'
+                                                   and pixel.pixelset_id = PS.id 
+                                                   and ps.id_analysis = analysis.id
+                                                   and Analysis_Experiment.id_analysis = analysis.id
+                                                   and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                   and tag.id = Tag_experiment.id_tag;"))
     
     CF$CF_OmicsArea =  dbGetQuery(con, paste0("select omicsarea.name, count(*)
-    from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
-    where pixel.cf_feature_name ='",CF$name,"'
-    and pixel.pixelset_id = PS.id 
-    and ps.id_analysis = analysis.id
-    and Analysis_Experiment.id_analysis = analysis.id
-    and experiment.id = Analysis_Experiment.id_experiment 
-    and omicsAreaid = omicsArea.id
-    group by omicsarea.name;"))
+                                              from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
+                                              where pixel.cf_feature_name ='",CF$name,"'
+                                              and pixel.pixelset_id = PS.id 
+                                              and ps.id_analysis = analysis.id
+                                              and Analysis_Experiment.id_analysis = analysis.id
+                                              and experiment.id = Analysis_Experiment.id_experiment 
+                                              and omicsAreaid = omicsArea.id
+                                              group by omicsarea.name;"))
     
     
     CF$CF_OmicsUnitType =  dbGetQuery(con, paste0("SELECT OmicsUnitType.name, count(*)
-    from pixel, OmicsUnitType
-    where pixel.cf_feature_name ='",CF$name,"'
-    and OmicsUnitType_id = OmicsUnitType.id
-    group by OmicsUnitType.name;"))
+                                                  from pixel, OmicsUnitType
+                                                  where pixel.cf_feature_name ='",CF$name,"'
+                                                  and OmicsUnitType_id = OmicsUnitType.id
+                                                  group by OmicsUnitType.name;"))
     
     CF$CF_Tag_Exp_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
-                                                  from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                  where pixel.cf_feature_name ='",CF$name,"'
-                                                      and pixel.pixelset_id = PS.id 
-                                                      and ps.id_analysis = analysis.id
-                                                      and Analysis_Experiment.id_analysis = analysis.id
-                                                      and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
-                                                      and tag.id = Tag_experiment.id_tag
-                                                      group by tag.name;"))
+                                                 from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
+                                                 where pixel.cf_feature_name ='",CF$name,"'
+                                                 and pixel.pixelset_id = PS.id 
+                                                 and ps.id_analysis = analysis.id
+                                                 and Analysis_Experiment.id_analysis = analysis.id
+                                                 and Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
+                                                 and tag.id = Tag_experiment.id_tag
+                                                 group by tag.name;"))
     
     
     CF$CF_Tag_Analysis_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
-                                                  from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                  where pixel.cf_feature_name ='",CF$name,"' and
+                                                      from pixel, pixelset PS, analysis, Tag_Analysis, tag 
+                                                      where pixel.cf_feature_name ='",CF$name,"' and
                                                       pixel.pixelset_id = PS.id 
                                                       and ps.id_analysis = analysis.id 
                                                       and Tag_Analysis.id_analysis = analysis.id 
                                                       and tag.id = Tag_Analysis.id_tag
                                                       group by tag.name;"))
     
+    CF$PIXELSET =  dbGetQuery(con, paste0("SELECT  pixel.value, pixel.quality_score, pixelset.id, pixelset.name, 
+                                          pixelset.description, pixelset.id_analysis, pixelset.id_submission, OmicsArea.name 
+                                          FROM pixel, pixelset, OmicsUnitType,  analysis_experiment, experiment, omicsarea
+                                          WHERE pixel.cf_feature_name = '",CF$name,"' 
+                                          AND pixel.OmicsUnitType_id = OmicsUnitType.id
+                                          AND pixel.pixelset_id = pixelset.id
+                                          AND pixelset.id_analysis = analysis_experiment.id_analysis
+                                          AND analysis_experiment.id_experiment = experiment.id
+                                          AND experiment.omicsAreaid = omicsarea.id
+                                          ;"))
+    
+    CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
+                                       from pixel,OmicsUnitType 
+                                       where cf_feature_name = '",CF$name,"'
+                                       and omicsunittype_id = OmicsUnitType.id;"))
     
     
-    CF$Sup_tab = NULL 
-    CF$PIXELSET_qualitative = CF$PIXELSET_qualitative[order(CF$PIXELSET_qualitative[,"name"]), ]
-    
-    # Sequence 
-    posS = which(CF$PIXELSET_qualitative[,"name"] ==  "Sequence")
-    CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
-                                    paste(strsplit(CF$PIXELSET_qualitative[posS,"value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
-    
-    # Go terms 
-    posGO = which(CF$PIXELSET_qualitative[,"name"] ==  "GO terms")
-    if (length(posGO) != 0){
-      table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"value"]," # ")), ncol = 3, byrow = T)
-      table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
-      table = apply(table, 1, paste, collapse= "</td><td>")
-      table = paste(table, collapse = "</td></tr><tr><td>")
+    if(!is.null(CF$PIXELSET) && nrow(CF$PIXELSET) != 0){
+      colnames(CF$PIXEL) = c("Value", "Quality score", "Pixelset ID", "Omics unit type")
+      colnames(CF$PIXELSET) = c("Value", "Quality score", "Pixelset ID", "Pixelset name", "Pixelset description", "Analysis ID", "Submission ID", "Omicsarea name")
       
-      CF$Sup_tab = c(CF$Sup_tab, paste( '<h3>Go terms</h3><table class="table table-striped"><thead>
-                                        <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
-                                        </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>"))
+      CF$PIXEL_quantitative = CF$PIXEL[!is.na(as.numeric(CF$PIXEL[,"Value"])), ]
+      CF$PIXEL_qualitative = CF$PIXEL[is.na(as.numeric(CF$PIXEL[,"Value"])), ]
+      CF$PIXELSET_quantitative = CF$PIXELSET[!is.na(as.numeric(CF$PIXELSET[,"Value"])),]
+      CF$PIXELSET_qualitative = CF$PIXELSET[is.na(as.numeric(CF$PIXELSET[,"Value"])),]
+      
+      CF$Sup_tab = NULL 
+      CF$PIXELSET_qualitative = CF$PIXELSET_qualitative[order(CF$PIXELSET_qualitative[,"Pixelset name"]), ]
+      
+      # Sequence 
+      
+      posS = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "Sequence")
+      if(length(posS) != 0){
+        CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
+                                        paste(strsplit(CF$PIXELSET_qualitative[posS,"Value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
+      }
+      
+      # Go terms 
+      posGO = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "GO terms")
+      if (length(posGO) != 0){
+        table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"Value"]," # ")), ncol = 3, byrow = T)
+        table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
+        table = apply(table, 1, paste, collapse= "</td><td>")
+        table = paste(table, collapse = "</td></tr><tr><td>")
+        
+        CF$Sup_tab = c(CF$Sup_tab, paste( '<h3>Go terms</h3><table class="table table-striped"><thead>
+                                          <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
+                                          </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>"))
+      }
+      
+      if(nrow(CF$PIXELSET_qualitative[-c(posS, posGO),]) != 0){
+        CF$Sup_tab = c(CF$Sup_tab,"<h3>Qualitative information</h3>")
+        CF$Sup_tab = c(CF$Sup_tab,paste("<b>",CF$PIXELSET_qualitative[-c(posS, posGO),"Pixelset name"],"</b> : ", CF$PIXELSET_qualitative[-c(posS, posGO),"Value"], "<br>"))
+      }
     }
     
-    if(nrow(CF$PIXELSET_qualitative[-c(posS, posGO),]) != 0){
-      CF$Sup_tab = c(CF$Sup_tab,"<h3>Qualitative information</h3>")
-      CF$Sup_tab = c(CF$Sup_tab,paste("<b>",CF$PIXELSET_qualitative[-c(posS, posGO),"name"],"</b> : ", CF$PIXELSET_qualitative[-c(posS, posGO),"value"], "<br>"))
-    }
     
     dbDisconnect(con)
   })
@@ -3949,7 +3970,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$CF_PixelSET_rows_selected,{
-    SEARCH_RV$PIXELSET = CF$PIXELSET_quantitative[input$CF_PixelSET_rows_selected,"pixelset_id"]
+    SEARCH_RV$PIXELSET = CF$PIXELSET_quantitative[input$CF_PixelSET_rows_selected,"Pixelset ID"]
     proxy = dataTableProxy('CF_PixelSET')
     proxy %>% selectRows(NULL)
   })
@@ -4933,7 +4954,7 @@ server <- function(input, output, session) {
     }
     names(choices) = namesChoices
     
-    updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+    updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[! AddRV$OmicsArea[,'name'] %in% c("Annotation", "GO Terms", "Sequence", "Area"),'name'])
     updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
     updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
     updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
@@ -4996,7 +5017,7 @@ server <- function(input, output, session) {
       }
       names(choices) = namesChoices
       
-      updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[,'name'])
+      updateSelectInput(session, 'Delete_branch_OmicsArea_SI', choices = AddRV$OmicsArea[! AddRV$OmicsArea[,'name'] %in% c("Annotation", "GO Terms", "Sequence", "Area"),'name'])
       updateSelectInput(session, 'Modify_OmicsArea_name_SI', choices = AddRV$OmicsArea[,'name'])
       updateSelectInput(session, 'Modify_OmicsArea_path_SI', choices = choices)
       updateSelectInput(session, 'Add_OmicsArea_path_SI', choices = choices)
@@ -5014,7 +5035,7 @@ server <- function(input, output, session) {
   
   
   output$Delete_branch_OmicsArea = renderUI({
-    selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[,'name'])
+    selectInput('Delete_branch_OmicsArea_SI', NULL, AddRV$OmicsArea[! AddRV$OmicsArea[,'name'] %in% c("Annotation", "GO Terms", "Sequence", "Area"),'name'])
   })
   
   output$treeOmicsArea <- renderGvis({
@@ -5080,6 +5101,8 @@ server <- function(input, output, session) {
                            host=ipDB, port=5432)
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
+          AddRV$Species = dbGetQuery(con, "SELECT * FROM species;")
+          AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
           dbDisconnect(con)
           
           MAJ$value = MAJ$value + 1
@@ -5247,6 +5270,9 @@ server <- function(input, output, session) {
                            host=ipDB, port=5432)
           on.exit(dbDisconnect(con))
           dbGetQuery(con, REQUEST)
+          on.exit(dbDisconnect(con))
+          AddRV$Strain = dbGetQuery(con, "SELECT * FROM strain;")
+          AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
           dbDisconnect(con)
           
           MAJ$value = MAJ$value + 1
@@ -5377,7 +5403,9 @@ server <- function(input, output, session) {
   })
   
   output$Delete_strain = renderUI({
-    selectInput('Delete_strain_SI', NULL, AddRV$Strain[,'name'])
+    if(!is.null(AddRV$Strain) && nrow(AddRV$Strain) != 0){
+      selectInput('Delete_strain_SI', NULL, AddRV$Strain[,'name'])
+    }
   })
   
   
@@ -5414,169 +5442,189 @@ server <- function(input, output, session) {
       unlink(paste0("www/Submissions/tmp_",isolate(input$USER)), recursive = T, force = T)
     }
     
-    # Create tmp folder
-    file$address = paste0("www/Submissions/tmp_",isolate(input$USER))
-    dir.create(file$address)
-    setwd(file$address)
-    
-    # Copy zip folder in tmp and unzip
-    file.copy(input$zip$datapath,"tmp.zip", overwrite = T )
-    unzip("tmp.zip")
-    file$addressFolder = paste0("www/Submissions/tmp_",isolate(input$USER), "/",list.dirs("./", recursive = F, full.names = F)[1] )
-    setwd(list.dirs("./", recursive = F, full.names = F)[1])
-    
-    # Read most recent metafile
-    metaDate = max(unlist(lapply(list.files("./", pattern = "meta_*"), function(x){regmatches(x,regexec("meta_(.*?).txt",x))[[1]][2]})))
-    metadata = read.table(paste0("meta_",metaDate,".txt"), sep = "\t", header = F, stringsAsFactors = F)
-    
-    # information controls 
-    
-    if(! metadata[3,2] %in% AddRV$OmicsArea[,'name']){
-      file$extractError = c(file$extractError, paste("<b>Omics area</b> :",metadata[3,2] ))
-    }
-    
-    if(! metadata[4,2] %in% AddRV$OUT[,2]){
-      file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[4,2] ))
-    }
-    
-    if(! metadata[5,2] %in% AddRV$DataSource[,'name']){
-      file$extractError = c(file$extractError, paste("<b>Data source</b> :",metadata[5,2] ))
-    }
-    
-    if(! metadata[6,2] %in% AddRV$StrainSpecies[,"species"]){
-      file$extractError = c(file$extractError, paste("<b>Species</b> :",metadata[6,2] ))
-    }
-    
-    if(! metadata[7,2] %in% AddRV$StrainSpecies[,"strain"]){
-      file$extractError = c(file$extractError, paste("<b>Strain</b> :",metadata[7,2] ))
-    }
-    
-    if(!is.null(file$extractError)){
+    if(nrow(AddRV$DataSource) == 0 ){
       sendSweetAlert(
         session = session,
-        title = "Missing information!",
-        text =HTML("<p>Some information is not known in the database. You will find the list below:</p>",
-                   paste("<p>",file$extractError,"</p>", collapse = "<br/>"),
-                   "<p>No information was imported into the database. Once the information has been saved, you can import this zip again. </p>"),
-        type = "error", html = TRUE
+        title = "Oops !!",
+        text = "No data source are saved.  Please go here : Manage annotation > Data source ",
+        type = "error"
+      )
+    } else if (nrow(AddRV$Strain) == 0){
+      sendSweetAlert(
+        session = session,
+        title = "Oops !!",
+        text = "No strains are saved.  Please go here : Manage annotation > Species & strains ",
+        type = "error"
       )
       
-      setwd("../../../..")
-      reset('zip')
-      disable(id='extractZip')
-      unlink(file$address, recursive = T, force = T)
-      file$notebook_name = NULL
-      file$SD_name = NULL
-      file$address = NULL
-      file$SD_address = NULL
-      file$notebook_address = NULL
-      
     } else {
+      # Create tmp folder
+      file$address = paste0("www/Submissions/tmp_",isolate(input$USER))
+      dir.create(file$address)
+      setwd(file$address)
       
-      updateTextAreaInput(session = session, inputId = "submission_Exp_description", value = metadata[1,2])
-      updateSelectInput(session = session, inputId = "submission_Exp_completionDate", selected = metadata[2,2])
-      updateSelectInput(session = session, inputId = "Submission_Exp_omicsArea_SI", selected = metadata[3,2])
-      updateSelectInput(session = session, inputId = "submission_pixelSet_OUT", selected = AddRV$OUT[which(AddRV$OUT[,2] == metadata[4,2]),1]  )
-      updateSelectInput(session = session, inputId = "Submission_Exp_dataSource_SI", selected = metadata[5,2])
-      updateSelectInput(session = session, inputId = "Submission_Exp_Species_SI", selected = metadata[6,2])
-      updateSelectInput(session = session, inputId = "Submission_Exp_Strain_SI", selected = metadata[7,2])
-      updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
-      updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
+      # Copy zip folder in tmp and unzip
+      file.copy(input$zip$datapath,"tmp.zip", overwrite = T )
+      unzip("tmp.zip")
+      file$addressFolder = paste0("www/Submissions/tmp_",isolate(input$USER), "/",list.dirs("./", recursive = F, full.names = F)[1] )
+      setwd(list.dirs("./", recursive = F, full.names = F)[1])
       
-      nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_md5",metadata[nrow(metadata),1]))[[1]][2])
-      updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
-                        selected = nbrPS)
+      # Read most recent metafile
+      metaDate = max(unlist(lapply(list.files("./", pattern = "meta_*"), function(x){regmatches(x,regexec("meta_(.*?).txt",x))[[1]][2]})))
+      metadata = read.table(paste0("meta_",metaDate,".txt"), sep = "\t", header = F, stringsAsFactors = F)
       
-      shinyjs::hide(id = "submission_Analysis_notebook")
-      shinyjs::hide(id = "submission_Analysis_secondary_data")
-      shinyjs::show(id = "submission_Analysis_notebook_name")
-      shinyjs::show(id = "submission_Analysis_secondary_data_name")
+      # information controls 
       
-      
-      file$notebook_name = metadata[10,2]
-      file$notebook_address = paste0(file$addressFolder, "/", metadata[10,2])
-      
-      file$SD_name = metadata[12,2]
-      file$SD_address = paste0(file$addressFolder , "/", metadata[12,2])
-      
-      # Check md5
-      if(metadata[10,2] != ""){
-        if(md5sum(metadata[10,2]) != metadata[11,2]){
-          file$extractMD5 = c(file$extractMD5,"<b>Notebook</b>"  )
-        }
+      if(! metadata[3,2] %in% AddRV$OmicsArea[,'name']){
+        file$extractError = c(file$extractError, paste("<b>Omics area</b> :",metadata[3,2] ))
       }
       
-      if(metadata[12,2] != ""){
-        if(md5sum(metadata[12,2]) != metadata[13,2]){
-          file$extractMD5 = c(file$extractMD5,"<b>Secondary data file</b>"  )
-        }
+      if(! metadata[4,2] %in% AddRV$OUT[,2]){
+        file$extractError = c(file$extractError, paste("<b>Omics unit type</b> :",metadata[4,2] ))
       }
       
-      # Multitable preparation
-      
-      if(!is.null(submissionRV$nbrPixelSet)){
-        for(i in 1: submissionRV$nbrPixelSet){
-          removeTab("tab_PixelSets", paste("PixelSet",i))
-        }
+      if(! metadata[5,2] %in% AddRV$DataSource[,'name']){
+        file$extractError = c(file$extractError, paste("<b>Data source</b> :",metadata[5,2] ))
       }
       
-      submissionRV$nbrPixelSet = nbrPS
-      
-      for(i in 1:nbrPS){
-        if(i == 1){
-          appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
-                                              h4("Name") ,
-                                              textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(14 + 4*(i-1)),2]),
-                                              h4("Description"),
-                                              textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
-                                              h4("File"),
-                                              disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(16 + 4*(i-1)),2]))
-                                              
-          ),select = T)
-          
-        }else{
-          appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
-                                               h4("Name") ,
-                                               textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(14 + 4*(i-1)),2]),
-                                               h4("Description"),
-                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
-                                               h4("File"),
-                                               disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(16 + 4*(i-1)),2]))
-                                               
-          ),select = F)
-          
-        }
-        
-        if(md5sum(metadata[(16 + 4*(i-1)),2]) != metadata[(17 + 4*(i-1)),2]){
-          file$extractMD5 = c(file$extractMD5,paste0("<b>Pixelset",i,"</b>")  )
-        }
-        
+      if(! metadata[6,2] %in% AddRV$StrainSpecies[,"species"]){
+        file$extractError = c(file$extractError, paste("<b>Species</b> :",metadata[6,2] ))
       }
       
-      if(!is.null(file$extractMD5)){
+      if(! metadata[7,2] %in% AddRV$StrainSpecies[,"strain"]){
+        file$extractError = c(file$extractError, paste("<b>Strain</b> :",metadata[7,2] ))
+      }
+      
+      if(!is.null(file$extractError)){
         sendSweetAlert(
           session = session,
           title = "Missing information!",
-          text =HTML("<p>The files were corrupted by the copy:</p>",
-                     paste("<p>",file$extractMD5,"</p>", collapse = "<br/>"),
-                     "<p>If you have made any changes, this message is not blocking. Otherwise, we advise you not to 
-                     import this data into Pixel2 because it is different from the expected data. </p>"),
-          type = "warning", html = TRUE
+          text =HTML("<p>Some information is not known in the database. You will find the list below:</p>",
+                     paste("<p>",file$extractError,"</p>", collapse = "<br/>"),
+                     "<p>No information was imported into the database. Once the information has been saved, you can import this zip again. </p>"),
+          type = "error", html = TRUE
         )
+        
+        setwd("../../../..")
+        reset('zip')
+        disable(id='extractZip')
+        unlink(file$address, recursive = T, force = T)
+        file$notebook_name = NULL
+        file$SD_name = NULL
+        file$address = NULL
+        file$SD_address = NULL
+        file$notebook_address = NULL
+        
       } else {
-        sendSweetAlert(
-          session = session,
-          title = "md5 checked",
-          text =HTML("The files were not corrupted by the copy"),
-          type = "success", html = TRUE
-        )
+        
+        updateTextAreaInput(session = session, inputId = "submission_Exp_description", value = metadata[1,2])
+        updateSelectInput(session = session, inputId = "submission_Exp_completionDate", selected = metadata[2,2])
+        updateSelectInput(session = session, inputId = "Submission_Exp_omicsArea_SI", selected = metadata[3,2])
+        updateSelectInput(session = session, inputId = "submission_pixelSet_OUT", selected = AddRV$OUT[which(AddRV$OUT[,2] == metadata[4,2]),1]  )
+        updateSelectInput(session = session, inputId = "Submission_Exp_dataSource_SI", selected = metadata[5,2])
+        updateSelectInput(session = session, inputId = "Submission_Exp_Species_SI", selected = metadata[6,2])
+        updateSelectInput(session = session, inputId = "Submission_Exp_Strain_SI", selected = metadata[7,2])
+        updateTextAreaInput(session = session, inputId = "submission_Analysis_description", value = metadata[8,2])
+        updateSelectInput(session = session, inputId = "submission_Analysis_completionDate", selected = metadata[9,2])
+        
+        nbrPS = as.numeric(regmatches(metadata[nrow(metadata),1],regexec("PixelSet(.*?)_md5",metadata[nrow(metadata),1]))[[1]][2])
+        updateSelectInput(session = session, inputId = "submission_pixelSet_nbr", 
+                          selected = nbrPS)
+        
+        shinyjs::hide(id = "submission_Analysis_notebook")
+        shinyjs::hide(id = "submission_Analysis_secondary_data")
+        shinyjs::show(id = "submission_Analysis_notebook_name")
+        shinyjs::show(id = "submission_Analysis_secondary_data_name")
+        
+        
+        file$notebook_name = metadata[10,2]
+        file$notebook_address = paste0(file$addressFolder, "/", metadata[10,2])
+        
+        file$SD_name = metadata[12,2]
+        file$SD_address = paste0(file$addressFolder , "/", metadata[12,2])
+        
+        # Check md5
+        if(metadata[10,2] != ""){
+          if(md5sum(metadata[10,2]) != metadata[11,2]){
+            file$extractMD5 = c(file$extractMD5,"<b>Notebook</b>"  )
+          }
+        }
+        
+        if(metadata[12,2] != ""){
+          if(md5sum(metadata[12,2]) != metadata[13,2]){
+            file$extractMD5 = c(file$extractMD5,"<b>Secondary data file</b>"  )
+          }
+        }
+        
+        # Multitable preparation
+        
+        if(!is.null(submissionRV$nbrPixelSet)){
+          for(i in 1: submissionRV$nbrPixelSet){
+            removeTab("tab_PixelSets", paste("PixelSet",i))
+          }
+        }
+        
+        submissionRV$nbrPixelSet = nbrPS
+        
+        for(i in 1:nbrPS){
+          if(i == 1){
+            appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
+                                                h4("Name") ,
+                                                textInput(paste0('submission_pixelSet_name_',i), NULL, value = metadata[(14 + 4*(i-1)),2]),
+                                                h4("Description"),
+                                                textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
+                                                h4("File"),
+                                                disabled( textInput(paste0("submission_pixelSet_file",i), NULL, value = metadata[(16 + 4*(i-1)),2]))
+                                                
+            ),select = T)
+            
+          }else{
+            appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
+                                                 h4("Name") ,
+                                                 textInput(paste0('submission_pixelSet_name_',i), NULL, metadata[(14 + 4*(i-1)),2]),
+                                                 h4("Description"),
+                                                 textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical", value = metadata[(15 + 4*(i-1)),2]),
+                                                 h4("File"),
+                                                 disabled(textInput(paste0("submission_pixelSet_file",i), NULL , value = metadata[(16 + 4*(i-1)),2]))
+                                                 
+            ),select = F)
+            
+          }
+          
+          if(md5sum(metadata[(16 + 4*(i-1)),2]) != metadata[(17 + 4*(i-1)),2]){
+            file$extractMD5 = c(file$extractMD5,paste0("<b>Pixelset",i,"</b>")  )
+          }
+          
+        }
+        
+        if(!is.null(file$extractMD5)){
+          sendSweetAlert(
+            session = session,
+            title = "Missing information!",
+            text =HTML("<p>The files were corrupted by the copy:</p>",
+                       paste("<p>",file$extractMD5,"</p>", collapse = "<br/>"),
+                       "<p>If you have made any changes, this message is not blocking. Otherwise, we advise you not to 
+                       import this data into Pixel2 because it is different from the expected data. </p>"),
+            type = "warning", html = TRUE
+          )
+        } else {
+          sendSweetAlert(
+            session = session,
+            title = "md5 checked",
+            text =HTML("The files were not corrupted by the copy"),
+            type = "success", html = TRUE
+          )
+        }
+        
+        file$extractMD5 = NULL
+        
+        file$extract = T
+        setwd("../../../..")
       }
-      
-      file$extractMD5 = NULL
-      
-      file$extract = T
-      setwd("../../../..")
     }
+    
+    
+    
     
     
     
@@ -6215,8 +6263,8 @@ server <- function(input, output, session) {
           appendTab("tab_PixelSets", tabPanel(paste("PixelSet",i), 
                                               h4("Name") ,
                                               textInput(paste0('submission_pixelSet_name_',i), NULL),
-                                              actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
-                                              actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
+                                              # actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                              # actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
                                               h4("Description"),
                                               textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                               fileInput(paste0("submission_pixelSet_file",i),label = NULL,
@@ -6229,8 +6277,8 @@ server <- function(input, output, session) {
           appendTab("tab_PixelSets",  tabPanel(paste("PixelSet",i), 
                                                h4("Name") ,
                                                textInput(paste0('submission_pixelSet_name_',i), NULL),
-                                               actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
-                                               actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
+                                               # actionButton(inputId = paste0('submissionPixelSetNameAuto_Sequence_',i), "Sequence", class="autoname"), 
+                                               # actionButton(inputId = paste0('submissionPixelSetNameAuto_GO_',i), "GO terms", class="autoname"), 
                                                h4("Description"),
                                                textAreaInput(paste0('submission_pixelSet_description_',i), NULL, resize = "vertical"),
                                                fileInput(paste0("submission_pixelSet_file",i),label = NULL,
