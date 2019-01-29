@@ -3646,6 +3646,16 @@ server <- function(input, output, session) {
       colnames(PixelSetExploRV$TAB) = c("Feature name", "Gene name", "Description",
                                         colnamesinter)
       
+      for(i in 1:ncol(PixelSetExploRV$TAB)){
+        vec = as.character(PixelSetExploRV$TAB[,i])
+        vec = vec[!vec == ""]
+        vec = na.omit(vec)
+        
+        if( all(!is.na(as.numeric(vec))) ){
+          PixelSetExploRV$TAB[,i] = as.numeric(as.character(PixelSetExploRV$TAB[,i]))
+        } 
+      }
+      
       sendSweetAlert(
         session = session,
         title = "Duplicated data! ",
@@ -4076,6 +4086,7 @@ server <- function(input, output, session) {
                                                             and tag.id = Tag_experiment.id_tag;"))
     
     PIXELSET_RV$Pixel = dbGetQuery(con,paste0("SELECT P.cf_feature_name as ",'"',"Feature name",'"',",CF.gene_name as ",'"',"Gene name",'"',", P.value as ",'"',"Value",'"',", P.quality_score as ",'"',"Quality score",'"', ", CF.description as ",'"',"Description",'"'," from pixel P, chromosomalfeature CF where cf_feature_name = feature_name and pixelSet_id ='",PIXELSET_RV$ID, "'"))
+    
     PIXELSET_RV$SEARCH = 1:nrow(PIXELSET_RV$Pixel)
     dbDisconnect(con)
     

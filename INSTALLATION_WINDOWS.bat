@@ -1,5 +1,6 @@
 docker pull tdenecker/pixel2_db
 docker run --name PIXEL2_DB -d tdenecker/pixel2_db
+docker start PIXEL2_DB 
 docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" PIXEL2_DB > Database/ipDB.txt
 
 docker pull tdenecker/pixel2_app
