@@ -698,7 +698,11 @@ server <- function(input, output, session) {
                    sidebarLayout(
                      sidebarPanel(
                        actionButton("add_filter_btn", "Add new filter",icon = icon("plus-circle")),
-                       actionButton("rm_filter_btn", "Remove last filter", icon = icon("minus-circle"))
+                       actionButton("rm_filter_btn", "Remove last filter", icon = icon("minus-circle")),
+                       tags$br(),
+                       radioGroupButtons(inputId = "joinType", 
+                                         label = "Join type :", choices = c("Full", 
+                                                                      "Inner"), justified = TRUE)
                      ),
                      mainPanel(
                        uiOutput("textbox_ui")
@@ -3773,7 +3777,7 @@ server <- function(input, output, session) {
   
   # Track the number of input boxes to render
   counter <- reactiveValues(n = 0)
-  MPS_RV <- reactiveValues(val = NULL)
+  MPS_RV <- reactiveValues(val = list())
   
   #Track the number of input boxes previously
   prevcount <-reactiveValues(n = 0)
@@ -3800,8 +3804,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$rm_filter_btn, {
     if (counter$n > 0) {
-      # MPS_RV$val = MPS_RV$val[! names(MPS_RV$val) %in% paste0("FilterUiElement_", counter$n)]
-      # MPS_RV$choice = MPS_RV$choice[! names(MPS_RV$choice) %in% paste0("col_",counter$n)] 
+      MPS_RV$val = MPS_RV$val[! names(MPS_RV$val) %in% paste0("FilterUiElement_", counter$n)]
+      MPS_RV$choice = MPS_RV$choice[! names(MPS_RV$choice) %in% paste0("col_",counter$n)] 
 
       counter$n <- counter$n - 1 
       prevcount$n <- counter$n + 1
@@ -3826,12 +3830,10 @@ server <- function(input, output, session) {
           isInc <- TRUE
         }
         
-        cat(paste("Test : ", lesscnt, "\n"),file = stderr() )
+        
         for(i in 1:lesscnt){
           MPS_RV$choice[paste0("col_",i)] = isolate(input[[paste0("col_",i)]])
           MPS_RV$val[[paste0("FilterUiElement_", i)]] = isolate(input[[paste0("FilterUiElement_",i)]])
-          
-          
         }
         
         if(isInc){
@@ -3877,25 +3879,32 @@ server <- function(input, output, session) {
         inter = inter[!is.null(inter)]
         
         if(!is.na(as.numeric(inter[1]))){
+          if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
+            cat(paste("Verif2 : ", paste(MPS_RV$val[[paste0("FilterUiElement_", id)]], collapse = "")), file = stderr())
+          }
           output[[paste0("FilterUi_", id)]] <- renderUI({
             
             if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
               div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
                           min = min(inter,na.rm = T), max = max(inter,na.rm = T),
                           value = MPS_RV$val[[paste0("FilterUiElement_", id)]]),
-                  materialSwitch(inputId =paste0("FilterUiElementMS_", id), 
-                                 label = "Gray part", value = TRUE, 
-                                 status = "danger"))
+                  
+                  radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
+                                    label = "Part studied", choices = c("Gray", 
+                                                                 "Red"), 
+                                    selected = "Gray", checkIcon = list(yes = icon("check")))
+                  )
             } else {
              div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
                           min = min(inter,na.rm = T), max = max(inter,na.rm = T),
                           value = c(min(inter,na.rm = T), max(inter,na.rm = T))),
-              materialSwitch(inputId =paste0("FilterUiElementMS_", id), 
-                             label = "Gray part", value = TRUE, 
-                             status = "danger"))
+              radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
+                                label = "Part studied", choices = c("Gray", 
+                                                             "Red"), 
+                                status = 'RGB_slider',
+                                selected = "Gray", checkIcon = list(yes = icon("check")))
+             )
             }
-            
-            
           })
         } else {
           output[[paste0("FilterUi_", id)]] <- renderUI({
@@ -3918,11 +3927,6 @@ server <- function(input, output, session) {
     textboxes() 
   })
   
-  observeEvent(input$col_1,{
-    if(counter$n == 1 && "FilterUiElement_1" %in% names(MPS_RV$val)){
-      updateSelectInput(session = session, inputId = "col_1", selected = input$col_1 )
-    }
-  })
   
   observeEvent(input$filter_btn, {
     if(counter$n > 0){
@@ -3936,28 +3940,34 @@ server <- function(input, output, session) {
       }
       
       if(check){
-        filterlist = NULL
+        filterlist = list()
         for (i in 1:counter$n){
           if(length(eval(parse(text = paste0("input$FilterUiElement_",i)))) == 2){
             min = min(eval(parse(text = paste0("input$FilterUiElement_",i))))
             max = max(eval(parse(text = paste0("input$FilterUiElement_",i))))
             data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",i)))]))
             
-            if(eval(parse(text = paste0("input$FilterUiElementMS_",i)))){
+            if(eval(parse(text = paste0("input$FilterUiElementRGB_",i))) == "Gray"){
               pos = which(data <= min | data >= max )
             } else {
               pos = which(data >= min & data <= max )
             }
             
             filterlist = c(filterlist,
-                           PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][pos,1])
+                           list(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][pos,1]))
           } else{
             filterlist = c(filterlist,
-                           PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$FilterUiElement_",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col_",i)))] , ignore.case = T, value = F),1])
+                           list(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$FilterUiElement_",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col_",i)))] , ignore.case = T, value = F),1]))
           }
           
         } 
-        filterlist = paste(unique(filterlist), collapse = " ; ")
+        
+        if(input$joinType == "Full"){
+          filterlist = paste(unique(unlist(filterlist)), collapse = " ; ")
+        } else if(input$joinType == "Inner"){
+          filterlist = paste(Reduce(intersect, filterlist), collapse = " ; ")
+        }
+        
         updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = filterlist)
         PixelSetExploRV$SEARCH = which(PixelSetExploRV$TAB[, "Feature name"] %in% unlist(strsplit(gsub(" ","", filterlist), ";")))
         
@@ -3992,6 +4002,14 @@ server <- function(input, output, session) {
   observeEvent(input$filter_clear_btn, {
     updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
     PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+    counter$n = 0
+    prevcount$n = 0
+    
+    for(n in names(MPS_RV$val)){
+      MPS_RV$val[[n]] <- NULL
+    }
+    MPS_RV$choice = NULL
+    
   })
   
   
