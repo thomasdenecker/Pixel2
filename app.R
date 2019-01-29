@@ -3771,20 +3771,21 @@ server <- function(input, output, session) {
   
   # Track the number of input boxes to render
   counter <- reactiveValues(n = 0)
+  MPS_RV <- reactiveValues(val = NULL)
   
   #Track the number of input boxes previously
   prevcount <-reactiveValues(n = 0)
   
   observeEvent(input$add_filter_btn, {
     counter$n <- counter$n + 1
-    prevcount$n <- counter$n - 1})
+    prevcount$n <- counter$n - 1
+  })
   
   observeEvent(input$rm_filter_btn, {
     if (counter$n > 0) {
       counter$n <- counter$n - 1 
       prevcount$n <- counter$n + 1
     }
-    
   })
   
   output$counter <- renderPrint(print(counter$n))
@@ -3792,7 +3793,7 @@ server <- function(input, output, session) {
   textboxes <- reactive({
     
     n <- counter$n
-    
+    cat(paste("N : ", n, "\n"), file = stderr())
     if (n > 0) {
       
       # If the no. of textboxes previously where more than zero, then 
@@ -3809,54 +3810,49 @@ server <- function(input, output, session) {
           isInc <- TRUE
         }
         
+        cat(paste("Test : ", lesscnt, "\n"),file = stderr() )
         for(i in 1:lesscnt){
-          inpid = paste0("col_",i)
-          choice[i] = input[[inpid]] 
-          
-          inpid = paste0("FilterUiElement_",i)
-          val[[i]] = isolate(input[[inpid]])
+          MPS_RV$choice[i] = isolate(input[[paste0("col_",i)]])
+          MPS_RV$val[[paste0("FilterUiElement_", i)]] = isolate(input[[paste0("FilterUiElement_",i)]])
         }
         
         if(isInc){
-          val[[n]] <- ""
+          MPS_RV$val[[paste0("FilterUiElement_", n)]] <- ""
         }
+        
+        choices = colnames(PixelSetExploRV$TAB)
+        choices = choices[! choices %in% c("Feature name", "Gene name", "Description")]
+        
         
         lapply(seq_len(n), function(i) {
           
           fluidRow(
-            div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB),selected = choice[i] ))),
+            div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = choices, selected = MPS_RV$choice[i] ))),
             column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
           )
         })
         
-        # for(i in 1:n){
-        #   if(length(length(val[[i]])) == 2){
-        #     updateSliderInput(session,paste0("FilterUiElement_",i),value = val[[i]])
-        #   } else {
-        #     updateTextInput(session,paste0("FilterUiElement_",i),value = val[[i]])
-        #   }
-        # }
-        
       }else{
+        choices = colnames(PixelSetExploRV$TAB)
+        choices = choices[! choices %in% c("Feature name", "Gene name", "Description")]
+        
         lapply(seq_len(n), function(i) {
           fluidRow(
-            div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = colnames(PixelSetExploRV$TAB)))),
+            div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = choices))),
             column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
           )
         }) 
       }
-      
     }
-    
   })
   
-  
-  
   observe({
-    input$lastSelect
+    input$last_SI
     isolate({
       if (!is.null(input$last_SI)) {
         id = unlist(strsplit({input$last_SI}, "_"))[2]
+        cat(paste0('ID  : ', id, "\n"),file = stderr())
+        
         inter = PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",id)))]
         inter = inter[!is.na(inter)]
         inter = inter[inter!=""]
@@ -3871,7 +3867,13 @@ server <- function(input, output, session) {
           })
         } else {
           output[[paste0("FilterUi_", id)]] <- renderUI({
-            textInput(inputId = paste0("FilterUiElement_", id),label = NULL, width = "100%", placeholder = "a regex expression")
+            if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val)){
+              textInput(inputId = paste0("FilterUiElement_", id),label = NULL,value = MPS_RV$val[[paste0("FilterUiElement_", id)]],
+                        width = "100%", placeholder = "a regex expression")
+            } else {
+              textInput(inputId = paste0("FilterUiElement_", id),label = NULL, width = "100%", placeholder = "a regex expression")
+            }
+            
           })
           
         }
