@@ -62,6 +62,8 @@ body <- dashboardBody(useShinyjs(),
                       # Add css style
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
                                      href="style.css" />')), 
+                      tags$style(HTML(".sliderStyle .irs-single, .sliderStyle .irs-bar-edge, .sliderStyle .irs-bar, .sliderStyle .irs-from, .sliderStyle .irs-to, .sliderStyle .irs-single {background: red}
+                                      .sliderStyle .irs-bar {border-color: red;}")), 
                       tags$head(tags$script(HTML("$(document).on('click', '.autoname', function () {
                                 Shiny.onInputChange('last_btn',this.id);
                                                   });"))),
@@ -3777,12 +3779,30 @@ server <- function(input, output, session) {
   prevcount <-reactiveValues(n = 0)
   
   observeEvent(input$add_filter_btn, {
-    counter$n <- counter$n + 1
-    prevcount$n <- counter$n - 1
+    if (counter$n > 0) {
+      if(eval(parse(text = paste0("input$col_",counter$n))) == "-"){
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "Previous filter isn't selected...",
+          type = "error"
+        )
+      }else {
+        counter$n <- counter$n + 1
+        prevcount$n <- counter$n - 1
+      }
+    } else {
+      counter$n <- counter$n + 1
+      prevcount$n <- counter$n - 1
+    }
+
   })
   
   observeEvent(input$rm_filter_btn, {
     if (counter$n > 0) {
+      # MPS_RV$val = MPS_RV$val[! names(MPS_RV$val) %in% paste0("FilterUiElement_", counter$n)]
+      # MPS_RV$choice = MPS_RV$choice[! names(MPS_RV$choice) %in% paste0("col_",counter$n)] 
+
       counter$n <- counter$n - 1 
       prevcount$n <- counter$n + 1
     }
@@ -3793,11 +3813,7 @@ server <- function(input, output, session) {
   textboxes <- reactive({
     
     n <- counter$n
-    cat(paste("N : ", n, "\n"), file = stderr())
     if (n > 0) {
-      
-      # If the no. of textboxes previously where more than zero, then 
-      # save the text inputs in those text boxes 
       if(prevcount$n > 0){
         val = list()
         choice = c()
@@ -3812,58 +3828,74 @@ server <- function(input, output, session) {
         
         cat(paste("Test : ", lesscnt, "\n"),file = stderr() )
         for(i in 1:lesscnt){
-          MPS_RV$choice[i] = isolate(input[[paste0("col_",i)]])
+          MPS_RV$choice[paste0("col_",i)] = isolate(input[[paste0("col_",i)]])
           MPS_RV$val[[paste0("FilterUiElement_", i)]] = isolate(input[[paste0("FilterUiElement_",i)]])
+          
+          
         }
         
         if(isInc){
           MPS_RV$val[[paste0("FilterUiElement_", n)]] <- ""
         }
         
-        choices = colnames(PixelSetExploRV$TAB)
-        choices = choices[! choices %in% c("Feature name", "Gene name", "Description")]
+        choices <- c('-', colnames(PixelSetExploRV$TAB))
         
         
         lapply(seq_len(n), function(i) {
           
           fluidRow(
-            div(class = "dynamicSI",column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", choices = choices, selected = MPS_RV$choice[i] ))),
+            div(class = "dynamicSI",
+                column(4, selectInput(paste0("col_", i),  label = NULL, width = "100%", 
+                                      choices = choices, selected = MPS_RV$choice[paste0("col_",i)] ))),
             column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
           )
         })
         
       }else{
-        choices = colnames(PixelSetExploRV$TAB)
-        choices = choices[! choices %in% c("Feature name", "Gene name", "Description")]
+        choices <- c('-', colnames(PixelSetExploRV$TAB))
         
-        lapply(seq_len(n), function(i) {
-          fluidRow(
-            div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = choices))),
-            column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
-          )
-        }) 
+        if(n == 1){
+          lapply(seq_len(n), function(i) {
+            fluidRow(
+              div(class = "dynamicSI",column(4,selectInput(paste0("col_", i), label = NULL, width = "100%", choices = choices))),
+              column(8 ,uiOutput(outputId = paste0("FilterUi_", i)))
+            )
+          })
+        }
       }
     }
   })
   
   observe({
-    input$last_SI
+    input$lastSelect
     isolate({
       if (!is.null(input$last_SI)) {
         id = unlist(strsplit({input$last_SI}, "_"))[2]
-        cat(paste0('ID  : ', id, "\n"),file = stderr())
-        
         inter = PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",id)))]
         inter = inter[!is.na(inter)]
         inter = inter[inter!=""]
         inter = inter[!is.null(inter)]
         
         if(!is.na(as.numeric(inter[1]))){
-          data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",id)))]))
           output[[paste0("FilterUi_", id)]] <- renderUI({
-            sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
-                        min = min(data,na.rm = T), max = max(data,na.rm = T),
-                        value = c(min(data,na.rm = T), max(data,na.rm = T)))
+            
+            if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
+              div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
+                          min = min(inter,na.rm = T), max = max(inter,na.rm = T),
+                          value = MPS_RV$val[[paste0("FilterUiElement_", id)]]),
+                  materialSwitch(inputId =paste0("FilterUiElementMS_", id), 
+                                 label = "Gray part", value = TRUE, 
+                                 status = "danger"))
+            } else {
+             div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
+                          min = min(inter,na.rm = T), max = max(inter,na.rm = T),
+                          value = c(min(inter,na.rm = T), max(inter,na.rm = T))),
+              materialSwitch(inputId =paste0("FilterUiElementMS_", id), 
+                             label = "Gray part", value = TRUE, 
+                             status = "danger"))
+            }
+            
+            
           })
         } else {
           output[[paste0("FilterUi_", id)]] <- renderUI({
@@ -3882,35 +3914,67 @@ server <- function(input, output, session) {
     })
   })
   
-  output$textbox_ui <- renderUI({ textboxes() })
+  output$textbox_ui <- renderUI({ 
+    textboxes() 
+  })
+  
+  observeEvent(input$col_1,{
+    if(counter$n == 1 && "FilterUiElement_1" %in% names(MPS_RV$val)){
+      updateSelectInput(session = session, inputId = "col_1", selected = input$col_1 )
+    }
+  })
   
   observeEvent(input$filter_btn, {
     if(counter$n > 0){
-      filterlist = NULL
-      for (i in 1:counter$n){
-        if(length(eval(parse(text = paste0("input$FilterUiElement_",i)))) == 2){
-          min = min(eval(parse(text = paste0("input$FilterUiElement_",i))))
-          max = max(eval(parse(text = paste0("input$FilterUiElement_",i))))
-          data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",i)))]))
-          pos = which(data >= min & data <= max )
-          filterlist = c(filterlist,
-                         PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][pos,1])
-        } else{
-          filterlist = c(filterlist,
-                         PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$FilterUiElement_",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col_",i)))] , ignore.case = T, value = F),1])
-        }
-        
-      } 
-      filterlist = paste(unique(filterlist), collapse = " ; ")
-      updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = filterlist)
-      PixelSetExploRV$SEARCH = which(PixelSetExploRV$TAB[, "Feature name"] %in% unlist(strsplit(gsub(" ","", filterlist), ";")))
       
-      if( length(PixelSetExploRV$SEARCH) == 0){
-        PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+      check = T
+      for (i in 1:counter$n){
+        if(eval(parse(text = paste0("input$col_",i))) == "-"){
+          check = F
+          break()
+        }
+      }
+      
+      if(check){
+        filterlist = NULL
+        for (i in 1:counter$n){
+          if(length(eval(parse(text = paste0("input$FilterUiElement_",i)))) == 2){
+            min = min(eval(parse(text = paste0("input$FilterUiElement_",i))))
+            max = max(eval(parse(text = paste0("input$FilterUiElement_",i))))
+            data = as.numeric(as.character(PixelSetExploRV$TAB[PixelSetExploRV$SEARCH ,eval(parse(text = paste0("input$col_",i)))]))
+            
+            if(eval(parse(text = paste0("input$FilterUiElementMS_",i)))){
+              pos = which(data <= min | data >= max )
+            } else {
+              pos = which(data >= min & data <= max )
+            }
+            
+            filterlist = c(filterlist,
+                           PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][pos,1])
+          } else{
+            filterlist = c(filterlist,
+                           PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,][grep(eval(parse(text = paste0("input$FilterUiElement_",i))),PixelSetExploRV$TAB[PixelSetExploRV$SEARCH,eval(parse(text = paste0("input$col_",i)))] , ignore.case = T, value = F),1])
+          }
+          
+        } 
+        filterlist = paste(unique(filterlist), collapse = " ; ")
+        updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = filterlist)
+        PixelSetExploRV$SEARCH = which(PixelSetExploRV$TAB[, "Feature name"] %in% unlist(strsplit(gsub(" ","", filterlist), ";")))
+        
+        if( length(PixelSetExploRV$SEARCH) == 0){
+          PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+          sendSweetAlert(
+            session = session,
+            title = "Oops!",
+            text = "None of the genes were found in the Pixel table.",
+            type = "error"
+          )
+        }
+      } else {
         sendSweetAlert(
           session = session,
           title = "Oops!",
-          text = "None of the genes were found in the Pixel table.",
+          text = "A filters isn't selected...",
           type = "error"
         )
       }
