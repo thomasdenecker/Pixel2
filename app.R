@@ -218,16 +218,14 @@ server <- function(input, output, session) {
           USER$Logged <- TRUE
           USER$infos <- RESULT_REQUEST[1,]
           USER$UserType <- RESULT_REQUEST[1,7]
-          if (USER$UserType == "Admin"){
-            REQUEST = "SELECT * FROM pixeler;"
-            pg <- dbDriver("PostgreSQL")
-            con <- dbConnect(pg, user="docker", password="docker",
-                             host=ipDB, port=5432)
-            on.exit(dbDisconnect(con))
-            
-            USERS$infos = dbGetQuery(con, REQUEST)
-            dbDisconnect(con)
-          }
+          REQUEST = "SELECT * FROM pixeler;"
+          pg <- dbDriver("PostgreSQL")
+          con <- dbConnect(pg, user="docker", password="docker",
+                           host=ipDB, port=5432)
+          on.exit(dbDisconnect(con))
+          
+          USERS$infos = dbGetQuery(con, REQUEST)
+          dbDisconnect(con)
         } else {
           USER$Logged <- F
           sendSweetAlert(
@@ -702,7 +700,7 @@ server <- function(input, output, session) {
                        tags$br(),
                        radioGroupButtons(inputId = "joinType", 
                                          label = "Join type :", choices = c("Full", 
-                                                                      "Inner"), justified = TRUE)
+                                                                            "Inner"), justified = TRUE)
                      ),
                      mainPanel(
                        uiOutput("textbox_ui")
@@ -766,7 +764,7 @@ server <- function(input, output, session) {
                )
           )
         ),
-
+        
         
         #=======================================================================
         # Tab content : Submission folder
@@ -3799,14 +3797,14 @@ server <- function(input, output, session) {
       counter$n <- counter$n + 1
       prevcount$n <- counter$n - 1
     }
-
+    
   })
   
   observeEvent(input$rm_filter_btn, {
     if (counter$n > 0) {
       MPS_RV$val = MPS_RV$val[! names(MPS_RV$val) %in% paste0("FilterUiElement_", counter$n)]
       MPS_RV$choice = MPS_RV$choice[! names(MPS_RV$choice) %in% paste0("col_",counter$n)] 
-
+      
       counter$n <- counter$n - 1 
       prevcount$n <- counter$n + 1
     }
@@ -3887,24 +3885,24 @@ server <- function(input, output, session) {
             
             if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
               div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
-                          min = min(inter,na.rm = T), max = max(inter,na.rm = T),
-                          value = MPS_RV$val[[paste0("FilterUiElement_", id)]]),
+                                                    min = min(inter,na.rm = T), max = max(inter,na.rm = T),
+                                                    value = MPS_RV$val[[paste0("FilterUiElement_", id)]]),
                   
                   radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
                                     label = "Part studied", choices = c("Gray", 
-                                                                 "Red"), 
+                                                                        "Red"), 
                                     selected = MPS_RV$RGB, checkIcon = list(yes = icon("check")))
-                  )
+              )
             } else {
-             div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
-                          min = min(inter,na.rm = T), max = max(inter,na.rm = T),
-                          value = c(min(inter,na.rm = T), max(inter,na.rm = T))),
-              radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
-                                label = "Part studied", choices = c("Gray", 
-                                                             "Red"), 
-                                status = 'RGB_slider',
-                                selected = "Gray", checkIcon = list(yes = icon("check")))
-             )
+              div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
+                                                    min = min(inter,na.rm = T), max = max(inter,na.rm = T),
+                                                    value = c(min(inter,na.rm = T), max(inter,na.rm = T))),
+                  radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
+                                    label = "Part studied", choices = c("Gray", 
+                                                                        "Red"), 
+                                    status = 'RGB_slider',
+                                    selected = "Gray", checkIcon = list(yes = icon("check")))
+              )
             }
           })
         } else {
