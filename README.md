@@ -14,6 +14,7 @@ installed the following requirements before trying to bootstrap the application:
 > We recommend you to follow Docker's official documentations to install
 required docker tools (see links above).
 
+
 **Docker must be on for the duration of Pixel2 use.**
 
 ## Quick start
@@ -26,7 +27,7 @@ Download the zip file ([here](https://github.com/thomasdenecker/Pixel2/archive/m
 
 #### Windows installation
 
-In this folder, you will find a file named INSTALLATION_MAC_LINUX.sh (for MAC and Linux users) and INSTALLATION_WINDOWS.bat (for Windows users). By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
+In this folder, you will find a file named INSTALLATION_WINDOWS.sh. By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
 
 #### Mac OsX installation
 
@@ -48,16 +49,23 @@ Check "Always Open With" and after clicking OK you should be able to execute you
 cd PATH/TO/Pixel2/folder
 ./INSTALLATION_LINUX.sh
 ```
+
+### Pixel2 utilisation
+#### Windows & Mac OSX
+Double click on PIXEL2 file and open your internet browser, typing the following url: http://localhost:3838/ and it should work™. Default user is admin with password : admin. We recommend you to change this password the first time you use it.
+
+**NOTE** (MAC users) : You may need to repeat the same manipulation as for the installation file (only once).
+
+#### Linux
+
 Once the installation is complete, use this command to launch the application:
 ```
 ./Pixel2.sh
 ```
-
-### Pixel2 utilisation
-
-Double click on PIXEL2 file and open your internet browser, typing the following url: http://localhost:3838/ and it should work™. Default user is admin with password : admin. We recommend you to change this password the first time you use it.
-
-**NOTE** (MAC users) : You may need to repeat the same manipulation as for the installation file (only once).
+or
+```
+bash Pixel2.sh
+```
 
 ## Development
 
@@ -86,8 +94,10 @@ docker run -ti --rm --link PIXEL2_DB:postgres -p 3839:3838 -v YOUR_APPLICATION_P
 ## Citation
 If you use Pixel2, please cite :
 
-Pixel: a digital lab assistant to integrate biological data in multi-omics projects
+**Pixel: a digital lab assistant to integrate biological data in multi-omics projects**
+
 Thomas Denecker, William Durand, Julien Maupetit, Charles Hebert, Jean-Michel Camadro, Pierre Poulain, Gaelle Lelandais
+
 bioRxiv 427724; doi: https://doi.org/10.1101/427724
 
 ## Contributing
