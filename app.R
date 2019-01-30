@@ -3335,7 +3335,7 @@ server <- function(input, output, session) {
       }
       
       # Go terms 
-      posGO = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "GO terms")
+      posGO = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "GO Terms")
       if (length(posGO) != 0){
         table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"Value"]," # ")), ncol = 3, byrow = T)
         table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
