@@ -1234,7 +1234,7 @@ server <- function(input, output, session) {
           h2("Submission"),
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Delete previous submission(s)"),
+                   h3(class ="h3-style","Delete submission(s)"),
                    p(class="info", "Select one or more submissions from the table and click Remove."),
                    DTOutput('SubmissionsAdminTab'),
                    br(),
@@ -5340,33 +5340,43 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$Delete_species_btn,{
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
-    
-    Used = dbGetQuery(con,paste0("SELECT distinct strain.name from strain, species
-                                 WHERE strain.species_id = species.id
-                                 AND species.name ='",input$Delete_species_SI,"';"))
-    dbDisconnect(con)
-    
-    if(nrow(Used) != 0){
+    if(is.null(input$Delete_species_SI)){
       sendSweetAlert(
         session = session,
-        title = "Species used",
-        text = paste("This species is used for this/these strain(s) :", paste(Used[,1], collapse = ", ")),
+        title = "No species to remove",
+        text = "There is no species to remove",
         type = "error"
       )
     }else {
-      confirmSweetAlert(
-        session = session,
-        inputId = "confirm_delete_species",
-        type = "warning",
-        title = "Want to confirm ?",
-        text = paste("Delete species  :",input$Delete_species_SI , "?" ),
-        danger_mode = TRUE
-      )
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      Used = dbGetQuery(con,paste0("SELECT distinct strain.name from strain, species
+                                   WHERE strain.species_id = species.id
+                                   AND species.name ='",input$Delete_species_SI,"';"))
+      dbDisconnect(con)
+      
+      if(nrow(Used) != 0){
+        sendSweetAlert(
+          session = session,
+          title = "Species used",
+          text = paste("This species is used for this/these strain(s) :", paste(Used[,1], collapse = ", ")),
+          type = "error"
+        )
+      }else {
+        confirmSweetAlert(
+          session = session,
+          inputId = "confirm_delete_species",
+          type = "warning",
+          title = "Want to confirm ?",
+          text = paste("Delete species  :",input$Delete_species_SI , "?" ),
+          danger_mode = TRUE
+        )
+      }
     }
+    
   }
   )
   
@@ -5378,12 +5388,25 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      dbGetQuery(con,paste0("delete from species where species.name ='",input$Delete_species_SI,"';"))
+      check = dbGetQuery(con,"select distinct species.name from chromosomalfeature, species where species.id = chromosomalfeature.species_id")
       
-      REQUEST = "SELECT * FROM species;"
-      AddRV$Species = dbGetQuery(con, REQUEST)
-      updateSelectInput(session, 'Delete_species_SI', choices = AddRV$Species[,'name'])
-      updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
+      if(input$Delete_species_SI %in% check[,1]){
+        sendSweetAlert(
+          session = session,
+          title = "Error",
+          text = "This species is used by chromosomale features.",
+          type = "error"
+        )
+      } else {
+        dbGetQuery(con,paste0("delete from species where species.name ='",input$Delete_species_SI,"';"))
+        
+        REQUEST = "SELECT * FROM species;"
+        AddRV$Species = dbGetQuery(con, REQUEST)
+        if(nrow(AddRV$Species)!=0){
+          updateSelectInput(session, "Delete_species_SI", choices = AddRV$Species[,'name'])
+          updateSelectInput(session, "Species_Strain_SI", choices = AddRV$Species[,'name'])
+        }
+      }
       dbDisconnect(con)
     } else {
       sendSweetAlert(
@@ -5516,35 +5539,46 @@ server <- function(input, output, session) {
   #-----------------------------------------------------------------------------
   
   observeEvent(input$Delete_strain_btn,{
-    pg <- dbDriver("PostgreSQL")
-    con <- dbConnect(pg, user="docker", password="docker",
-                     host=ipDB, port=5432)
-    on.exit(dbDisconnect(con))
     
-    Used = dbGetQuery(con,paste0("SELECT distinct pixelset.id from strain, experiment, Analysis_Experiment, pixelset
-                                 WHERE strain.id = experiment.strainId
-                                 AND experiment.id = Analysis_Experiment.id_experiment
-                                 AND Analysis_Experiment.id_analysis = pixelset.id_analysis
-                                 AND strain.name ='",input$Delete_strain_SI,"';"))
-    dbDisconnect(con)
-    
-    if(nrow(Used) != 0){
+    if (is.null(input$Delete_strain_SI)){
       sendSweetAlert(
         session = session,
-        title = "Strain  used",
-        text = paste("This Strain is used for this/these Pixelset(s) :", paste(Used[,1], collapse = ", ")),
+        title = "No strain to remove",
+        text = "There is no strain to remove",
         type = "error"
       )
-    }else {
-      confirmSweetAlert(
-        session = session,
-        inputId = "confirm_delete_strain",
-        type = "warning",
-        title = "Want to confirm ?",
-        text = paste("Delete strain  :",input$Delete_strain_SI , "?" ),
-        danger_mode = TRUE
-      )
-    }
+    } else {
+      pg <- dbDriver("PostgreSQL")
+      con <- dbConnect(pg, user="docker", password="docker",
+                       host=ipDB, port=5432)
+      on.exit(dbDisconnect(con))
+      
+      Used = dbGetQuery(con,paste0("SELECT distinct pixelset.id from strain, experiment, Analysis_Experiment, pixelset
+                                   WHERE strain.id = experiment.strainId
+                                   AND experiment.id = Analysis_Experiment.id_experiment
+                                   AND Analysis_Experiment.id_analysis = pixelset.id_analysis
+                                   AND strain.name ='",input$Delete_strain_SI,"';"))
+      dbDisconnect(con)
+      
+      if(nrow(Used) != 0){
+        sendSweetAlert(
+          session = session,
+          title = "Strain  used",
+          text = paste("This Strain is used for this/these Pixelset(s) :", paste(Used[,1], collapse = ", ")),
+          type = "error"
+        )
+      } else {
+        confirmSweetAlert(
+          session = session,
+          inputId = "confirm_delete_strain",
+          type = "warning",
+          title = "Want to confirm ?",
+          text = paste("Delete strain  :",input$Delete_strain_SI , "?" ),
+          danger_mode = TRUE
+        )
+      }
+    } 
+    
   }
   )
   
@@ -5561,7 +5595,9 @@ server <- function(input, output, session) {
       REQUEST = "SELECT * FROM strain;"
       AddRV$Strain = dbGetQuery(con, REQUEST)
       AddRV$StrainSpecies = dbGetQuery(con,"select strain.name as Strain, species.name as Species from strain, species where species.id = strain.species_id;")
-      updateSelectInput(session, 'Delete_strain_SI', choices = AddRV$Strain[,'name'])
+      if(nrow(AddRV$Strain) != 0){
+        updateSelectInput(session, 'Delete_strain_SI', choices = AddRV$Strain[,'name'])
+      }
       dbDisconnect(con)
     } else {
       sendSweetAlert(
