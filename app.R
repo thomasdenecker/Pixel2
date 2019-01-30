@@ -2906,7 +2906,7 @@ server <- function(input, output, session) {
                                   "Strand", "Description", "Species", "URL")
     )
     
-  },  options = list(scrollX = TRUE , dom = 't')) 
+  }, selection = 'none', options = list(scrollX = TRUE , dom = 't')) 
   
   output$contents_CF <-  renderDataTable({
     
