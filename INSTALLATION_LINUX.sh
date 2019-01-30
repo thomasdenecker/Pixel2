@@ -11,6 +11,7 @@ docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" PIX
 echo '#!/bin/bash' > $BASEDIR/Pixel2.sh
 echo docker stop PIXEL2_DB >> $BASEDIR/Pixel2.sh
 echo docker start PIXEL2_DB >> $BASEDIR/Pixel2.sh
-echo 'docker run --rm --link PIXEL2_DB:postgres -p 3838:3838 -v' $BASEDIR':/srv/shiny-server tdenecker/tdenecker/pixel2_app' >> $BASEDIR/Pixel2.sh
+echo 'docker run -d --rm --link PIXEL2_DB:postgres -p 3838:3838 --name PIXEL2_APP -v' $BASEDIR':/srv/shiny-server tdenecker/pixel2_app' >> $BASEDIR/Pixel2.sh
+
 
 chmod +x $BASEDIR/Pixel2.sh
