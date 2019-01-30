@@ -3830,10 +3830,14 @@ server <- function(input, output, session) {
           isInc <- TRUE
         }
         
-        
+        # Memory of previous choices
         for(i in 1:lesscnt){
           MPS_RV$choice[paste0("col_",i)] = isolate(input[[paste0("col_",i)]])
           MPS_RV$val[[paste0("FilterUiElement_", i)]] = isolate(input[[paste0("FilterUiElement_",i)]])
+          
+          if(!is.null(isolate(input[[paste0("FilterUiElementRGB_",i)]]))){
+            MPS_RV$RGB = isolate(input[[paste0("FilterUiElementRGB_",i)]])
+          }
         }
         
         if(isInc){
@@ -3879,9 +3883,6 @@ server <- function(input, output, session) {
         inter = inter[!is.null(inter)]
         
         if(!is.na(as.numeric(inter[1]))){
-          if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
-            cat(paste("Verif2 : ", paste(MPS_RV$val[[paste0("FilterUiElement_", id)]], collapse = "")), file = stderr())
-          }
           output[[paste0("FilterUi_", id)]] <- renderUI({
             
             if(!is.null(MPS_RV$val) && paste0("FilterUiElement_", id) %in% names(MPS_RV$val) && length(MPS_RV$val[[paste0("FilterUiElement_", id)]]) == 2){
@@ -3892,7 +3893,7 @@ server <- function(input, output, session) {
                   radioGroupButtons(inputId = paste0("FilterUiElementRGB_", id), 
                                     label = "Part studied", choices = c("Gray", 
                                                                  "Red"), 
-                                    selected = "Gray", checkIcon = list(yes = icon("check")))
+                                    selected = MPS_RV$RGB, checkIcon = list(yes = icon("check")))
                   )
             } else {
              div(class= "sliderStyle", sliderInput(paste0("FilterUiElement_", id), NULL, width = '100%',
@@ -4011,8 +4012,6 @@ server <- function(input, output, session) {
     MPS_RV$choice = NULL
     
   })
-  
-  
   
   #-----------------------------------------------------------------------------
   # MultiPixelSets : Download table
