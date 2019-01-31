@@ -1246,7 +1246,7 @@ server <- function(input, output, session) {
           
           fluidRow(
             column(12,
-                   h3(class ="h3-style","Modify previous submission"),
+                   h3(class ="h3-style","Modify submission"),
                    p(class="info", "Select one of the lines to activate the modifiion"),
                    sidebarLayout(
                      sidebarPanel(
@@ -2679,7 +2679,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$removePixelSets,{
-    
     confirmSweetAlert(
       session = session,
       inputId = "confirm_del_PixelSets",
@@ -4654,12 +4653,15 @@ server <- function(input, output, session) {
   #=============================================================================
   
   output$DatasourceTab <- renderDT({
-    colnames(datasourceRV$tab) = c("Datasource name", "Datasource description", "Published?", "Datasource URL","Pixelset ID",
-                                   "Pixelset name", "Pixelset description", "Omics area")
-    
-    datasourceRV$tab[,"Datasource name"] = as.factor(datasourceRV$tab[,"Datasource name"])
-    datasourceRV$tab[,"Published?"] = as.factor(datasourceRV$tab[,"Published?"])
-    datasourceRV$tab[,"Omics area"] = as.factor(datasourceRV$tab[,"Omics area"])
+    if(!is.null(datasourceRV$tab) && nrow(datasourceRV$tab) != 0){
+      colnames(datasourceRV$tab) = c("Datasource name", "Datasource description", "Published?", "Datasource URL","Pixelset ID",
+                                     "Pixelset name", "Pixelset description", "Omics area")
+      
+      datasourceRV$tab[,"Datasource name"] = as.factor(datasourceRV$tab[,"Datasource name"])
+      datasourceRV$tab[,"Published?"] = as.factor(datasourceRV$tab[,"Published?"])
+      datasourceRV$tab[,"Omics area"] = as.factor(datasourceRV$tab[,"Omics area"])
+    }
+
     datasourceRV$tab
   }, 
   selection = 'single', 
@@ -6243,12 +6245,19 @@ server <- function(input, output, session) {
         
       }
       
+      if(adresse_analysis_notebook == "" ){
+        md5_notebook = ""
+      } else {
+        md5_notebook = md5sum(paste0("www/",adresse_analysis_notebook))
+        md5_notebook[is.na(md5_notebook)] = ""
+      }
       
-      md5_notebook = md5sum(paste0("www/",adresse_analysis_notebook))
-      md5_notebook[is.na(md5_notebook)] = ""
-      
-      md5_SD = md5sum(paste0("www/",adresse_analysis_SD))
-      md5_SD[is.na(md5_SD)] = ""
+      if(adresse_analysis_SD == ""){
+        md5_SD = ""
+      } else {
+        md5_SD = md5sum(paste0("www/",adresse_analysis_SD))
+        md5_SD[is.na(md5_SD)] = ""
+      }
       
       submissionRV$META = rbind(submissionRV$META,
                                 c("Analysis_description",input$submission_Analysis_description),
