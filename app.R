@@ -3329,20 +3329,28 @@ server <- function(input, output, session) {
       
       posS = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "Sequence")
       if(length(posS) != 0){
-        CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
-                                        paste(strsplit(CF$PIXELSET_qualitative[posS,"Value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
+        for(pos in posS){
+          if( CF$PIXEL[which(CF$PIXEL[,"Pixelset ID"] == CF$PIXELSET_qualitative[pos,"Pixelset ID"]), "Omics unit type"][1] == "gene" ){
+            CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Gene sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
+                                            paste(strsplit(CF$PIXELSET_qualitative[pos,"Value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
+          } else if (CF$PIXEL[which(CF$PIXEL[,"Pixelset ID"] == CF$PIXELSET_qualitative[pos,"Pixelset ID"]), "Omics unit type"][1] == "protein" ){
+            CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Protein sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
+                                            paste(strsplit(CF$PIXELSET_qualitative[pos,"Value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
+          }
+          
+        }
       }
       
       # Go terms 
       posGO = which(CF$PIXELSET_qualitative[,"Omicsarea name"] ==  "GO Terms")
       if (length(posGO) != 0){
-        table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"Value"]," # ")), ncol = 3, byrow = T)
+        table = matrix(unlist(strsplit(CF$PIXELSET_qualitative[posGO,"Value"]," # ")), ncol = 4, byrow = T)
         table[,1] = paste0("<a href ='https://www.ebi.ac.uk/QuickGO/GTerm?id=",table[,1], "' target='_blank'>", table[,1], "</a>" )
         table = apply(table, 1, paste, collapse= "</td><td>")
         table = paste(table, collapse = "</td></tr><tr><td>")
         
         CF$Sup_tab = c(CF$Sup_tab, paste( '<h3>Go terms</h3><table class="table table-striped"><thead>
-                                          <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th></tr>
+                                          <tr><th scope="col">Go term</th><th scope="col">Term</th><th scope="col">Definition</th><th scope="col">Name space</th></tr>
                                           </thead><tbody>',"<tr><td>",table, "</td></tr></tbody></table>"))
       }
       
