@@ -1877,10 +1877,10 @@ server <- function(input, output, session) {
       fileSD = ""
     }
     
-    md5_notebook = md5sum(paste0("www/",idSubmission,"/", fileNB))
+    md5_notebook = md5sum(paste0("www/Submissions/",idSubmission,"/", fileNB))
     md5_notebook[is.na(md5_notebook)] = ""
     
-    md5_SD = md5sum(paste0("www/",idSubmission,"/", fileSD))
+    md5_SD = md5sum(paste0("www/Submissions/",idSubmission,"/", fileSD))
     md5_SD[is.na(md5_SD)] = ""
     
     meta = rbind(
