@@ -203,7 +203,7 @@ server <- function(input, output, session) {
       
       REQUEST = paste0("SELECT * 
             FROM pixeler
-            WHERE user_name = '",Username,"'
+            WHERE user_name = '",gsub("\'","\'\'", Username),"'
             AND password = crypt('",Password,"', password);")
       
       pg <- dbDriver("PostgreSQL")
@@ -1575,7 +1575,7 @@ server <- function(input, output, session) {
       
       REQUEST = paste0("SELECT * 
                  FROM pixeler
-                 WHERE ( email = '",USER$infos[1, 5],"' or user_name = '",USER$infos[1, 4],"') 
+                 WHERE ( email = '",gsub("\'","\'\'", USER$infos[1, 5]),"' or user_name = '",gsub("\'","\'\'", USER$infos[1, 4]),"') 
                  AND password = crypt('",Password,"', password);")
       
       RESULT_REQUEST = dbGetQuery(con, REQUEST)
@@ -1583,7 +1583,7 @@ server <- function(input, output, session) {
       if(nrow(RESULT_REQUEST) != 0){
         USER$infos <- RESULT_REQUEST[1,]
         REQUEST = paste0("UPDATE pixeler SET password = crypt('",
-                         input$NewPW2,"', password) WHERE user_name ='",USER$infos[1, 4],"';")
+                         input$NewPW2,"', password) WHERE user_name ='",gsub("\'","\'\'", USER$infos[1, 4]),"';")
         dbGetQuery(con, REQUEST)
         
         updateTextInput(session, "OldPW", value="")
@@ -1773,29 +1773,29 @@ server <- function(input, output, session) {
       
       dbGetQuery(con,paste0("update submission set status ='",input$SubmissionsAdminTab_modify_STATUS_SI,"' where id = '",submissionModify$id, "';"))
       
-      dbGetQuery(con,paste0("update analysis set description  = '",input$SubmissionsAdminTab_modify_DescriptionAnalysis_TA,"' 
+      dbGetQuery(con,paste0("update analysis set description  = '",gsub("\'","\'\'", input$SubmissionsAdminTab_modify_DescriptionAnalysis_TA),"' 
                             where id IN (select DISTINCT id_analysis from pixelset where id_submission = '",submissionModify$id,"')"))
-      dbGetQuery(con,paste0("update experiment set description  = '",input$SubmissionsAdminTab_modify_DescriptionExperiment_TA,"' 
+      dbGetQuery(con,paste0("update experiment set description  = '",gsub("\'","\'\'", input$SubmissionsAdminTab_modify_DescriptionExperiment_TA),"' 
                             where id IN (select DISTINCT id_experiment from pixelset , analysis_experiment, experiment 
                             where id_submission = '",submissionModify$id,"' 
                             and pixelset.id_analysis = analysis_experiment.id_analysis 
                             and analysis_experiment.id_experiment = experiment.id );"))
       
-      idStrain = dbGetQuery(con,paste0("Select id from strain where name ='",input$SubmissionsAdminTab_modify_Strain_SI,"';"))
+      idStrain = dbGetQuery(con,paste0("Select id from strain where name ='",gsub("\'","\'\'", input$SubmissionsAdminTab_modify_Strain_SI),"';"))
       
       dbGetQuery(con,paste0("update experiment set strainId = ",idStrain[1,1]," where id = (select DISTINCT analysis_experiment.id_experiment
                               from pixelset, analysis_experiment
                               where pixelset.id_submission='",submissionModify$id,"'
                               and pixelset.id_analysis = analysis_experiment.id_analysis);"))
       
-      idOmicsArea = dbGetQuery(con,paste0("Select id from omicsarea where name ='",input$SubmissionsAdminTab_modify_OmicsArea_SI,"';"))
+      idOmicsArea = dbGetQuery(con,paste0("Select id from omicsarea where name ='",gsub("\'","\'\'", input$SubmissionsAdminTab_modify_OmicsArea_SI),"';"))
       
-      dbGetQuery(con,paste0("update experiment set omicsAreaid = '",idOmicsArea[1,1],"' where id = (select DISTINCT analysis_experiment.id_experiment
+      dbGetQuery(con,paste0("update experiment set omicsAreaid = '",gsub("\'","\'\'", idOmicsArea[1,1]),"' where id = (select DISTINCT analysis_experiment.id_experiment
                               from pixelset, analysis_experiment
                               where pixelset.id_submission='",submissionModify$id,"'
                               and pixelset.id_analysis = analysis_experiment.id_analysis);"))
       
-      idOmicsUnitType = dbGetQuery(con,paste0("Select id from omicsunittype where name ='",input$SubmissionsAdminTab_modify_OmicsUnitType_SI,"';"))
+      idOmicsUnitType = dbGetQuery(con,paste0("Select id from omicsunittype where name ='",gsub("\'","\'\'", input$SubmissionsAdminTab_modify_OmicsUnitType_SI),"';"))
       dbGetQuery(con,paste0("update pixel set OmicsUnitType_id = ",idOmicsUnitType," where id in (
         select pixel.id from pixel, pixelSet
         where pixel.pixelSet_id = pixelset.id
@@ -1884,14 +1884,14 @@ server <- function(input, output, session) {
     md5_SD[is.na(md5_SD)] = ""
     
     meta = rbind(
-      c("Experiment_description", Info_inter[1,1]),
+      c("Experiment_description",gsub("[\r\n]"," ", Info_inter[1,1])),
       c("Experiment_completionDate",Info_inter[1,2]	),
       c("Experiment_omicsArea",	Info_inter[1,3]),
       c("Experiment_omicsUnitType",OUT_inter[1,1]),
       c("Experiment_dataSource",Info_inter[1,4]	),
       c("Experiment_species",Info_inter[1,5]	),
       c("Experiment_strain",Info_inter[1,6]	),
-      c("Analysis_description",Info_inter[1,7]	),
+      c("Analysis_description",gsub("[\r\n]"," ", Info_inter[1,7])	),
       c("Analysis_completionDate",Info_inter[1,8]	),
       c("Analysis_notebookFile",fileNB),
       c("md5_notebook", md5_notebook),
@@ -1902,7 +1902,7 @@ server <- function(input, output, session) {
     for(i in 1:nrow(Info_inter)){
       meta = rbind(meta,
                    c(paste0("PixelSet",i,"_name"),Info_inter[i,11]	),
-                   c(paste0("PixelSet",i,"_description"),Info_inter[i,12]	),
+                   c(paste0("PixelSet",i,"_description"),gsub("[\r\n]"," ", Info_inter[i,12])	),
                    c(paste0("PixelSet",i,"_file"),unlist(strsplit(Info_inter[i,13], "/"))[3]),
                    c(paste0("PixelSet",i,"_md5"),md5sum(paste0("www/",Info_inter[i,13])))
       )          
@@ -2034,7 +2034,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                               FROM tag
-                              WHERE name = '",tolower(input$ManageTag_NewName),"';")
+                              WHERE name = '",gsub("\'","\'\'", tolower(input$ManageTag_NewName)),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -2052,8 +2052,8 @@ server <- function(input, output, session) {
     } else {
       
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",tolower(input$ManageTag_NewName), "',
-                            '",input$ManageTag_NewDescription, "');
+                            '",gsub("\'","\'\'", tolower(input$ManageTag_NewName)), "',
+                            '",gsub("\'","\'\'", input$ManageTag_NewDescription), "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       
@@ -2363,8 +2363,8 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432) 
       on.exit(dbDisconnect(con))
       
-      dbGetQuery(con,paste0("update tag set description ='",input$PTagAdminTab_modify_Description_TA,"' where id = ",tagModif$id , ";"))
-      dbGetQuery(con,paste0("update tag set name ='",input$TagAdminTab_modify_name_TA,"' where id = ",tagModif$id , ";"))
+      dbGetQuery(con,paste0("update tag set description ='",gsub("\'","\'\'", input$PTagAdminTab_modify_Description_TA),"' where id = ",tagModif$id , ";"))
+      dbGetQuery(con,paste0("update tag set name ='",gsub("\'","\'\'", input$TagAdminTab_modify_name_TA),"' where id = ",tagModif$id , ";"))
       
       TAG$table = dbGetQuery(con, "select * from tag ORDER BY name;")
       dbDisconnect(con)
@@ -2505,7 +2505,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                               FROM tag
-                              WHERE name = '",tolower(input$PSModify_tags_NewName),"';")
+                              WHERE name = '",gsub("\'","\'\'", tolower(input$PSModify_tags_NewName)),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -2523,8 +2523,8 @@ server <- function(input, output, session) {
     } else {
       
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",tolower(input$PSModify_tags_NewName), "',
-                            '",input$PSModify_tags_NewDescription, "');
+                            '",gsub("\'","\'\'", tolower(input$PSModify_tags_NewName)), "',
+                            '",gsub("\'","\'\'", input$PSModify_tags_NewDescription), "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       
@@ -2594,8 +2594,8 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      dbGetQuery(con,paste0("update pixelset set description ='",input$PixelSetAdminTab_modify_Description_TA,"' where id = '",pixelsetModify$id, "';"))
-      dbGetQuery(con,paste0("update pixelset set name ='",input$PixelSetAdminTab_modify_name_TA,"' where id = '",pixelsetModify$id, "';"))
+      dbGetQuery(con,paste0("update pixelset set description ='",gsub("\'","\'\'", input$PixelSetAdminTab_modify_Description_TA),"' where id = '",pixelsetModify$id, "';"))
+      dbGetQuery(con,paste0("update pixelset set name ='",gsub("\'","\'\'", input$PixelSetAdminTab_modify_name_TA),"' where id = '",pixelsetModify$id, "';"))
       
       if(nrow(pixelsetModify$TagA) != 0){
         for(i in 1:nrow(pixelsetModify$TagA)){
@@ -2810,8 +2810,8 @@ server <- function(input, output, session) {
           REQUEST = paste0("UPDATE pixeler SET password = crypt('",
                            USERS$infos[i, j],"', password) WHERE id =",USERS$infos[i, 1],";")
         } else {
-          REQUEST = paste0("UPDATE pixeler SET ",colnames(USERS$infos)[j] ," = '",
-                           USERS$infos[i, j],"' WHERE id =",USERS$infos[i, 1],";")
+          REQUEST = paste0("UPDATE pixeler SET ",gsub("\'","\'\'", colnames(USERS$infos)[j]) ," = '",
+                           gsub("\'","\'\'", USERS$infos[i, j]),"' WHERE id =",USERS$infos[i, 1],";")
         }
         
         pg <- dbDriver("PostgreSQL")
@@ -2835,7 +2835,7 @@ server <- function(input, output, session) {
   observeEvent(input$addUser, {
     REQUEST_EXISTING = paste0("SELECT *
                                 FROM pixeler
-                              WHERE email = '",input$EMAIL_NU,"' or user_name = '",input$USERNAME_NU,"';")
+                              WHERE email = '",gsub("\'","\'\'", input$EMAIL_NU),"' or user_name = '",gsub("\'","\'\'", input$USERNAME_NU),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -2851,10 +2851,10 @@ server <- function(input, output, session) {
       )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO pixeler (first_name, last_name, user_name, email, user_type, lab_country, password) VALUES (
-                            '",input$FN_NU, "',
-                            '",input$LN_NU, "',
-                            '",input$USERNAME_NU,"',
-                            '",input$EMAIL_NU, "',
+                            '",gsub("\'","\'\'", input$FN_NU), "',
+                            '",gsub("\'","\'\'", input$LN_NU), "',
+                            '",gsub("\'","\'\'", input$USERNAME_NU),"',
+                            '",gsub("\'","\'\'", input$EMAIL_NU), "',
                             '",input$UserType, "',
                             '",input$COUNTRY_NU, "',
                             crypt('tempPW', gen_salt('bf'))
@@ -2929,7 +2929,7 @@ server <- function(input, output, session) {
     rv$ERROR = F
     
     REQUEST_ANNOT = paste0("INSERT INTO CFSource (name,abbreviation, description, url) VALUES ('",
-                           input$CFSourceName, "','", input$CFAbbreviation, "','", input$CFSourceDescription,"','",input$CFSourceURL,"');" )
+                           gsub("\'","\'\'", input$CFSourceName), "','", gsub("\'","\'\'", input$CFAbbreviation), "','", gsub("\'","\'\'", input$CFSourceDescription),"','",gsub("\'","\'\'", input$CFSourceURL),"');" )
     
     
     tryCatch(dbSendQuery(con, REQUEST_ANNOT)
@@ -2987,8 +2987,8 @@ server <- function(input, output, session) {
                         stringsAsFactors = F
     )
     
-    species_id  = dbGetQuery(con, paste0("Select id from species where name = '",database[1,8],"';"))[1,1]
-    default_db_id = dbGetQuery(con, paste0("Select id from CFSource where name = '",input$selectSource,"';"))[1,1]
+    species_id  = dbGetQuery(con, paste0("Select id from species where name = '",gsub("\'","\'\'", database[1,8]),"';"))[1,1]
+    default_db_id = dbGetQuery(con, paste0("Select id from CFSource where name = '",gsub("\'","\'\'", input$selectSource),"';"))[1,1]
     
     withProgress(message = 'Import in Database', value = 0, {
       # if(input$importTypeCF == "main"){
@@ -2999,14 +2999,14 @@ server <- function(input, output, session) {
           
           incProgress(1/n, detail = paste("Doing part", i))
           
-          REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",database[i,1],"'" );
+          REQUEST_INDB = paste0("SELECT * from ChromosomalFeature WHERE feature_name = '",gsub("\'","\'\'", database[i,1]),"'" );
           if(nrow(dbGetQuery(con, REQUEST_INDB)) != 0){
-            REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",database[i,2],"', chromosome = '",database[i,3],
-                                   "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",database[i,6],
-                                   "',description ='",gsub("\'","\'\'",database[i,7]),"',species_id ='",species_id, "', url ='",database[i,9] ,"',default_db_id ='",default_db_id 
-                                   ,"' WHERE Feature_name = '",database[i,1],"';" );
+            REQUEST_ANNOT = paste0("UPDATE ChromosomalFeature SET gene_name = '",gsub("\'","\'\'", database[i,2]),"', chromosome = '",gsub("\'","\'\'", database[i,3]),
+                                   "', start_coordinate = ",database[i,4],", stop_coordinate =",database[i,5],", strand ='",gsub("\'","\'\'", database[i,6]),
+                                   "',description ='",gsub("\'","\'\'",database[i,7]),"',species_id ='",species_id, "', url ='",gsub("\'","\'\'", database[i,9]) ,"',default_db_id ='",default_db_id 
+                                   ,"' WHERE Feature_name = '",gsub("\'","\'\'", database[i,1]),"';" );
           } else {
-            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",database[i,1:3],"'"), database[i,4:5], paste0("'",database[i,6],"'"), paste0("'",gsub("\'","\'\'",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
+            REQUEST_ANNOT = paste0("INSERT INTO ChromosomalFeature (feature_name , gene_name,  chromosome, start_coordinate, stop_coordinate, strand, description,species_id, url, default_db_id) VALUES ( ",paste(c(paste0("'",gsub("\'","\'\'", database[i,1:3]),"'"), database[i,4:5], paste0("'",gsub("\'","\'\'", database[i,6]),"'"), paste0("'",gsub("\'","\'\'",database[i,7]),"'"),paste0("'",species_id,"'"), paste0("'",database[i,9],"'"),paste0("'",default_db_id,"'")),collapse = ","),
                                    ");")
           }
           
@@ -3095,7 +3095,7 @@ server <- function(input, output, session) {
       con <- dbConnect(pg, user="docker", password="docker",
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
-      testCF = dbGetQuery(con,paste0("select feature_name, species.name from chromosomalfeature, species where (lower(feature_name) ='",tolower(input$searchCF),"' or lower(gene_name) = '",tolower(input$searchCF),"') and species.id = species_id;"))
+      testCF = dbGetQuery(con,paste0("select feature_name, species.name from chromosomalfeature, species where (lower(feature_name) ='",gsub("\'","\'\'", tolower(input$searchCF)),"' or lower(gene_name) = '",gsub("\'","\'\'", tolower(input$searchCF)),"') and species.id = species_id;"))
       dbDisconnect(con)
       if(nrow(testCF) == 1){
         CF$name = testCF[1,1]
@@ -3150,7 +3150,7 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      testTag = dbGetQuery(con,paste0("select name from tag where name = '",tolower(input$searchTag),"';"))
+      testTag = dbGetQuery(con,paste0("select name from tag where name = '",gsub("\'","\'\'", tolower(input$searchTag)),"';"))
       
       dbDisconnect(con)
       if(nrow(testTag) != 0){
@@ -3237,7 +3237,7 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
-    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",CF$name,"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
+    CF$main_annotation = dbGetQuery(con, paste0("select feature_name, gene_name, chromosome, start_coordinate, stop_coordinate, strand, chromosomalfeature.description, species.name as Species_name, chromosomalfeature.url, cfsource.name from chromosomalfeature, species, cfsource where feature_name ='",gsub("\'","\'\'", CF$name),"' and cfsource.id = chromosomalfeature.default_db_id and species.id = chromosomalfeature.species_id;"))
     CF$main_annotation[1, 'url'] = paste0("<a href='",CF$main_annotation[1, 'url'] ,"'  target='_blank'>",CF$main_annotation[1, 'url'], "</a>")
     CF$main_annotation[1, 'species_name'] = paste0("<i>",CF$main_annotation[1, 'species_name'], "</i>")
     CF$main_annotation = paste("<b>", gsub("_", " " ,colnames(CF$main_annotation)),"</b> : ", CF$main_annotation[1,])
@@ -3245,14 +3245,14 @@ server <- function(input, output, session) {
     
     
     CF$CF_Tag_analysis = dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                  where pixel.cf_feature_name ='",CF$name,"' and
+                                                  where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"' and
                                                 pixel.pixelset_id = PS.id 
                                                 and ps.id_analysis = analysis.id 
                                                 and Tag_Analysis.id_analysis = analysis.id 
                                                 and tag.id = Tag_Analysis.id_tag;"))
     
     CF$CF_Tag_experiment =  dbGetQuery(con, paste0("select DISTINCT tag.name, tag.description from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                   where pixel.cf_feature_name ='",CF$name,"'
+                                                   where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"'
                                                    and pixel.pixelset_id = PS.id 
                                                    and ps.id_analysis = analysis.id
                                                    and Analysis_Experiment.id_analysis = analysis.id
@@ -3261,7 +3261,7 @@ server <- function(input, output, session) {
     
     CF$CF_OmicsArea =  dbGetQuery(con, paste0("select omicsarea.name, count(*)
                                               from pixel, pixelset PS, analysis,  Analysis_Experiment, omicsarea, Experiment
-                                              where pixel.cf_feature_name ='",CF$name,"'
+                                              where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"'
                                               and pixel.pixelset_id = PS.id 
                                               and ps.id_analysis = analysis.id
                                               and Analysis_Experiment.id_analysis = analysis.id
@@ -3272,13 +3272,13 @@ server <- function(input, output, session) {
     
     CF$CF_OmicsUnitType =  dbGetQuery(con, paste0("SELECT OmicsUnitType.name, count(*)
                                                   from pixel, OmicsUnitType
-                                                  where pixel.cf_feature_name ='",CF$name,"'
+                                                  where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"'
                                                   and OmicsUnitType_id = OmicsUnitType.id
                                                   group by OmicsUnitType.name;"))
     
     CF$CF_Tag_Exp_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
                                                  from pixel, pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                                 where pixel.cf_feature_name ='",CF$name,"'
+                                                 where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"'
                                                  and pixel.pixelset_id = PS.id 
                                                  and ps.id_analysis = analysis.id
                                                  and Analysis_Experiment.id_analysis = analysis.id
@@ -3289,7 +3289,7 @@ server <- function(input, output, session) {
     
     CF$CF_Tag_Analysis_graph = dbGetQuery(con, paste0("select tag.name, count(*) 
                                                       from pixel, pixelset PS, analysis, Tag_Analysis, tag 
-                                                      where pixel.cf_feature_name ='",CF$name,"' and
+                                                      where pixel.cf_feature_name ='",gsub("\'","\'\'", CF$name),"' and
                                                       pixel.pixelset_id = PS.id 
                                                       and ps.id_analysis = analysis.id 
                                                       and Tag_Analysis.id_analysis = analysis.id 
@@ -3299,7 +3299,7 @@ server <- function(input, output, session) {
     CF$PIXELSET =  dbGetQuery(con, paste0("SELECT  pixel.value, pixel.quality_score, pixelset.id, pixelset.name, 
                                           pixelset.description, pixelset.id_analysis, pixelset.id_submission, OmicsArea.name 
                                           FROM pixel, pixelset, OmicsUnitType,  analysis_experiment, experiment, omicsarea
-                                          WHERE pixel.cf_feature_name = '",CF$name,"' 
+                                          WHERE pixel.cf_feature_name = '",gsub("\'","\'\'", CF$name),"' 
                                           AND pixel.OmicsUnitType_id = OmicsUnitType.id
                                           AND pixel.pixelset_id = pixelset.id
                                           AND pixelset.id_analysis = analysis_experiment.id_analysis
@@ -3309,7 +3309,7 @@ server <- function(input, output, session) {
     
     CF$PIXEL =  dbGetQuery(con, paste0("select value, quality_score as QS, pixelset_id, OmicsUnitType.name as OUT
                                        from pixel,OmicsUnitType 
-                                       where cf_feature_name = '",CF$name,"'
+                                       where cf_feature_name = '",gsub("\'","\'\'", CF$name),"'
                                        and omicsunittype_id = OmicsUnitType.id;"))
     
     
@@ -3650,7 +3650,7 @@ server <- function(input, output, session) {
       colnames(PixelSetExploRV$TAB) = c("feature_name", 
                                         colnamesinter)
       
-      PixelSetExploRV$InfoCF = dbGetQuery(con,paste0("select feature_name, gene_name,description from ChromosomalFeature where feature_name IN (",paste0("'",PixelSetExploRV$TAB[,1],"'", collapse = ","),")") )
+      PixelSetExploRV$InfoCF = dbGetQuery(con,paste0("select feature_name, gene_name,description from ChromosomalFeature where feature_name IN (",paste0("'",gsub("\'","\'\'", PixelSetExploRV$TAB[,1]),"'", collapse = ","),")") )
       
       PixelSetExploRV$TAB = merge(PixelSetExploRV$InfoCF, PixelSetExploRV$TAB,by = "feature_name", all = T)
       
@@ -4409,7 +4409,7 @@ server <- function(input, output, session) {
     
     TAG$DESCRIPTION = dbGetQuery(con,paste0("select name, description
                                             from tag
-                                            where name = '",TAG$NAME,"';"))
+                                            where name = '",gsub("\'","\'\'", TAG$NAME),"';"))
     if(TAG$DESCRIPTION[1,2] == ""){
       TAG$DESCRIPTION = "No description saved"
     } else {
@@ -4431,7 +4431,7 @@ server <- function(input, output, session) {
     
     TAG$PIXEL_SET_EXP = dbGetQuery(con,paste0("SELECT PS.*
                                               FROM pixelset PS, analysis, Tag_Experiment, tag, Analysis_Experiment
-                                              WHERE tag.name ='",TAG$NAME,"' 
+                                              WHERE tag.name ='",gsub("\'","\'\'", TAG$NAME),"' 
                                               AND ps.id_analysis = analysis.id
                                               AND Analysis_Experiment.id_analysis = analysis.id
                                               AND Tag_Experiment.id_experiment = Analysis_Experiment.id_experiment 
@@ -4439,7 +4439,7 @@ server <- function(input, output, session) {
     
     TAG$PIXEL_SET_ANALYSIS = dbGetQuery(con,paste0("SELECT PS.* 
                                                    FROM  pixelset PS, analysis, Tag_Analysis, tag 
-                                                   WHERE tag.name ='",TAG$NAME,"' 
+                                                   WHERE tag.name ='",gsub("\'","\'\'", TAG$NAME),"' 
                                                    AND ps.id_analysis = analysis.id 
                                                    AND Tag_Analysis.id_analysis = analysis.id 
                                                    AND tag.id = Tag_Analysis.id_tag;"))
@@ -4746,8 +4746,8 @@ server <- function(input, output, session) {
           AddRV$OUT[i, j] <<- DT::coerceValue(v, AddRV$OUT[i, j])
           replaceData(proxyOUT, AddRV$OUT, resetPaging = F)  # important
           
-          REQUEST = paste0("UPDATE omicsunittype SET ",colnames(AddRV$OUT)[j] ," = '",
-                           AddRV$OUT[i, j],"' WHERE id =",AddRV$OUT[i, 1],";")
+          REQUEST = paste0("UPDATE omicsunittype SET ",gsub("\'","\'\'", colnames(AddRV$OUT)[j]) ," = '",
+                           gsub("\'","\'\'", AddRV$OUT[i, j]),"' WHERE id =",AddRV$OUT[i, 1],";")
           
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
@@ -4770,7 +4770,7 @@ server <- function(input, output, session) {
   observeEvent(input$addOUT_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM omicsunittype
-                              WHERE name = '",input$Name_OUT,"';")
+                              WHERE name = '",gsub("\'","\'\'", input$Name_OUT),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -4785,8 +4785,8 @@ server <- function(input, output, session) {
       )
     } else {
       REQUESTE_ADD = paste0("INSERT INTO omicsunittype (name, description) VALUES (
-                            '",input$Name_OUT, "',
-                            '",input$Description_OUT, "');")
+                            '",gsub("\'","\'\'", input$Name_OUT), "',
+                            '",gsub("\'","\'\'", input$Description_OUT), "');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
@@ -4822,7 +4822,7 @@ server <- function(input, output, session) {
     
     Used = dbGetQuery(con,paste0("SELECT distinct pixelSet_id from Pixel , OmicsUnitType 
                                  WHERE pixel.OmicsUnitType_id = OmicsUnitType.id 
-                                 AND OmicsUnitType.name ='",input$Delete_OUT_SI,"';"))
+                                 AND OmicsUnitType.name ='",gsub("\'","\'\'", input$Delete_OUT_SI),"';"))
     dbDisconnect(con)
     
     if(nrow(Used) != 0){
@@ -4853,7 +4853,7 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      dbGetQuery(con,paste0("delete from OmicsUnitType where OmicsUnitType.name ='",input$Delete_OUT_SI,"';"))
+      dbGetQuery(con,paste0("delete from OmicsUnitType where OmicsUnitType.name ='",gsub("\'","\'\'", input$Delete_OUT_SI),"';"))
       
       REQUEST = "SELECT * FROM OmicsUnitType;"
       AddRV$OUT = dbGetQuery(con, REQUEST)
@@ -4908,8 +4908,8 @@ server <- function(input, output, session) {
           AddRV$DataSource[i, j] <<- DT::coerceValue(v, AddRV$DataSource[i, j])
           replaceData(proxyDS, AddRV$DataSource, resetPaging = F)  # important
           
-          REQUEST = paste0("UPDATE datasource SET ",colnames(AddRV$DataSource)[j] ," = '",
-                           AddRV$DataSource[i, j],"' WHERE id =",AddRV$DataSource[i, 1],";")
+          REQUEST = paste0("UPDATE datasource SET ",gsub("\'","\'\'", colnames(AddRV$DataSource)[j]) ," = '",
+                           gsub("\'","\'\'", AddRV$DataSource[i, j]),"' WHERE id =",AddRV$DataSource[i, 1],";")
           
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
@@ -4930,7 +4930,7 @@ server <- function(input, output, session) {
   observeEvent(input$addDataSource_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM datasource
-                              WHERE name = '",input$Name_DataSource,"';")
+                              WHERE name = '",gsub("\'","\'\'", input$Name_DataSource),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -4947,7 +4947,7 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO datasource (name, description, published, url) VALUES (
-                            '",input$Name_DataSource, "','",input$Description_DataSource, "','",input$Published_DataSource, "','",input$URL_DataSource, "');")
+                            '",gsub("\'","\'\'", input$Name_DataSource), "','",gsub("\'","\'\'", input$Description_DataSource), "','",input$Published_DataSource, "','",gsub("\'","\'\'", input$URL_DataSource), "');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
@@ -5006,7 +5006,7 @@ server <- function(input, output, session) {
   observeEvent(input$Add_OmicsArea_btn,{
     REQUEST_EXISTING = paste0("SELECT *
                               FROM OmicsArea
-                              WHERE name = '",input$Add_OmicsArea_name,"';")
+                              WHERE name = '",gsub("\'","\'\'", input$Add_OmicsArea_name),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -5021,8 +5021,8 @@ server <- function(input, output, session) {
         type = "error"
       )
     } else {
-      REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', input$Add_OmicsArea_name),"',
-                            '",input$Add_OmicsArea_name, "','",input$Add_OmicsArea_description, "','",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.'),"');")
+      REQUESTE_ADD = paste0("INSERT INTO omicsarea (id, name, description, path) VALUES ('",gsub(' ', '', gsub("\'","\'\'", input$Add_OmicsArea_name)),"',
+                            '",gsub("\'","\'\'", input$Add_OmicsArea_name), "','",gsub("\'","\'\'", input$Add_OmicsArea_description), "','",gsub("\'","",paste(input$Add_OmicsArea_path_SI,gsub(' ', '', input$Add_OmicsArea_name) , sep='.')),"');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
@@ -5103,14 +5103,14 @@ server <- function(input, output, session) {
     on.exit(dbDisconnect(con))
     
     if( input$Modify_OmicsArea_description_TI != AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'description'] ){
-      dbGetQuery(con, paste0("update OmicsArea set description = '",input$Modify_OmicsArea_description_TI,"' where name = '",input$Modify_OmicsArea_name_SI,"';"))
+      dbGetQuery(con, paste0("update OmicsArea set description = '",gsub("\'","\'\'", input$Modify_OmicsArea_description_TI),"' where name = '",gsub("\'","\'\'", input$Modify_OmicsArea_name_SI),"';"))
     }
     
     SOURCE_PATH = AddRV$OmicsArea[which(AddRV$OmicsArea[,'name'] == input$Modify_OmicsArea_name_SI),'path']
     
     if(input$Modify_OmicsArea_path_SI != SOURCE_PATH){
-      dbGetQuery(con, paste0("update OmicsArea set path = '",input$Modify_OmicsArea_path_SI,"' || subpath(path, nlevel('",SOURCE_PATH,"')-1)
-                where path <@ '",SOURCE_PATH,"';"))
+      dbGetQuery(con, paste0("update OmicsArea set path = '",gsub("\'","", input$Modify_OmicsArea_path_SI),"' || subpath(path, nlevel('",gsub("\'","", SOURCE_PATH),"')-1)
+                where path <@ '",gsub("\'","", SOURCE_PATH),"';"))
     }
     
     sendSweetAlert(
@@ -5151,7 +5151,7 @@ server <- function(input, output, session) {
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
     
-    Used = dbGetQuery(con,paste0("select experiment.id from experiment, OmicsArea where experiment.omicsareaid = omicsarea.id and omicsarea.name ='",input$Delete_branch_OmicsArea_SI,"';"))
+    Used = dbGetQuery(con,paste0("select experiment.id from experiment, OmicsArea where experiment.omicsareaid = omicsarea.id and omicsarea.name ='",gsub("\'","\'\'", input$Delete_branch_OmicsArea_SI),"';"))
     dbDisconnect(con)
     
     if(nrow(Used) != 0){
@@ -5274,8 +5274,8 @@ server <- function(input, output, session) {
           AddRV$Species[i, j] <<- DT::coerceValue(v, AddRV$Species[i, j])
           replaceData(proxySpecies, AddRV$Species, resetPaging = F)  # important
           
-          REQUEST = paste0("UPDATE species SET ",colnames(AddRV$Species)[j] ," = '",
-                           AddRV$Species[i, j],"' WHERE id =",AddRV$Species[i, 1],";")
+          REQUEST = paste0("UPDATE species SET ",gsub("\'","\'\'", colnames(AddRV$Species)[j]) ," = '",
+                           gsub("\'","\'\'", AddRV$Species[i, j]),"' WHERE id =", AddRV$Species[i, 1],";")
           
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
@@ -5299,7 +5299,7 @@ server <- function(input, output, session) {
   observeEvent(input$addSpecies_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM species
-                              WHERE name = '",input$Name_Species,"';")
+                              WHERE name = '",gsub("\'","\'\'", input$Name_Species),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -5315,9 +5315,9 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO species (name, description, url) VALUES (
-                            '",input$Name_Species, "',
-                            '",input$Description_Species, "',
-                            '",input$URL_Species, "');")
+                            '",gsub("\'","\'\'", input$Name_Species), "',
+                            '",gsub("\'","\'\'", input$Description_Species), "',
+                            '",gsub("\'","\'\'", input$URL_Species), "');")
       
       dbGetQuery(con, REQUESTE_ADD)
       dbDisconnect(con)
@@ -5365,7 +5365,7 @@ server <- function(input, output, session) {
       
       Used = dbGetQuery(con,paste0("SELECT distinct strain.name from strain, species
                                    WHERE strain.species_id = species.id
-                                   AND species.name ='",input$Delete_species_SI,"';"))
+                                   AND species.name ='",gsub("\'","\'\'", input$Delete_species_SI),"';"))
       dbDisconnect(con)
       
       if(nrow(Used) != 0){
@@ -5408,7 +5408,7 @@ server <- function(input, output, session) {
           type = "error"
         )
       } else {
-        dbGetQuery(con,paste0("delete from species where species.name ='",input$Delete_species_SI,"';"))
+        dbGetQuery(con,paste0("delete from species where species.name ='",gsub("\'","\'\'", input$Delete_species_SI),"';"))
         
         REQUEST = "SELECT * FROM species;"
         AddRV$Species = dbGetQuery(con, REQUEST)
@@ -5466,8 +5466,8 @@ server <- function(input, output, session) {
           AddRV$Strain[i, j] <<- DT::coerceValue(v, AddRV$Strain[i, j])
           replaceData(proxyStrain, AddRV$Strain, resetPaging = F)  # important
           
-          REQUEST = paste0("UPDATE strain SET ",colnames(AddRV$Strain)[j] ," = '",
-                           AddRV$Strain[i, j],"' WHERE id =",AddRV$Strain[i, 1],";")
+          REQUEST = paste0("UPDATE strain SET ",gsub("\'","\'\'", colnames(AddRV$Strain)[j]) ," = '",
+                           gsub("\'","\'\'", AddRV$Strain[i, j]),"' WHERE id =",AddRV$Strain[i, 1],";")
           
           pg <- dbDriver("PostgreSQL")
           con <- dbConnect(pg, user="docker", password="docker",
@@ -5492,13 +5492,13 @@ server <- function(input, output, session) {
   observeEvent(input$addStrain_btn, {
     REQUEST_EXISTING = paste0("SELECT *
                               FROM strain
-                              WHERE name = '",input$Name_Strain,"';")
+                              WHERE name = '",gsub("\'","\'\'", input$Name_Strain),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
                      host=ipDB, port=5432)
     on.exit(dbDisconnect(con))
-    species_ID = dbGetQuery(con, paste0("SELECT id from species where name ='",input$Species_Strain_SI,"';"))[1,1] 
+    species_ID = dbGetQuery(con, paste0("SELECT id from species where name ='",gsub("\'","\'\'", input$Species_Strain_SI),"';"))[1,1] 
     
     if(nrow(dbGetQuery(con, REQUEST_EXISTING)) != 0 ){
       sendSweetAlert(
@@ -5510,9 +5510,9 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO strain (name, description, ref, species_id) VALUES (
-                            '",input$Name_Strain, "',
-                            '",input$Description_Strain, "',
-                            '",input$Ref_Strain, "',
+                            '",gsub("\'","\'\'", input$Name_Strain), "',
+                            '",gsub("\'","\'\'", input$Description_Strain), "',
+                            '",gsub("\'","\'\'", input$Ref_Strain), "',
                             '",species_ID, "');")
       
       dbGetQuery(con, REQUESTE_ADD)
@@ -5567,7 +5567,7 @@ server <- function(input, output, session) {
                                    WHERE strain.id = experiment.strainId
                                    AND experiment.id = Analysis_Experiment.id_experiment
                                    AND Analysis_Experiment.id_analysis = pixelset.id_analysis
-                                   AND strain.name ='",input$Delete_strain_SI,"';"))
+                                   AND strain.name ='",gsub("\'","\'\'", input$Delete_strain_SI),"';"))
       dbDisconnect(con)
       
       if(nrow(Used) != 0){
@@ -5600,7 +5600,7 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      dbGetQuery(con,paste0("delete from strain where strain.name ='",input$Delete_strain_SI,"';"))
+      dbGetQuery(con,paste0("delete from strain where strain.name ='",gsub("\'","\'\'", input$Delete_strain_SI),"';"))
       
       REQUEST = "SELECT * FROM strain;"
       AddRV$Strain = dbGetQuery(con, REQUEST)
@@ -5688,7 +5688,7 @@ server <- function(input, output, session) {
       
       # Read most recent metafile
       metaDate = max(unlist(lapply(list.files("./", pattern = "meta_*"), function(x){regmatches(x,regexec("meta_(.*?).txt",x))[[1]][2]})))
-      metadata = read.table(paste0("meta_",metaDate,".txt"), sep = "\t", header = F, stringsAsFactors = F)
+      metadata = read.csv(paste0("meta_",metaDate,".txt"), sep = "\t", header = F, stringsAsFactors = F)
       
       # information controls 
       
@@ -5935,7 +5935,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                                 FROM tag
-                              WHERE name = '",tolower(input$Submission_tags_NewName),"';")
+                              WHERE name = '",gsub("\'","\'\'", tolower(input$Submission_tags_NewName)),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -5952,8 +5952,8 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",tolower(input$Submission_tags_NewName), "',
-                            '",input$Submission_tags_NewDescription, "');
+                            '",gsub("\'","\'\'", tolower(input$Submission_tags_NewName)), "',
+                            '",gsub("\'","\'\'", input$Submission_tags_NewDescription), "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       
@@ -5978,7 +5978,7 @@ server <- function(input, output, session) {
     
     REQUEST_EXISTING = paste0("SELECT *
                               FROM tag
-                              WHERE name = '",tolower(input$Submission_tags_NewName_analysis),"';")
+                              WHERE name = '",gsub("\'","\'\'", tolower(input$Submission_tags_NewName_analysis)),"';")
     
     pg <- dbDriver("PostgreSQL")
     con <- dbConnect(pg, user="docker", password="docker",
@@ -5995,8 +5995,8 @@ server <- function(input, output, session) {
       
     } else {
       REQUESTE_ADD = paste0("INSERT INTO tag (name, description) VALUES (
-                            '",tolower(input$Submission_tags_NewName_analysis), "',
-                            '",input$Submission_tags_NewDescription_analysis, "');
+                            '",gsub("\'","\'\'", tolower(input$Submission_tags_NewName_analysis)), "',
+                            '",gsub("\'","\'\'", input$Submission_tags_NewDescription_analysis), "');
                             ")
       dbGetQuery(con, REQUESTE_ADD)
       
@@ -6173,7 +6173,7 @@ server <- function(input, output, session) {
       submissionRV$META = NULL
       # Add experiment in META
       submissionRV$META = rbind(submissionRV$META,
-                                c("Experiment_description", input$submission_Exp_description),
+                                c("Experiment_description", gsub("[\r\n]"," ",input$submission_Exp_description)),
                                 c("Experiment_completionDate", input$submission_Exp_completionDate),
                                 c("Experiment_omicsArea", input$Submission_Exp_omicsArea_SI),
                                 c("Experiment_omicsUnitType", AddRV$OUT[which(AddRV$OUT[,1] == input$submission_pixelSet_OUT),2]),
@@ -6190,18 +6190,18 @@ server <- function(input, output, session) {
                        host=ipDB, port=5432)
       on.exit(dbDisconnect(con))
       
-      omicsAreaid = dbGetQuery(con, paste0("SELECT id from omicsarea where name = '",input$Submission_Exp_omicsArea_SI,"';"))[1,1]
-      strainId = dbGetQuery(con, paste0("SELECT id from strain where name = '",input$Submission_Exp_Strain_SI,"';"))[1,1]
-      DataSourceId = dbGetQuery(con, paste0("SELECT id from datasource where name = '",input$Submission_Exp_dataSource_SI,"';"))[1,1]
+      omicsAreaid = dbGetQuery(con, paste0("SELECT id from omicsarea where name = '",gsub("\'","\'\'", input$Submission_Exp_omicsArea_SI),"';"))[1,1]
+      strainId = dbGetQuery(con, paste0("SELECT id from strain where name = '",gsub("\'","\'\'", input$Submission_Exp_Strain_SI),"';"))[1,1]
+      DataSourceId = dbGetQuery(con, paste0("SELECT id from datasource where name = '",gsub("\'","\'\'", input$Submission_Exp_dataSource_SI),"';"))[1,1]
       
       # Add experiment
       id_exp = paste0("Exp_",time )
-      REQUEST_Exp =  paste0("INSERT INTO experiment (id, omicsAreaid, description, completionDate,strainId, DataSourceId) values ('",id_exp,"','",omicsAreaid,"','",input$submission_Exp_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",strainId,"','",DataSourceId,"');")
+      REQUEST_Exp =  paste0("INSERT INTO experiment (id, omicsAreaid, description, completionDate,strainId, DataSourceId) values ('",id_exp,"','",gsub("\'","\'\'",omicsAreaid),"','",gsub("\'","\'\'", input$submission_Exp_description),"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",strainId,"','",DataSourceId,"');")
       dbGetQuery(con, REQUEST_Exp)
       
       # Add tag associated 
       if(length(input$Submission_Exp_tags_CBG) !=0){
-        REQUEST_Exp_tag = paste0("INSERT INTO Tag_Experiment (id_tag, id_experiment) SELECT id, '",id_exp,"' from tag where name in (",paste0("'",input$Submission_Exp_tags_CBG,"'", collapse = ","),");")
+        REQUEST_Exp_tag = paste0("INSERT INTO Tag_Experiment (id_tag, id_experiment) SELECT id, '",id_exp,"' from tag where name in (",paste0("'",gsub("\'","\'\'", input$Submission_Exp_tags_CBG),"'", collapse = ","),");")
         dbGetQuery(con, REQUEST_Exp_tag)
       }
       
@@ -6268,7 +6268,7 @@ server <- function(input, output, session) {
       }
       
       submissionRV$META = rbind(submissionRV$META,
-                                c("Analysis_description",input$submission_Analysis_description),
+                                c("Analysis_description",gsub("[\r\n]"," ",input$submission_Analysis_description)),
                                 c("Analysis_completionDate",input$submission_Exp_completionDate),
                                 c("Analysis_notebookFile",file$notebook_name),
                                 c("md5_notebook", md5_notebook),
@@ -6278,12 +6278,12 @@ server <- function(input, output, session) {
       )
       
       
-      REQUEST_Analysis =  paste0("insert into analysis (id, description, completionDate, notebook_file,secondary_data_file) values ('",id_analysis,"','",input$submission_Analysis_description,"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",adresse_analysis_notebook,"','",adresse_analysis_SD,"');")
+      REQUEST_Analysis =  paste0("insert into analysis (id, description, completionDate, notebook_file,secondary_data_file) values ('",id_analysis,"','",gsub("\'","\'\'", input$submission_Analysis_description),"',	to_date('",input$submission_Exp_completionDate,"', 'YYYY')",",'",adresse_analysis_notebook,"','",adresse_analysis_SD,"');")
       dbGetQuery(con, REQUEST_Analysis)
       
       # Add tag associated 
       if(length(input$Submission_Analysis_tags_CBG) !=0){
-        REQUEST_Analysis_tag = paste0("insert into Tag_Analysis (id_tag, id_analysis) SELECT id, '",id_analysis,"' from tag where name in (",paste0("'",input$Submission_Analysis_tags_CBG,"'", collapse = ","),");")
+        REQUEST_Analysis_tag = paste0("insert into Tag_Analysis (id_tag, id_analysis) SELECT id, '",id_analysis,"' from tag where name in (",paste0("'",gsub("\'","\'\'", input$Submission_Analysis_tags_CBG),"'", collapse = ","),");")
         dbGetQuery(con, REQUEST_Analysis_tag)
         
       }
@@ -6296,7 +6296,7 @@ server <- function(input, output, session) {
       # SUBMISSION
       #-------------------------------------------------------------------------
       
-      pixeler_user_id = dbGetQuery(con, paste0("SELECT id from pixeler where user_name='",isolate(input$USER),"';"))[1,1]
+      pixeler_user_id = dbGetQuery(con, paste0("SELECT id from pixeler where user_name='",gsub("\'","\'\'", isolate(input$USER)),"';"))[1,1]
       REQUEST_Submission = paste0("insert into Submission (id, submission_date, status, pixeler_user_id) values('",id_Submission,"', to_date('",Sys.Date(),"', 'YYYY-MM-DD'), FALSE, '",pixeler_user_id,"');")
       dbGetQuery(con, REQUEST_Submission)
       
@@ -6321,7 +6321,7 @@ server <- function(input, output, session) {
           }
           
           
-          REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",eval(parse(text = paste0("input$submission_pixelSet_name_",i))),"','",adresse_analysis_file,"','",eval(parse(text = paste0("input$submission_pixelSet_description_",i))),"','",id_analysis,"','",id_Submission,"');")
+          REQUEST_PixelSet = paste0("insert into PixelSet (id, name, pixelSet_file, description, id_analysis, id_submission) values('",id_PixelSets,"', '",gsub("\'","\'\'", eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),"','",adresse_analysis_file,"','",gsub("\'","\'\'", eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),"','",id_analysis,"','",id_Submission,"');")
           dbGetQuery(con, REQUEST_PixelSet)
           
           if(!is.null(file$extract) && file$extract == T){
@@ -6332,7 +6332,7 @@ server <- function(input, output, session) {
             )
             submissionRV$META = rbind(submissionRV$META,
                                       c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
-                                      c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
+                                      c(paste0("PixelSet",i,"_description"), gsub("[\r\n]"," ", eval(parse(text = paste0("input$submission_pixelSet_description_",i))))),
                                       c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i)))),
                                       c(paste0("PixelSet",i,"_md5"),md5sum(paste0(paste0("www/", adresse_analysis_file))))
                                       
@@ -6346,7 +6346,7 @@ server <- function(input, output, session) {
             
             submissionRV$META = rbind(submissionRV$META,
                                       c(paste0("PixelSet",i,"_name"),eval(parse(text = paste0("input$submission_pixelSet_name_",i)))),
-                                      c(paste0("PixelSet",i,"_description"),eval(parse(text = paste0("input$submission_pixelSet_description_",i)))),
+                                      c(paste0("PixelSet",i,"_description"),gsub("[\r\n]"," ", eval(parse(text = paste0("input$submission_pixelSet_description_",i))))),
                                       c(paste0("PixelSet",i,"_file"),eval(parse(text = paste0("input$submission_pixelSet_file",i,"$name")))),
                                       c(paste0("PixelSet",i,"_md5"),md5sum(paste0(paste0("www/", adresse_analysis_file))))
                                       
@@ -6363,7 +6363,7 @@ server <- function(input, output, session) {
             n = nrow(inter)
             for(j in 1:nrow(inter)){
               incProgress(1/n, detail = paste0("Imported :", floor(j/n*100),"%")) 
-              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",gsub("\'","\'\'",inter[j,2]),"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",input$submission_pixelSet_OUT,"');")
+              REQUEST_Pixel = paste0("insert into Pixel (value, quality_score, pixelSet_id, cf_feature_name, OmicsUnitType_id) values('",gsub("\'","\'\'",inter[j,2]),"',", inter[j,3],",'",id_PixelSets,"','",inter[j,1],"','",gsub("\'","\'\'", input$submission_pixelSet_OUT),"');")
               dbGetQuery(con, REQUEST_Pixel)
             }
           })
