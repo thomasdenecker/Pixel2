@@ -1,0 +1,4 @@
+"x"
+"1" "Mon instance de test"
+"2" "#FFFFFF"
+"3" "#DD4B39"

@@ -45,3 +45,9 @@ RUN Rscript -e "install.packages('xlsx', repos='https://cran.rstudio.com/', depe
 
 RUN Rscript -e "install.packages('UpSetR', repos='https://cran.rstudio.com/', dependencies = TRUE)" \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN Rscript -e "install.packages('shinycssloaders', repos='https://cran.rstudio.com/', dependencies = TRUE)" \
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN Rscript -e "install.packages('colourpicker', repos='https://cran.rstudio.com/', dependencies = TRUE)" \
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
