@@ -7,14 +7,21 @@
 # https://github.com/thomasdenecker/Pixel_V2
 ################################################################################
 
+options("encoding" = "UTF-8")
+
+################################################################################
+# Config file
+################################################################################
+
+
 ################################################################################
 # Library
 ################################################################################
 
 library(shiny)
-library(shinydashboard)
 library(shinyjs)
 library(shinyFiles)
+library(shinycssloaders)
 library(evobiR)
 library(plotly)
 library(ape)
@@ -27,6 +34,9 @@ library(DT)
 library(shinyWidgets)
 library(xlsx)
 library(UpSetR)
+library(shinydashboard)
+library(colourpicker)
+
 
 ################################################################################
 # Admin adress
@@ -53,7 +63,29 @@ ipDB = read.table("Database/ipDB.txt", header = F, stringsAsFactors = F)[1,1]
 # UI
 ################################################################################
 
-header <- dashboardHeader(title = "Pixel2")
+header <- dashboardHeader(title = "Pixel2" ,
+                          tags$li(class = "dropdown", tags$a(HTML(paste("", textOutput("title"))))),
+                          dropdownMenu(icon = icon("question-circle"),badgeStatus =NULL,headerText = "Global information",
+                                       messageItem(
+                                         from = "Find our project?",
+                                         message = "Visit our Github!",
+                                         icon = icon("github"),
+                                         href = "https://github.com/thomasdenecker/Pixel2"
+                                       ),
+                                       messageItem(
+                                         from = "New User?",
+                                         message = "Read the docs!",
+                                         icon = icon("book"),
+                                         href = "https://github.com/thomasdenecker/Pixel2/wiki"
+                                       ),
+                                       messageItem(
+                                         from = "A bug with app?",
+                                         message = "Declare an issue!",
+                                         icon = icon("exclamation-triangle"),
+                                         href = "https://github.com/thomasdenecker/Pixel2/issues"
+                                       )
+                          )
+                         )
 sidebar <- dashboardSidebar(uiOutput("sidebarpanel"))
 body <- dashboardBody(useShinyjs(), 
                       useShinyalert(),
@@ -62,6 +94,8 @@ body <- dashboardBody(useShinyjs(),
                       # Add css style
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
                                      href="style.css" />')), 
+                      tags$head(HTML('<link rel="stylesheet" type="text/css"
+                                     href="styleInstance.css" />')), 
                       tags$style(HTML(".sliderStyle .irs-single, .sliderStyle .irs-bar-edge, .sliderStyle .irs-bar, .sliderStyle .irs-from, .sliderStyle .irs-to, .sliderStyle .irs-single {background: red}
                                       .sliderStyle .irs-bar {border-color: red;}")), 
                       tags$head(tags$script(HTML("$(document).on('click', '.autoname', function () {
@@ -71,7 +105,7 @@ body <- dashboardBody(useShinyjs(),
                                 Shiny.onInputChange('last_SI',this.id);
                                 Shiny.onInputChange('lastSelect', Math.random());
                                                  });"))),
-                      uiOutput("body"))
+                      withSpinner(uiOutput("body"), color = getOption("spinner.color", default = "red")))
 ui <- dashboardPage(skin= "red", header, sidebar, body)
 
 
@@ -97,6 +131,17 @@ server <- function(input, output, session) {
   file$extract = F
   
   MAJ$value = 0
+  
+  #=============================================================================
+  # Header
+  #=============================================================================
+  
+  configApp <- reactiveValues(table = read.table("www/configApp.txt", stringsAsFactors = F))
+  
+  output$title <- renderText({
+    toString(configApp$table[1,1])
+  })
+  
   
   #=============================================================================
   # MAJ Values
@@ -289,7 +334,8 @@ server <- function(input, output, session) {
                       
                       menuItem("Administration", tabName = "Administration", icon = icon("wrench"),
                                startExpanded = F,
-                               menuSubItem("Manage Pixelers", tabName = "Pixeler") 
+                               menuSubItem("Manage Pixelers", tabName = "Pixeler"),
+                               menuSubItem("Manage app", tabName = "manageApp")
                       ),
                       menuItem("Pixeler information", tabName = "Profile", icon = icon("user")),
                       h4(class ='sideBar',"Quick searches"),
@@ -1223,6 +1269,50 @@ server <- function(input, output, session) {
                            'Add pixeler', icon = icon("plus-circle"))
               
           )),
+        
+        #=======================================================================
+        # Tab content : manageApp
+        #=======================================================================
+        
+        tabItem(
+          tabName = "manageApp", 
+          h2("Manage application"),
+          div(class = "table_style", 
+              p(class="info", "In this section, you can change the application appearance."),
+              h3(class ="h3-style","Title"),
+              fluidRow(
+                column(3,div(class = "inputNew",textInput("titleApp", "Title", value = configApp$table[1,1])))
+              ),
+              
+              h3(class ="h3-style","Colors"),
+              fluidRow(
+                column(3,div(class = "inputNew", colourpicker::colourInput("textColorApp", "Text color", configApp$table[2,1]))),
+                column(3,div(class = "inputNew",colourpicker::colourInput("themeColorApp", "Theme color", configApp$table[3,1]))),
+                column(3,div(class = "inputNew",colourpicker::colourInput("themeHoverColorApp", "Theme hover color", configApp$table[4,1])))
+              ),
+              
+              
+              h3(class ="h3-style","Font"),
+              fluidRow(
+                column(3,div(class = "inputNew",selectInput("bodyFont", "Body font", c("Arial", "Helvetica", "Times New Roman", "Times", 
+                                                                                     "Courier New","Courier", "Verdana" ,"Georgia",
+                                                                                     "Palatino", "Garamond", "Bookman", "Comic Sans MS", 
+                                                                                     "Trebuchet MS", "Arial Black", "Impact"), selected = configApp$table[5,1]))),
+                column(3,div(class = "inputNew",selectInput("titleFont", "Title font", c("Arial", "Helvetica", "Times New Roman", "Times", 
+                                                                                       "Courier New","Courier", "Verdana" ,"Georgia",
+                                                                                       "Palatino", "Garamond", "Bookman", "Comic Sans MS", 
+                                                                                       "Trebuchet MS", "Arial Black", "Impact"), selected = configApp$table[6,1])))
+              ),
+              
+              
+              actionButton('changeApp', class = "pull-right PS-btn",
+                           'Modify', icon = icon("hammer")), 
+              
+              actionButton('defaultApp', class = "pull-right PS-btn",
+                           'Default', icon = icon("undo-alt"))
+              
+          )),
+        
         
         #=======================================================================
         # Tab content : SubmissionsAdmin
@@ -2888,6 +2978,139 @@ server <- function(input, output, session) {
       enable("addUser")
     }
   })
+  
+  #.............................................................................
+  # Manage app
+  #.............................................................................
+  
+  observeEvent(input$changeApp, {
+    write.table(c(input$titleApp,input$textColorApp, input$themeColorApp, input$themeHoverColorApp, input$bodyFont, input$titleFont), "www/configApp.txt")
+    configApp$table = read.table("www/configApp.txt", stringsAsFactors = F)
+    write(paste0('
+            body{font-family: "',input$bodyFont,'", Times, "Times New Roman", serif; }
+            .h3-style {
+              background-color: ',input$themeColorApp,' !important;
+              color: ',input$textColorApp,' !important;
+              padding: 10px;
+              font-size: 18px;
+            }
+            
+            .title-cf {
+              background-color: ',input$themeColorApp,' !important;
+              color: ',input$textColorApp,' !important;
+              padding: 10px;
+              font-size: 18px;
+            }
+            
+            .skin-red .main-header .navbar {
+              background-color: ',input$themeColorApp,' !important;
+            }
+
+            .skin-red .main-header .logo {
+              background-color: ',input$themeHoverColorApp,' !important;
+              color: ',input$textColorApp,' !important;
+              font-family: "',input$titleFont,'", Times, "Times New Roman", serif;
+            }
+
+            .skin-red .main-header .logo:hover {
+              background-color: ',input$themeHoverColorApp,' !important;
+            }
+
+            .skin-red .main-header .navbar .sidebar-toggle:hover {
+                background-color: ',input$themeHoverColorApp,' !important;
+            }
+
+            .skin-red .main-header .navbar .sidebar-toggle {
+                background-color: ',input$themeColorApp,' !important;
+            }
+
+            .skin-red .main-header .navbar .nav>li>a:hover {
+                background-color: ',input$themeHoverColorApp,' !important;
+            }
+            
+            .skin-red .main-header .navbar .nav>li>a {
+                background-color: ',input$themeColorApp,' !important;
+                color: ',input$textColorApp,' !important;
+            }
+
+            .box.box-solid.box-danger>.box-header {
+                color: ',input$textColorApp,' !important;
+                background: ',input$themeColorApp,' !important;
+                background-color: ',input$themeColorApp,' !important;
+            } 
+                 
+             /* main sidebar */
+             
+             .skin-red .main-sidebar {
+                background-color: #808080;
+             }
+             
+             /* active selected tab in the sidebarmenu */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu .active a {
+              background-color: #595959;
+             }
+             
+             /* other links in the sidebarmenu */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu a {
+              background-color: #808080;
+              color: white;
+             }
+             
+             /* other links in the sidebarmenu when hovered */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
+              background-color: #595959;
+             } 
+            
+            .PixelSet h3 {
+              margin-left: -10px;
+                 background-color: ',input$themeColorApp,' !important;
+                 color: ',input$textColorApp,' !important;
+                 padding: 10px;
+                 font-size: 18px;
+            }
+                 
+             .title-pixelset {
+             background-color: ',input$themeColorApp,' !important;
+             color: ',input$textColorApp,' !important;
+             padding: 10px;
+             font-size: 18px;
+             }
+            '),
+          "www/styleInstance.css")
+    
+    
+    updateTabItems (session, "tabs", selected = "Dashboard")
+    sendSweetAlert(
+      session = session,
+      title = "A new style has been generated !",
+      text = "Your application has a new style! All that remains is to reload the page.", 
+      type = "success"
+    )
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  
+  observeEvent(input$defaultApp, {
+    configApp$tableDefault = read.table("www/configAppDefault.txt", stringsAsFactors = F)
+   
+    updateTextInput(session, "titleApp", value =configApp$tableDefault[1,1])
+    updateColourInput(session, "textColorApp", value = configApp$tableDefault[2,1])
+    updateColourInput(session, "themeColorApp", value = configApp$tableDefault[3,1])
+    updateColourInput(session, "themeHoverColorApp", value = configApp$tableDefault[4,1])
+    updateSelectInput(session, "bodyFont", selected = configApp$tableDefault[5,1])
+    updateSelectInput(session, "titleFont", selected = configApp$tableDefault[6,1])
+    
+    sendSweetAlert(
+      session = session,
+      title = "Default loaded",
+      text = "The default settings have been loaded. All that remains is to make the modifications (click Modify)", 
+      type = "success"
+    )
+  })
+  
+  
   
   #.............................................................................
   # Annotation

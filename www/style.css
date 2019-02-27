@@ -140,37 +140,8 @@ General
   margin-right: 10px;
 }
 
-/*******************************************************************************
-Header
-*******************************************************************************/
-
 .content-wrapper {
   background-color: white;
-}
-
-/* main sidebar */
-
-.skin-red .main-sidebar {
-  background-color: #808080;
-}
-
-/* active selected tab in the sidebarmenu */
-
-.skin-red .main-sidebar .sidebar .sidebar-menu .active a {
-  background-color: #595959;
-}
-
-/* other links in the sidebarmenu */
-
-.skin-red .main-sidebar .sidebar .sidebar-menu a {
-  background-color: #808080;
-  color: white;
-}
-
-/* other links in the sidebarmenu when hovered */
-
-.skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
-  background-color: #595959;
 }
 
 /*******************************************************************************
@@ -252,21 +223,6 @@ PixelSet
   margin-right: 20px;
 }
 
-.PixelSet h3 {
-  margin-left: -10px;
-  background-color: #dd4b39 !important;
-  color: white;
-  padding: 10px;
-  font-size: 18px;
-}
-
-.title-pixelset {
-  background-color: #dd4b39 !important;
-  color: white;
-  padding: 10px;
-  font-size: 18px;
-}
-
 /*******************************************************************************
 Search
 *******************************************************************************/
@@ -317,24 +273,6 @@ Tag
   padding: 5px;
   font-size: 14px;
   font-weight: bold;
-}
-
-/*******************************************************************************
-Title
-*******************************************************************************/
-
-.h3-style {
-  background-color: #dd4b39 !important;
-  color: white;
-  padding: 10px;
-  font-size: 18px;
-}
-
-.title-cf {
-  background-color: #dd4b39 !important;
-  color: white;
-  padding: 10px;
-  font-size: 18px;
 }
 
 /*******************************************************************************

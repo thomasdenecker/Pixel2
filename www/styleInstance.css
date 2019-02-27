@@ -1,0 +1,93 @@
+
+            body{font-family: "Arial", Times, "Times New Roman", serif; }
+            .h3-style {
+              background-color: #DD4B39 !important;
+              color: #FFFFFF !important;
+              padding: 10px;
+              font-size: 18px;
+            }
+            
+            .title-cf {
+              background-color: #DD4B39 !important;
+              color: #FFFFFF !important;
+              padding: 10px;
+              font-size: 18px;
+            }
+            
+            .skin-red .main-header .navbar {
+              background-color: #DD4B39 !important;
+            }
+
+            .skin-red .main-header .logo {
+              background-color: #D33724 !important;
+              color: #FFFFFF !important;
+              font-family: "Arial", Times, "Times New Roman", serif;
+            }
+
+            .skin-red .main-header .logo:hover {
+              background-color: #D33724 !important;
+            }
+
+            .skin-red .main-header .navbar .sidebar-toggle:hover {
+                background-color: #D33724 !important;
+            }
+
+            .skin-red .main-header .navbar .sidebar-toggle {
+                background-color: #DD4B39 !important;
+            }
+
+            .skin-red .main-header .navbar .nav>li>a:hover {
+                background-color: #D33724 !important;
+            }
+            
+            .skin-red .main-header .navbar .nav>li>a {
+                background-color: #DD4B39 !important;
+                color: #FFFFFF !important;
+            }
+
+            .box.box-solid.box-danger>.box-header {
+                color: #FFFFFF !important;
+                background: #DD4B39 !important;
+                background-color: #DD4B39 !important;
+            } 
+                 
+             /* main sidebar */
+             
+             .skin-red .main-sidebar {
+                background-color: #808080;
+             }
+             
+             /* active selected tab in the sidebarmenu */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu .active a {
+              background-color: #595959;
+             }
+             
+             /* other links in the sidebarmenu */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu a {
+              background-color: #808080;
+              color: white;
+             }
+             
+             /* other links in the sidebarmenu when hovered */
+             
+             .skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
+              background-color: #595959;
+             } 
+            
+            .PixelSet h3 {
+              margin-left: -10px;
+                 background-color: #DD4B39 !important;
+                 color: #FFFFFF !important;
+                 padding: 10px;
+                 font-size: 18px;
+            }
+                 
+             .title-pixelset {
+             background-color: #DD4B39 !important;
+             color: #FFFFFF !important;
+             padding: 10px;
+             font-size: 18px;
+             }
+            

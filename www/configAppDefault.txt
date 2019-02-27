@@ -1,0 +1,7 @@
+"x"
+"1" "Default"
+"2" "#FFFFFF"
+"3" "#DD4B39"
+"4" "#D33724"
+"5" "Arial"
+"6" "Arial"
