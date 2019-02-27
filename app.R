@@ -3083,7 +3083,7 @@ server <- function(input, output, session) {
              font-size: 18px;
              }
             '),
-          "www/styleInstance.css")
+          "www/Submissions/styleInstance.css")
     
     
     updateTabItems (session, "tabs", selected = "Dashboard")
