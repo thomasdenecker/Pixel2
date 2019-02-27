@@ -95,7 +95,7 @@ body <- dashboardBody(useShinyjs(),
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
                                      href="style.css" />')), 
                       tags$head(HTML('<link rel="stylesheet" type="text/css"
-                                     href="styleInstance.css" />')), 
+                                     href="Submissions/styleInstance.css" />')), 
                       tags$style(HTML(".sliderStyle .irs-single, .sliderStyle .irs-bar-edge, .sliderStyle .irs-bar, .sliderStyle .irs-from, .sliderStyle .irs-to, .sliderStyle .irs-single {background: red}
                                       .sliderStyle .irs-bar {border-color: red;}")), 
                       tags$head(tags$script(HTML("$(document).on('click', '.autoname', function () {
