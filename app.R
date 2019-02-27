@@ -136,7 +136,7 @@ server <- function(input, output, session) {
   # Header
   #=============================================================================
   
-  configApp <- reactiveValues(table = read.table("www/configApp.txt", stringsAsFactors = F))
+  configApp <- reactiveValues(table = read.table("www/Submissions/configApp.txt", stringsAsFactors = F))
   
   output$title <- renderText({
     toString(configApp$table[1,1])
@@ -2984,8 +2984,8 @@ server <- function(input, output, session) {
   #.............................................................................
   
   observeEvent(input$changeApp, {
-    write.table(c(input$titleApp,input$textColorApp, input$themeColorApp, input$themeHoverColorApp, input$bodyFont, input$titleFont), "www/configApp.txt")
-    configApp$table = read.table("www/configApp.txt", stringsAsFactors = F)
+    write.table(c(input$titleApp,input$textColorApp, input$themeColorApp, input$themeHoverColorApp, input$bodyFont, input$titleFont), "www/Submissions/configApp.txt")
+    configApp$table = read.table("www/Submissions/configApp.txt", stringsAsFactors = F)
     write(paste0('
             body{font-family: "',input$bodyFont,'", Times, "Times New Roman", serif; }
             .h3-style {
