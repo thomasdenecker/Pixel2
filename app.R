@@ -136,6 +136,10 @@ server <- function(input, output, session) {
   # Header
   #=============================================================================
   
+  if(! file.exists("www/Submissions/configApp.txt")){
+    file.copy("www/configAppDefault.txt", "www/Submissions/configApp.txt")
+  }
+  
   configApp <- reactiveValues(table = read.table("www/Submissions/configApp.txt", stringsAsFactors = F))
   
   output$title <- renderText({
