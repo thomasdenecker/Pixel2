@@ -65,22 +65,24 @@ ipDB = read.table("Database/ipDB.txt", header = F, stringsAsFactors = F)[1,1]
 
 header <- dashboardHeader(title = "Pixel2" ,
                           tags$li(class = "dropdown", tags$a(HTML(paste("", textOutput("title"))))),
-                          dropdownMenu(type = "messages",
+                          dropdownMenu(icon = icon("question-circle"),badgeStatus =NULL,headerText = "Global information",
                                        messageItem(
-                                         from = "Sales Dept",
-                                         message = "Sales are steady this month."
+                                         from = "Find our project?",
+                                         message = "Visit our Github!",
+                                         icon = icon("github"),
+                                         href = "https://github.com/thomasdenecker/Pixel2"
                                        ),
                                        messageItem(
-                                         from = "New User",
-                                         message = "How do I register?",
-                                         icon = icon("question"),
-                                         time = "13:45"
+                                         from = "New User?",
+                                         message = "Read the docs!",
+                                         icon = icon("book"),
+                                         href = "https://github.com/thomasdenecker/Pixel2/wiki"
                                        ),
                                        messageItem(
-                                         from = "Support",
-                                         message = "The new server is ready.",
-                                         icon = icon("life-ring"),
-                                         time = "2014-12-01"
+                                         from = "A bug with app?",
+                                         message = "Declare an issue!",
+                                         icon = icon("exclamation-triangle"),
+                                         href = "https://github.com/thomasdenecker/Pixel2/issues"
                                        )
                           )
                          )
