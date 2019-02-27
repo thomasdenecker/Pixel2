@@ -1276,17 +1276,38 @@ server <- function(input, output, session) {
           tabName = "manageApp", 
           h2("Manage application"),
           div(class = "table_style", 
-              h3(class ="h3-style","Modify application cosmetics"),
               p(class="info", "In this section, you can change the application appearance."),
-              
+              h3(class ="h3-style","Title"),
               fluidRow(
-                column(3,div(class = "inputNew",textInput("titleApp", "Title", value = configApp$table[1,1]))),
+                column(3,div(class = "inputNew",textInput("titleApp", "Title", value = configApp$table[1,1])))
+              ),
+              
+              h3(class ="h3-style","Colors"),
+              fluidRow(
                 column(3,div(class = "inputNew", colourpicker::colourInput("textColorApp", "Text color", configApp$table[2,1]))),
                 column(3,div(class = "inputNew",colourpicker::colourInput("themeColorApp", "Theme color", configApp$table[3,1]))),
                 column(3,div(class = "inputNew",colourpicker::colourInput("themeHoverColorApp", "Theme hover color", configApp$table[4,1])))
               ),
-              actionButton('changeApp', class = "pull-right",
-                           'Modify', icon = icon("hammer"))
+              
+              
+              h3(class ="h3-style","Font"),
+              fluidRow(
+                column(3,div(class = "inputNew",selectInput("bodyFont", "Body font", c("Arial", "Helvetica", "Times New Roman", "Times", 
+                                                                                     "Courier New","Courier", "Verdana" ,"Georgia",
+                                                                                     "Palatino", "Garamond", "Bookman", "Comic Sans MS", 
+                                                                                     "Trebuchet MS", "Arial Black", "Impact"), selected = configApp$table[5,1]))),
+                column(3,div(class = "inputNew",selectInput("titleFont", "Title font", c("Arial", "Helvetica", "Times New Roman", "Times", 
+                                                                                       "Courier New","Courier", "Verdana" ,"Georgia",
+                                                                                       "Palatino", "Garamond", "Bookman", "Comic Sans MS", 
+                                                                                       "Trebuchet MS", "Arial Black", "Impact"), selected = configApp$table[6,1])))
+              ),
+              
+              
+              actionButton('changeApp', class = "pull-right PS-btn",
+                           'Modify', icon = icon("hammer")), 
+              
+              actionButton('defaultApp', class = "pull-right PS-btn",
+                           'Default', icon = icon("undo-alt"))
               
           )),
         
@@ -2959,30 +2980,34 @@ server <- function(input, output, session) {
   #.............................................................................
   # Manage app
   #.............................................................................
-  # textColorApp themeColorApp
   
   observeEvent(input$changeApp, {
-    write.table(c(input$titleApp,input$textColorApp, input$themeColorApp), "www/configApp.txt")
+    write.table(c(input$titleApp,input$textColorApp, input$themeColorApp, input$themeHoverColorApp, input$bodyFont, input$titleFont), "www/configApp.txt")
     configApp$table = read.table("www/configApp.txt", stringsAsFactors = F)
-    write(paste0('.h3-style {
+    write(paste0('
+            body{font-family: "',input$bodyFont,'", Times, "Times New Roman", serif; }
+            .h3-style {
               background-color: ',input$themeColorApp,' !important;
-              color: white;
+              color: ',input$textColorApp,' !important;
               padding: 10px;
               font-size: 18px;
             }
             
             .title-cf {
               background-color: ',input$themeColorApp,' !important;
-              color: white;
+              color: ',input$textColorApp,' !important;
               padding: 10px;
               font-size: 18px;
             }
-            .content-wrapper {
-              background-color: white;
-            }
-
+            
             .skin-red .main-header .navbar {
               background-color: ',input$themeColorApp,' !important;
+            }
+
+            .skin-red .main-header .logo {
+              background-color: ',input$themeHoverColorApp,' !important;
+              color: ',input$textColorApp,' !important;
+              font-family: "',input$titleFont,'", Times, "Times New Roman", serif;
             }
 
             .skin-red .main-header .logo:hover {
@@ -2997,20 +3022,17 @@ server <- function(input, output, session) {
                 background-color: ',input$themeColorApp,' !important;
             }
 
-            .skin-red .main-header .logo {
-              background-color: ',input$themeHoverColorApp,' !important;
-            }
-
             .skin-red .main-header .navbar .nav>li>a:hover {
                 background-color: ',input$themeHoverColorApp,' !important;
             }
             
             .skin-red .main-header .navbar .nav>li>a {
                 background-color: ',input$themeColorApp,' !important;
+                color: ',input$textColorApp,' !important;
             }
 
             .box.box-solid.box-danger>.box-header {
-                color: #fff;
+                color: ',input$textColorApp,' !important;
                 background: ',input$themeColorApp,' !important;
                 background-color: ',input$themeColorApp,' !important;
             } 
@@ -3018,39 +3040,39 @@ server <- function(input, output, session) {
              /* main sidebar */
              
              .skin-red .main-sidebar {
-              background-color: #808080;
+                background-color: #808080;
              }
              
              /* active selected tab in the sidebarmenu */
              
              .skin-red .main-sidebar .sidebar .sidebar-menu .active a {
-             background-color: #595959;
+              background-color: #595959;
              }
              
              /* other links in the sidebarmenu */
              
              .skin-red .main-sidebar .sidebar .sidebar-menu a {
-             background-color: #808080;
-             color: white;
+              background-color: #808080;
+              color: white;
              }
              
              /* other links in the sidebarmenu when hovered */
              
              .skin-red .main-sidebar .sidebar .sidebar-menu a:hover {
-             background-color: #595959;
+              background-color: #595959;
              } 
             
             .PixelSet h3 {
               margin-left: -10px;
                  background-color: ',input$themeColorApp,' !important;
-                 color: white;
+                 color: ',input$textColorApp,' !important;
                  padding: 10px;
                  font-size: 18px;
             }
                  
              .title-pixelset {
              background-color: ',input$themeColorApp,' !important;
-             color: white;
+             color: ',input$textColorApp,' !important;
              padding: 10px;
              font-size: 18px;
              }
@@ -3066,6 +3088,24 @@ server <- function(input, output, session) {
       type = "success"
     )
     shinyjs::runjs("window.scrollTo(0, 0)")
+  })
+  
+  observeEvent(input$defaultApp, {
+    configApp$tableDefault = read.table("www/configAppDefault.txt", stringsAsFactors = F)
+   
+    updateTextInput(session, "titleApp", value =configApp$tableDefault[1,1])
+    updateColourInput(session, "textColorApp", value = configApp$tableDefault[2,1])
+    updateColourInput(session, "themeColorApp", value = configApp$tableDefault[3,1])
+    updateColourInput(session, "themeHoverColorApp", value = configApp$tableDefault[4,1])
+    updateSelectInput(session, "bodyFont", selected = configApp$tableDefault[5,1])
+    updateSelectInput(session, "titleFont", selected = configApp$tableDefault[6,1])
+    
+    sendSweetAlert(
+      session = session,
+      title = "Default loaded",
+      text = "The default settings have been loaded. All that remains is to make the modifications (click Modify)", 
+      type = "success"
+    )
   })
   
   
