@@ -3558,7 +3558,7 @@ server <- function(input, output, session) {
       if(length(posS) != 0){
         for(pos in posS){
           if( CF$PIXEL[which(CF$PIXEL[,"Pixelset ID"] == CF$PIXELSET_qualitative[pos,"Pixelset ID"]), "Omics unit type"][1] == "gene" ){
-            CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Gene sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
+            CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Nucleic acid sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
                                             paste(strsplit(CF$PIXELSET_qualitative[pos,"Value"], "(?<=.{60})", perl = TRUE)[[1]], collapse = "<br>"), "</p>"))
           } else if (CF$PIXEL[which(CF$PIXEL[,"Pixelset ID"] == CF$PIXELSET_qualitative[pos,"Pixelset ID"]), "Omics unit type"][1] == "protein" ){
             CF$Sup_tab = c(CF$Sup_tab,paste("<h3>Protein sequence</h3><p style ='font-family: monospace;'> >",CF$name,"<br>", 
