@@ -4233,15 +4233,24 @@ server <- function(input, output, session) {
   )
   
   observeEvent(input$filter_clear_btn, {
-    updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
-    PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
-    counter$n = 0
-    prevcount$n = 0
-    
-    for(n in names(MPS_RV$val)){
-      MPS_RV$val[[n]] <- NULL
+    if(is.null(PixelSetExploRV$TAB)) {
+      sendSweetAlert(
+        session = session,
+        title = "Oops!",
+        text = "No pixelset has been selected! Go to: Database exploration > Search by Pixelset.",
+        type = "error"
+      )
+    } else {
+      updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
+      PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+      counter$n = 0
+      prevcount$n = 0
+      
+      for(n in names(MPS_RV$val)){
+        MPS_RV$val[[n]] <- NULL
+      }
+      MPS_RV$choice = NULL
     }
-    MPS_RV$choice = NULL
     
   })
   
@@ -4307,20 +4316,42 @@ server <- function(input, output, session) {
     
     PixelSetExploRV$SEARCH = which(PixelSetExploRV$TAB[, "Feature name"] %in% unlist(strsplit(gsub(" ","", input$MPS_searchGenelist), ";")))
     
-    if( length(PixelSetExploRV$SEARCH) == 0){
-      PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+    if(is.null(PixelSetExploRV$TAB)) {
       sendSweetAlert(
         session = session,
         title = "Oops!",
-        text = "None of the genes were found in the Pixel table.",
+        text = "No pixelset has been selected! Go to: Database exploration > Search by Pixelset.",
         type = "error"
       )
+    } else {
+      if(!is.null(input$MPS_searchGenelist) & input$MPS_searchGenelist != ""){
+        if( length(PixelSetExploRV$SEARCH) == 0){
+          PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+          sendSweetAlert(
+            session = session,
+            title = "Oops!",
+            text = "None of the genes were found in the Pixel table.",
+            type = "error"
+          )
+        }
+      } else {
+        sendSweetAlert(
+          session = session,
+          title = "Oops!",
+          text = "No genes are entered in the search area!",
+          type = "error"
+        )
+      }
     }
+    
+    
   })
   
   observeEvent(input$MPS_searchGenelist_clear_btn,{
-    updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
-    PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+    if(!is.null(input$MPS_searchGenelist) & input$MPS_searchGenelist != ""){
+      updateTextAreaInput(session,inputId = "MPS_searchGenelist", value = "")
+      PixelSetExploRV$SEARCH = 1:nrow(PixelSetExploRV$TAB)
+    }
   })
   
   #=============================================================================
