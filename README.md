@@ -4,6 +4,8 @@
 
 **Pixel2** is an original digital assistant to help people involved in a multi-omics biological project
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4028741.svg)](https://doi.org/10.5281/zenodo.4028741)
+
 ## Requirements
 
 We use Docker to develop and run Pixel. We invite you to ensure you have
