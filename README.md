@@ -31,6 +31,9 @@ Download the zip file ([here](https://github.com/thomasdenecker/Pixel2/archive/m
 
 In this folder, you will find a file named INSTALLATION_WINDOWS.sh. By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
 
+
+**Warning**: if you have spaces in your folder names, we recommend that you use the installation file: `INSTALLATION_WINDOWS_POWERSHELL.bat`. It will generate a file called `Pixel2.ps1`. All you have to do now is right-click on the file and execute it using powershell.
+
 #### Mac OsX installation
 
 In this folder, you will find a file named INSTALLATION_MAC.sh. By double clicking on it, the installation will begin. This may take a little time depending on the quality of your internet connection. When the installation will be completed, two new files will appear. They allow to launch the Pixel2.
